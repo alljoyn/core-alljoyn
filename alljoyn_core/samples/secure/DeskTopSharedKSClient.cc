@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <vector>
 
+#include <qcc/Mutex.h>
 #include <qcc/String.h>
 
 #include <alljoyn/AllJoynStd.h>
@@ -46,7 +47,7 @@ using namespace ajn;
 extern KeyStoreListener* CreateKeyStoreListenerInstance(const char* fname);
 
 /** Static top level message bus object */
-static BusAttachment* g_msgBus = nullptr;
+static BusAttachment* s_msgBus = nullptr;
 
 static KeyStoreListener* keyStoreListener = nullptr;
 static AuthListener* authListener = nullptr;
@@ -60,6 +61,7 @@ static const SessionPort SERVICE_PORT = 42;
 static bool s_joinComplete = false;
 static String s_sessionHost;
 static SessionId s_sessionId = 0;
+static qcc::Mutex* s_sessionLock = nullptr;
 
 static volatile sig_atomic_t s_interrupt = false;
 
@@ -96,25 +98,42 @@ char*get_line(char*str, size_t num, FILE*fp)
     return p;
 }
 
+/** Inform the app thread that JoinSession is complete, store the session ID. */
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
+        if (ER_OK == status) {
+            printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+            s_sessionLock->Lock(MUTEX_CONTEXT);
+            s_sessionId = sessionId;
+            s_joinComplete = true;
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
+        } else {
+            printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+        }
+    }
+};
+
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener, public SessionListener {
   public:
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
         printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
+        s_sessionLock->Lock(MUTEX_CONTEXT);
         if (0 == strcmp(name, SERVICE_NAME) && s_sessionHost.empty()) {
-            /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             s_sessionHost = name;
-            g_msgBus->EnableConcurrentCallbacks();
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
+            /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = g_msgBus->JoinSession(name, SERVICE_PORT, this, s_sessionId, opts);
+            QStatus status = s_msgBus->JoinSessionAsync(name, SERVICE_PORT, this, opts, &joinCb);
             if (ER_OK != status) {
-                printf("JoinSession failed (status=%s)\n", QCC_StatusText(status));
-            } else {
-                printf("JoinSession SUCCESS (Session id=%d)\n", s_sessionId);
+                printf("JoinSessionAsync failed (status=%s)", QCC_StatusText(status));
             }
-            s_joinComplete = true;
+        } else {
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
         }
     }
 
@@ -127,6 +146,9 @@ class MyBusListener : public BusListener, public SessionListener {
                    newOwner ? newOwner : "<none>");
         }
     }
+
+  private:
+    MyJoinCallback joinCb;
 };
 
 /*
@@ -196,7 +218,7 @@ QStatus CreateInterface(void)
 {
     /* Add org.alljoyn.Bus.method_sample interface */
     InterfaceDescription* testIntf = nullptr;
-    QStatus status = g_msgBus->CreateInterface(INTERFACE_NAME, testIntf, AJ_IFC_SECURITY_REQUIRED);
+    QStatus status = s_msgBus->CreateInterface(INTERFACE_NAME, testIntf, AJ_IFC_SECURITY_REQUIRED);
 
     if (status == ER_OK) {
         printf("Interface '%s' created.\n", INTERFACE_NAME);
@@ -212,7 +234,7 @@ QStatus CreateInterface(void)
 /** Start the message bus, report the result to stdout, and return the result status. */
 QStatus StartMessageBus(void)
 {
-    QStatus status = g_msgBus->Start();
+    QStatus status = s_msgBus->Start();
 
     if (ER_OK == status) {
         printf("BusAttachment started.\n");
@@ -231,7 +253,7 @@ QStatus EnableSecurity()
      */
     QCC_ASSERT(keyStoreListener == nullptr);
     keyStoreListener = CreateKeyStoreListenerInstance("/.alljoyn_keystore/central.ks");
-    QStatus status = g_msgBus->RegisterKeyStoreListener(*keyStoreListener);
+    QStatus status = s_msgBus->RegisterKeyStoreListener(*keyStoreListener);
 
     if (ER_OK == status) {
         printf("BusAttachment::RegisterKeyStoreListener successful.\n");
@@ -241,7 +263,7 @@ QStatus EnableSecurity()
 
     QCC_ASSERT(authListener == nullptr);
     authListener = new SrpKeyXListener();
-    status = g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX", authListener);
+    status = s_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX", authListener);
 
     if (ER_OK == status) {
         printf("BusAttachment::EnablePeerSecurity successful.\n");
@@ -255,12 +277,12 @@ QStatus EnableSecurity()
 /** Handle the connection to the bus, report the result to stdout, and return the result status. */
 QStatus ConnectToBus(void)
 {
-    QStatus status = g_msgBus->Connect();
+    QStatus status = s_msgBus->Connect();
 
     if (ER_OK == status) {
-        printf("BusAttachment connected to '%s'.\n", g_msgBus->GetConnectSpec().c_str());
+        printf("BusAttachment connected to '%s'.\n", s_msgBus->GetConnectSpec().c_str());
     } else {
-        printf("BusAttachment::Connect('%s') failed.\n", g_msgBus->GetConnectSpec().c_str());
+        printf("BusAttachment::Connect('%s') failed.\n", s_msgBus->GetConnectSpec().c_str());
     }
 
     return status;
@@ -272,7 +294,7 @@ void RegisterBusListener(void)
     /* Static bus listener */
     static MyBusListener s_busListener;
 
-    g_msgBus->RegisterBusListener(s_busListener);
+    s_msgBus->RegisterBusListener(s_busListener);
     printf("BusListener Registered.\n");
 }
 
@@ -281,7 +303,7 @@ void RegisterBusListener(void)
 QStatus FindAdvertisedName(void)
 {
     /* Begin discovery on the well-known name of the service to be called */
-    QStatus status = g_msgBus->FindAdvertisedName(SERVICE_NAME);
+    QStatus status = s_msgBus->FindAdvertisedName(SERVICE_NAME);
 
     if (status == ER_OK) {
         printf("org.alljoyn.Bus.FindAdvertisedName ('%s') succeeded.\n", SERVICE_NAME);
@@ -315,8 +337,10 @@ QStatus WaitForJoinSessionCompletion(void)
 /** Do a method call, report the result to stdout, and return the result status. */
 QStatus MakeMethodCall(void)
 {
-    ProxyBusObject remoteObj(*g_msgBus, SERVICE_NAME, SERVICE_PATH, s_sessionId);
-    const InterfaceDescription* alljoynTestIntf = g_msgBus->GetInterface(INTERFACE_NAME);
+    s_sessionLock->Lock(MUTEX_CONTEXT);
+    ProxyBusObject remoteObj(*s_msgBus, SERVICE_NAME, SERVICE_PATH, s_sessionId);
+    s_sessionLock->Unlock(MUTEX_CONTEXT);
+    const InterfaceDescription* alljoynTestIntf = s_msgBus->GetInterface(INTERFACE_NAME);
 
     QCC_ASSERT(alljoynTestIntf);
     remoteObj.AddInterface(*alljoynTestIntf);
@@ -330,7 +354,7 @@ QStatus MakeMethodCall(void)
     if (ER_OK != status) {
         printf("SecureConnection failed.\n");
     } else {
-        Message reply(*g_msgBus);
+        Message reply(*s_msgBus);
         MsgArg inputs[1];
         char buffer[80];
 
@@ -384,12 +408,13 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     sprintf(buffer, "SRPSecurity%s", clientName);
 
     /* Create message bus */
-    g_msgBus = new BusAttachment(buffer, true);
+    s_msgBus = new BusAttachment(buffer, true);
+    s_sessionLock = new qcc::Mutex();
 
     /* This test for nullptr is only required if new() behavior is to return nullptr
      * instead of throwing an exception upon an out of memory failure.
      */
-    if (!g_msgBus) {
+    if ((s_msgBus == nullptr) || (s_sessionLock == nullptr)) {
         status = ER_OUT_OF_MEMORY;
     }
 
@@ -423,12 +448,10 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 
     /* Deallocate bus */
-    delete g_msgBus;
-    g_msgBus = nullptr;
+    delete s_msgBus;
+    delete s_sessionLock;
     delete keyStoreListener;
-    keyStoreListener = nullptr;
     delete authListener;
-    authListener = nullptr;
 
     printf("Basic client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 

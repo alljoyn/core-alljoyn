@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <vector>
 
+#include <qcc/Mutex.h>
 #include <qcc/String.h>
 
 #include <alljoyn/AllJoynStd.h>
@@ -59,11 +60,11 @@ static const char* SERVICE_PATH = "/";
 static const SessionPort SERVICE_PORT = 25;
 
 /** Static top level message bus object */
-static BusAttachment* s_msgBus = NULL;
+static BusAttachment* s_msgBus = nullptr;
 
 static bool s_joinComplete = false;
 static String s_sessionHost;
-static SessionId s_sessionId = 0;
+static qcc::Mutex* s_sessionLock = nullptr;
 
 static volatile sig_atomic_t s_interrupt = false;
 
@@ -73,26 +74,42 @@ static void CDECL_CALL SigIntHandler(int sig)
     s_interrupt = true;
 }
 
+/** Inform the app thread that JoinSession is complete. */
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
+        if (ER_OK == status) {
+            printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+            s_sessionLock->Lock(MUTEX_CONTEXT);
+            s_joinComplete = true;
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
+        } else {
+            printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+        }
+    }
+};
+
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener {
   public:
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
+        s_sessionLock->Lock(MUTEX_CONTEXT);
         if (0 == strcmp(name, SERVICE_NAME) && s_sessionHost.empty()) {
+            s_sessionHost = name;
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
             printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
             /* We found a remote bus that is advertising basic service's well-known name so connect to it. */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
-            s_sessionHost = name;
-            s_msgBus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = s_msgBus->JoinSession(name, SERVICE_PORT, NULL, s_sessionId, opts);
-            if (ER_OK == status) {
-                printf("JoinSession SUCCESS (Session id=%d).\n", s_sessionId);
-            } else {
-                printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+            QStatus status = s_msgBus->JoinSessionAsync(name, SERVICE_PORT, nullptr, opts, &joinCb);
+            if (ER_OK != status) {
+                printf("JoinSessionAsync failed (status=%s)", QCC_StatusText(status));
             }
-            s_joinComplete = true;
+        } else {
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
         }
     }
 
@@ -105,16 +122,19 @@ class MyBusListener : public BusListener {
                    newOwner ? newOwner : "<none>");
         }
     }
+
+  private:
+    MyJoinCallback joinCb;
 };
 
 class SignalListeningObject : public BusObject {
   public:
     SignalListeningObject(BusAttachment& bus, const char* path) :
         BusObject(path),
-        nameChangedMember(NULL)
+        nameChangedMember(nullptr)
     {
         /* Add org.alljoyn.Bus.signal_sample interface */
-        InterfaceDescription* intf = NULL;
+        InterfaceDescription* intf = nullptr;
         QStatus status = bus.CreateInterface(INTERFACE_NAME, intf);
         if (status == ER_OK) {
             printf("Interface created successfully.\n");
@@ -140,7 +160,7 @@ class SignalListeningObject : public BusObject {
         status =  bus.RegisterSignalHandler(this,
                                             static_cast<MessageReceiver::SignalHandler>(&SignalListeningObject::NameChangedSignalHandler),
                                             nameChangedMember,
-                                            NULL);
+                                            nullptr);
         if (status != ER_OK) {
             printf("Failed to register signal handler for %s.nameChanged.\n", SERVICE_NAME);
         } else {
@@ -295,15 +315,16 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     signal(SIGINT, SigIntHandler);
 
     QStatus status = ER_OK;
-    SignalListeningObject* object = NULL;
+    SignalListeningObject* object = nullptr;
 
     /* Create message bus */
     s_msgBus = new BusAttachment("myApp", true);
+    s_sessionLock = new qcc::Mutex();
 
-    /* This test for NULL is only required if new() behavior is to return NULL
+    /* This test for nullptr is only required if new() behavior is to return nullptr
      * instead of throwing an exception upon an out of memory failure.
      */
-    if (s_msgBus) {
+    if ((s_msgBus != nullptr) && (s_sessionLock != nullptr)) {
         if (ER_OK == status) {
             status = StartMessageBus();
         }
@@ -337,9 +358,8 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
 
     /* Clean up */
     delete s_msgBus;
-    s_msgBus = NULL;
+    delete s_sessionLock;
     delete object;
-    object = NULL;
 
     printf("Signal consumer client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
