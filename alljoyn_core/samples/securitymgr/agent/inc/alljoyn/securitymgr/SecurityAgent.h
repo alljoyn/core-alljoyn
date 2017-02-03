@@ -136,6 +136,13 @@ class SecurityAgent {
     virtual const KeyInfoNISTP256& GetPublicKeyInfo() const = 0;
 
     /**
+     * @brief Ping an application.
+     *
+     * @param[in,out] app   The application to get the status for.
+     */
+    virtual QStatus PingApplication(const OnlineApplication& app) const = 0;
+
+    /**
      * @brief Virtual destructor for derivable class.
      */
     virtual ~SecurityAgent() { }

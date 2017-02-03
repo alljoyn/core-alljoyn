@@ -114,6 +114,21 @@ class ClaimContextImpl :
     }
 };
 
+static bool s_pingAsyncFlag = false;
+static const char* s_pingContextStr = "SecMgrPingContextString";
+class SecMgrPingAsyncCB : public BusAttachment::PingAsyncCB {
+  public:
+    SecMgrPingAsyncCB() : m_status(ER_FAIL), m_context(nullptr) { }
+
+    void PingCB(QStatus status, void* context) {
+        m_status = status;
+        m_context = context;
+        s_pingAsyncFlag = true;
+    }
+    QStatus m_status;
+    void* m_context;
+};
+
 QStatus SecurityAgentImpl::ClaimSelf()
 {
     QStatus status;
@@ -593,6 +608,28 @@ void SecurityAgentImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
 const KeyInfoNISTP256& SecurityAgentImpl::GetPublicKeyInfo() const
 {
     return publicKeyInfo;
+}
+
+QStatus SecurityAgentImpl::PingApplication(const OnlineApplication& _application) const
+{
+    QStatus status = ER_FAIL;
+    SecMgrPingAsyncCB pingCB;
+
+    appsMutex.Lock(__FILE__, __LINE__);
+    s_pingAsyncFlag = false;
+
+    busAttachment->PingAsync(_application.busName.c_str(), 1000, &pingCB, (void*)s_pingContextStr);
+    for (uint32_t msecs = 0; msecs < 1100; msecs += 5) {
+        if (s_pingAsyncFlag) {
+            break;
+        }
+        qcc::Sleep(5);
+    }
+
+    status = pingCB.m_status;
+    appsMutex.Unlock(__FILE__, __LINE__);
+
+    return status;
 }
 
 QStatus SecurityAgentImpl::GetApplication(OnlineApplication& _application) const
