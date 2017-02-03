@@ -886,6 +886,10 @@ QStatus BusObject::SignalInternal(const char* destination,
 
     std::vector<std::pair<SessionId, const char*> > emissionParams;
     if (sessionId == SESSION_ID_ALL_HOSTED) {
+        if (outMsg != NULL) {
+            QCC_LogError(ER_BAD_ARG_8, ("outMsg should be NULL when using SESSION_ID_ALL_HOSTED"));
+            return ER_BAD_ARG_8;
+        }
         sessions = bus->GetInternal().GetHostedSessions();
         std::vector<BusAttachment::Internal::Session>::iterator it;
         for (it = sessions.begin(); it != sessions.end(); ++it) {
