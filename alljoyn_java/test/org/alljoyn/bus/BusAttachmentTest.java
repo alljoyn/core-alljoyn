@@ -2140,10 +2140,53 @@ public class BusAttachmentTest extends TestCase {
                     getMethodImplementation(getClass(), "mySetPropertyImpl", new Class[]{Object.class}) };
             }
 
-            Object myMethodImpl() throws BusException {return null;}
-            void mySignalImpl(Object arg) throws BusException {}
-            Object myGetPropertyImpl() throws BusException {return null;}
-            void mySetPropertyImpl(Object arg) throws BusException {}
+            public Object myMethodImpl() throws BusException {return null;}
+            public void mySignalImpl(Object arg) throws BusException {}
+            public Object myGetPropertyImpl() throws BusException {return null;}
+            public void mySetPropertyImpl(Object arg) throws BusException {}
+        };
+
+        // Register the dynamic bus object
+        status = bus.registerBusObject(busObj, "/test");
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetMethodHandler);
+        assertEquals(1, receivedGetSignalHandler);
+        assertEquals(1, receivedGetPropertyHandler);
+    }
+
+    public void testRegisterAbstractDynamicBusObject() {
+        // Create bus attachment
+        bus = new BusAttachment(getClass().getName());
+        Status status = bus.connect();
+        assertEquals(Status.OK, status);
+
+        // Create dynamic bus object
+        BusObjectInfo info = buildInterfaceDefinitions();
+        DynamicBusObject busObj = new AbstractDynamicBusObject(info) {
+            @Override
+            public Method getMethodHandler(String interfaceName, String methodName, String signature) {
+                receivedGetMethodHandler++;
+                return getMethodImplementation(getClass(), "myMethodImpl");
+            }
+
+            @Override
+            public Method getSignalHandler(String interfaceName, String signalName, String signature) {
+                receivedGetSignalHandler++;
+                return getMethodImplementation(getClass(), "mySignalImpl", new Class[]{Object.class});
+            }
+
+            @Override
+            public Method[] getPropertyHandler(String interfaceName, String propertyName) {
+                receivedGetPropertyHandler++;
+                return new Method[] {
+                    getMethodImplementation(getClass(), "myGetPropertyImpl"),
+                    getMethodImplementation(getClass(), "mySetPropertyImpl", new Class[]{Object.class}) };
+            }
+
+            public Object myMethodImpl() throws BusException {return null;}
+            public void mySignalImpl(Object arg) throws BusException {}
+            public Object myGetPropertyImpl() throws BusException {return null;}
+            public void mySetPropertyImpl(Object arg) throws BusException {}
         };
 
         // Register the dynamic bus object
@@ -2191,6 +2234,23 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.BUS_CANNOT_ADD_HANDLER, status);
     }
 
+    public void testRegisterAbstractDynamicBusObject_invalidGetImplHandlers() {
+        // Create bus attachment
+        bus = new BusAttachment(getClass().getName());
+        Status status = bus.connect();
+        assertEquals(Status.OK, status);
+
+        // Create dynamic bus object (without providing method/signal/property getHandler or implementation Methods)
+        BusObjectInfo info = buildInterfaceDefinitions();
+        DynamicBusObject busObj = new AbstractDynamicBusObject(info) {
+            /* no getHandler overrides nor concrete implementation Methods */
+        };
+
+        // Register the dynamic bus object. No error because AbstractDynamicBusObject has default no-op handler Methods.
+        status = bus.registerBusObject(busObj, "/test");
+        assertEquals(Status.OK, status);
+    }
+
     public void testRegisterDynamicBusObject_validNullGetImplHandlers() {
         // Create bus attachment
         bus = new BusAttachment(getClass().getName());
@@ -2231,7 +2291,7 @@ public class BusAttachmentTest extends TestCase {
                 return null;  // OK because the bus object's interface definitions don't include bus properties (never called)
             }
 
-            void myMethodImpl() throws BusException {}
+            public void myMethodImpl() throws BusException {}
         };
 
         // Register the dynamic bus object
@@ -2242,22 +2302,47 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(0, receivedGetPropertyHandler);
     }
 
-    public class GenericService implements DynamicBusObject {
-        BusObjectInfo info;
+    public void testRegisterAbstractDynamicBusObject_validNullGetImplHandlers() {
+        // Create bus attachment
+        bus = new BusAttachment(getClass().getName());
+        Status status = bus.connect();
+        assertEquals(Status.OK, status);
+
+        // Initialize the bus object interface definitions to have only a bus method
+        InterfaceDef ifaceDef = new InterfaceDef("org.test.iface");
+        ifaceDef.addMethod(new MethodDef("DoSomething", "", "", "org.test.iface"));
+
+        // Create dynamic bus object. No need to override getSignalHandler and getPropertyHandler because
+        // the bus object's interface definitions don't include signals or properties (so never called).
+        DynamicBusObject busObj = new AbstractDynamicBusObject("/test", Arrays.asList(ifaceDef)) {
+            @Override
+            public Method getMethodHandler(String interfaceName, String methodName, String signature) {
+                receivedGetMethodHandler++;
+                return getMethodImplementation(getClass(), "myMethodImpl");
+            }
+
+            public void myMethodImpl() throws BusException {}
+        };
+
+        // Register the dynamic bus object
+        status = bus.registerBusObject(busObj, "/test");
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetMethodHandler);
+        assertEquals(0, receivedGetSignalHandler);
+        assertEquals(0, receivedGetPropertyHandler);
+    }
+
+    public class GenericService extends AbstractDynamicBusObject {
+        private BusAttachment bus;
 
         // Map-key format: path + interfaceName + memberName + memberSignature
         public Map<String,Integer> callbackCount = new HashMap<String,Integer>();
         public Map<String,Object> propertyMap = new HashMap<String,Object>();
 
-        public GenericService(String path, String ifaceName) {
-            info = buildInterfaceDefinitions2(path, ifaceName);
+        public GenericService(BusAttachment bus, String objPath, String ifaceName) {
+            super(buildInterfaceDefinitions2(objPath, ifaceName));
+            this.bus = bus;
         }
-
-        @Override
-        public String getPath() { return info.getPath(); }
-
-        @Override
-        public List<InterfaceDef> getInterfaces() { return info.getInterfaces(); }
 
         @Override
         public Method getMethodHandler(String interfaceName, String methodName, String signature) {
@@ -2269,14 +2354,8 @@ public class BusAttachmentTest extends TestCase {
         public Method[] getPropertyHandler(String interfaceName, String propertyName) {
             receivedGetPropertyHandler++;
             return new Method[] {
-                getMethodImplementation(getClass(), "busPropertyGetImpl", new Class[]{}),
-                getMethodImplementation(getClass(), "busPropertySetImpl", new Class[]{Object.class}) };
-        }
-
-        @Override
-        public Method getSignalHandler(String interfaceName, String signalName, String signature) {
-            receivedGetSignalHandler++;
-            return getMethodImplementation(getClass(), "busSignalImpl", new Class[]{Object[].class});
+                getMethodImplementation(getClass(), "busPropertyGetImpl"),
+                getMethodImplementation(getClass(), "busPropertySetImpl", Object.class) };
         }
 
         /** A generic implementation Method used with a bus method with any return type and any input parameters */
@@ -2288,6 +2367,7 @@ public class BusAttachmentTest extends TestCase {
             Integer count = callbackCount.get(key);
             callbackCount.put(key, count==null ? 1 : ++count);
 
+            BusObjectInfo info = new BusObjectInfo(getPath(), getInterfaces());
             MethodDef methodDef = info.getMethod(ctx.interfaceName, ctx.memberName, ctx.signature);
             String replySig = methodDef.getReplySignature();
             if (replySig == null || replySig.isEmpty()) {
@@ -2327,11 +2407,6 @@ public class BusAttachmentTest extends TestCase {
 
             return propertyMap.get(key);
         }
-
-        /** A generic implementation Method used with a bus signal with any input parameters */
-        public void busSignalImpl(Object... args) throws BusException {
-            // no-op - not needed since interface definition in buildInterfaceDefinitions2() has no bus signals
-        }
     }
 
     public void testDynamicBusObjectContainingGenericImplementationHandlers() throws Exception {
@@ -2352,7 +2427,7 @@ public class BusAttachmentTest extends TestCase {
 
         // Create and register a dynamic bus object
 
-        GenericService busObj = new GenericService(objPath, ifaceName);
+        GenericService busObj = new GenericService(bus, objPath, ifaceName);
         status = bus.registerBusObject(busObj, objPath);
         assertEquals(Status.OK, status);
 
@@ -2368,7 +2443,6 @@ public class BusAttachmentTest extends TestCase {
 
         assertEquals(4, receivedGetMethodHandler); // Note: counts based on intf def in buildInterfaceDefinitions2()
         assertEquals(3, receivedGetPropertyHandler);
-        assertEquals(0, receivedGetSignalHandler);
 
         // Test BusMethod: boolean DoSomethingNoInArg()
 
@@ -2441,6 +2515,69 @@ public class BusAttachmentTest extends TestCase {
         assertEquals("blue", (String)properties.get("StringProperty").getObject());
         assertEquals(true, ((Boolean)properties.get("BooleanProperty").getObject()).booleanValue());
         assertEquals(999, ((Integer)properties.get("IntegerProperty").getObject()).intValue());
+    }
+
+    public void testAbstractDynamicBusObjectWithDefaultImplementation() throws Exception {
+        final String busName = "org.alljoyn.bus.BusAttachmentTest";
+        final String objPath = "/defaultImplementationHandlers";
+        final String ifaceName = "org.alljoyn.bus.DynamicInterfaceForDefaultHandlerTest";
+        Object result;
+
+        // Setup BusAttachment and use DBusProxyObj to request bus name
+
+        bus = new BusAttachment(getClass().getName());
+        Status status = bus.connect();
+        assertEquals(Status.OK, status);
+
+        DBusProxyObj control = bus.getDBusProxyObj();
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                control.RequestName(busName, DBusProxyObj.REQUEST_NAME_NO_FLAGS));
+
+        // Create dynamic bus object (without overriding its default getHandlers nor providing implementation Methods)
+        BusObjectInfo info = buildInterfaceDefinitions2(objPath, ifaceName); // defines several bus methods and properties
+        DynamicBusObject busObj = new AbstractDynamicBusObject(info) {
+            /* no concrete implementation being provided here for the defined bus methods and properties */
+        };
+
+        // Create and register a dynamic bus object
+
+        status = bus.registerBusObject(busObj, objPath);
+        assertEquals(Status.OK, status);
+
+        // Get proxy using dynamic interface definition and GenericInterface invocation
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject(busName, objPath,
+                BusAttachment.SESSION_ID_ANY,
+                busObj.getInterfaces(),
+                false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        // Test calling unimplemented BusMethod: boolean DoSomethingNoInArg()
+
+        try {
+            proxy.methodCall(ifaceName, "DoSomethingNoInArg");
+            fail("Expected ErrorReplyBusException('Not implemented')");
+        } catch (BusException ex) {
+            assertEquals("Not implemented", ex.getMessage());
+        }
+
+        // Test calling unimplemented BusProperty setter: void setStringProperty(String value)
+
+        try {
+            proxy.setProperty(ifaceName, "StringProperty", "blue");
+            fail("Expected ErrorReplyBusException('Not implemented')");
+        } catch (BusException ex) {
+            assertEquals("Not implemented", ex.getMessage());
+        }
+
+        // Test calling unimplemented BusProperty getter: String getStringProperty()
+
+        try {
+            proxy.getProperty(ifaceName, "StringProperty");
+            fail("Expected ErrorReplyBusException('Not implemented')");
+        } catch (BusException ex) {
+            assertEquals("Not implemented", ex.getMessage());
+        }
     }
 
     /* Build a bus object definition containing interfaces that have methods, signals, and properties. */
