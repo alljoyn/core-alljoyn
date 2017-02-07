@@ -1353,9 +1353,6 @@ JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_compu
     }
 
     size_t digest_size;
-
-    SecurityApplicationProxy::ComputeManifestDigest(unsignedManifestXml.c_str(), *cx509Ptr, NULL, &digest_size);
-
     uint8_t* digest = nullptr;
 
     QStatus status = SecurityApplicationProxy::ComputeManifestDigest(unsignedManifestXml.c_str(), *cx509Ptr, &digest, &digest_size);
