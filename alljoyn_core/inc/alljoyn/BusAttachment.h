@@ -200,11 +200,11 @@ class BusAttachment : public MessageReceiver {
      * @param applicationName       Name of the application.
      * @param allowRemoteMessages   True if this attachment is allowed to receive messages from remote devices.
      * @param concurrency           The maximum number of concurrent method and signal handlers locally executing.
-     *                              Warning: if synchronous remote procedure calls or other blocking calls are made
-     *                              from within AllJoyn callbacks and this value is too low, the application may deadlock.
-     *                              Please see the documentation for BusAttachment::EnableConcurrentCallbacks() for details.
+     *                              This parameter is deprecated. In versions 17.04 and newer, the concurrency
+     *                              value is adjusted automatically and the number of method and signal handlers
+     *                              processed concurrently is not limited.
      */
-    BusAttachment(const char* applicationName, bool allowRemoteMessages = false, uint32_t concurrency = 4);
+    BusAttachment(const char* applicationName, bool allowRemoteMessages = false, uint32_t concurrency = 0);
 
     /** Destructor */
     virtual ~BusAttachment();
@@ -212,9 +212,12 @@ class BusAttachment : public MessageReceiver {
     /**
      * Get the concurrent method and signal handler limit.
      *
+     * @deprecated In versions 17.04 and newer, the concurrency value is adjusted automatically
+     *             and the number of method and signal handlers processed concurrently is not limited.
+     *
      * @return The maximum number of concurrent method and signal handlers.
      */
-    uint32_t GetConcurrency();
+    QCC_DEPRECATED_ON(uint32_t GetConcurrency(), 17.04);
 
     /**
      * Get the connect spec used by the BusAttachment
@@ -239,28 +242,20 @@ class BusAttachment : public MessageReceiver {
      * calls such as JoinSession(), AdvertiseName(), CancelAdvertisedName(),
      * FindAdvertisedName(), CancelFindAdvertisedName(), SetLinkTimeout(), etc.
      *
-     * EnableConcurrentCallbacks doesn't take effect when a BusAttachment is
-     * created with just one thread. If the BusAttachment is created with just
-     * one thread, i.e. `ajn::BusAttachment busAttachment(appName, true, 1)` and
-     * the application developer attempts to make a blocking method call in a
-     * callback after invoking EnableConcurrentCallbacks(), the application will
-     * deadlock.
+     * If this function is not called, any non-asynchronous remote procedure call
+     * made from within an AllJoyn callback will immediately return with an
+     * ER_BUS_BLOCKING_CALL_NOT_ALLOWED error.
      *
-     * For the same reason that EnableConcurrentCallbacks cannot be used with
-     * just one thread, the maximum number of concurrent callbacks is limited
-     * to the value specified when creating the BusAttachment. If no concurrency
-     * value was chosen the default is 4. It is the application developers
-     * responsibility to make sure the maximum number of concurrent callbacks is
-     * not exceeded. If the maximum number is exceeded the application will
-     * deadlock.
-     *
-     * For the above reasons, if time-consuming blocking calls from within AllJoyn
-     * callbacks are needed, it is recommended to delegate them to application-owned
-     * threads. If remote procedure calls (e.g., JoinSession()) from within AllJoyn
-     * callbacks are needed, it is recommended to use the asynchronous variants
-     * (e.g., JoinSessionAsync()) and process their callbacks in threads owned
-     * by the application. Please refer to the AboutClient sample for an implementation
-     * example.
+     * If this function is called, non-asynchronous remote procedure calls made
+     * from within callbacks will be handled by the BusAttachment's thread pool.
+     * The number of calls processed in this way is not limited, however a large number
+     * of calls in a short period of time could significantly increase the usage
+     * of system resources by the AllJoyn process. Therefore, if a large number
+     * of remote system calls from callbacks is expected, it is recommended
+     * to use the asynchronous variants of remote procedure calls (e.g.,
+     * JoinSessionAsync()) and process their callbacks in threads owned
+     * and managed by the application.
+     * Please refer to the AboutClient sample for an implementation example.
      */
     void EnableConcurrentCallbacks();
 
@@ -2001,8 +1996,10 @@ class BusAttachment : public MessageReceiver {
      * @param internal     Internal state.
      * @param concurrency  The maximum number of concurrent method and signal
      *                     handlers locally executing.
+     *                     In versions 17.04 and newer, the concurrency value is adjusted automatically
+     *                     and the number of method and signal handlers processed concurrently is not limited.
      */
-    BusAttachment(Internal* internal, uint32_t concurrency);
+    BusAttachment(Internal* internal, uint32_t concurrency = 0);
     /// @endcond
 
     /// @cond ALLJOYN_DEV
@@ -2114,7 +2111,6 @@ class BusAttachment : public MessageReceiver {
     qcc::String connectSpec;  /**< The connect spec used to connect to the bus */
     bool isStarted;           /**< Indicates if the bus has been started */
     bool isStopping;          /**< Indicates Stop has been called */
-    uint32_t concurrency;     /**< The maximum number of concurrent method and signal handlers locally executing */
     Internal* busInternal;    /**< Internal state information */
 
     /**
