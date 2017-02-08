@@ -70,13 +70,10 @@ typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus stat
 /**
  * Allocate an alljoyn_busattachment.
  *
- * By default this will create an alljoyn_busattachment capable of handling 4 concurrent method and signal handlers.
- * This is the recommended default value.  If for some reason the application must be able to handle a different
- * number of concurrent methods use alljoyn_busattachment_create_concurrency.
+ * This will create an alljoyn_busattachment capable of handling method and signal handlers concurrently.
  *
  * @note Any alljoyn_busattachment allocated using this function must be freed using alljoyn_busattachment_destroy
  *
- * @see alljoyn_busattachment_create_concurrency
  * @see alljoyn_busattachment_destroy
  *
  * @param applicationName       Name of the application.
@@ -88,6 +85,9 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
 
 /**
  * Allocate an alljoyn_busattachment.
+ *
+ * @deprecated In versions 17.04 and newer, the maximum number of concurrent method and signal handlers locally executing
+ * is not limited as the concurrency value is adjusted automatically. Please use alljoyn_busattachment_create instead.
  *
  * This will Allocate an alljoyn_busattachment that is capable of using a different value for concurrency then
  * the default value of 4.
@@ -103,7 +103,9 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
  *
  * @return the allocated alljoyn_busattachment
  */
-extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const char* applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrency);
+QCC_DEPRECATED_ON(
+    extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const char* applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrency),
+    17.04);
 
 /**
  * Free an allocated alljoyn_busattachment.
@@ -276,12 +278,17 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_join(alljoyn_busattachment b
 /**
  * Get the concurrent method and signal handler limit.
  *
+ * @deprecated In versions 17.04 and newer, the concurrency value is adjusted automatically
+ *             and the number of method and signal handlers processed concurrently is not limited.
+ *
  * @param bus    The alljoyn_busattachment on which to get the concurrent method and
  *               signal handler limit.
  *
  * @return The maximum number of concurrent method and signal handlers.
  */
-extern AJ_API uint32_t AJ_CALL alljoyn_busattachment_getconcurrency(alljoyn_busattachment bus);
+QCC_DEPRECATED_ON(
+    extern AJ_API uint32_t AJ_CALL alljoyn_busattachment_getconcurrency(alljoyn_busattachment bus),
+    17.04);
 
 /**
  * Get the connect spec used by the alljoyn_busattachment
@@ -312,21 +319,19 @@ extern AJ_API const char* AJ_CALL alljoyn_busattachment_getconnectspec(alljoyn_b
  * alljoyn_busattachment_canceladvertisename(),
  * alljoyn_busattachment_setlinktimeout(), etc.
  *
- * alljoyn_busattachment_enableconcurrentcallbacks doesn't take effect when a
- * alljoyn_busattachment is created with just one thread. If the
- * alljoyn_busattachment is created with just one thread,
- * i.e.`alljoyn_busattachment_create_concurrency(appName, true, 1)`, and the
- * application developer attempts to make a blocking method call in a callback
- * after invoking alljoyn_busattachment_enableconcurrentcallbacks(), the
- * application will deadlock.
+ * If this function is not called, any non-asynchronous remote procedure call
+ * made from within an AllJoyn callback will immediately return with an
+ * ER_BUS_BLOCKING_CALL_NOT_ALLOWED error.
  *
- * For the same reason that alljoyn_busattachment_enableconcurrentcallbacks
- * cannot be used with just one thread, the maximum number of concurrent
- * callbacks is limited to the value specified when creating the BusAttachment.
- * If no concurrency value was chosen the default is 4. It is the application
- * developers responsibility to make sure the maximum number of concurrent
- * callbacks is not exceeded. If the maximum number is exceeded the application
- * will deadlock.
+ * If this function is called, non-asynchronous remote procedure calls made
+ * from within callbacks will be handled by the BusAttachment's thread pool.
+ * The number of calls processed in this way is not limited, however a large number
+ * of calls in a short period of time could significantly increase the usage
+ * of system resources by the AllJoyn process. Therefore, if a large number
+ * of remote system calls from callbacks is expected, it is recommended
+ * to use the asynchronous variants of remote procedure calls (e.g.,
+ * alljoyn_busattachment_joinsessionasync) and process their callbacks in
+ * threads owned and managed by the application.
  *
  * @param bus    The alljoyn_busattachment to enable concurrent callbacks on
  */

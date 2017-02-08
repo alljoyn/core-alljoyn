@@ -67,7 +67,6 @@ static int g_sleepBeforeLeave = 0;
 static bool g_useMultipoint = true;
 static bool g_suppressNameOwnerChanged = false;
 static bool g_keep_retrying_in_failure = false;
-static uint32_t g_concurrent_threads = 4;
 
 SessionPort SESSION_PORT = 26;
 
@@ -413,15 +412,6 @@ int CDECL_CALL main(int argc, char** argv)
             g_suppressNameOwnerChanged = true;
         } else if (0 == strcmp("-fa", argv[i])) {
             g_keep_retrying_in_failure = true;
-        } else if (0 == strcmp("-ct", argv[i])) {
-            ++i;
-            if (i == argc) {
-                printf("option %s requires a parameter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                g_concurrent_threads = qcc::StringToU32(argv[i], 0);;
-            }
         } else if (0 == strcmp("-sp", argv[i])) {
             ++i;
             if (i == argc) {
@@ -455,7 +445,7 @@ int CDECL_CALL main(int argc, char** argv)
     qcc::String clientArgs = env->Find("BUS_ADDRESS");
 
     /* Create message bus */
-    g_msgBus = new BusAttachment("bbjoin", true, g_concurrent_threads);
+    g_msgBus = new BusAttachment("bbjoin", true);
     LocalTestObject* testObj = nullptr;
     if (g_msgBus != nullptr) {
         status = g_msgBus->Start();
