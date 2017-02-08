@@ -206,7 +206,7 @@ TEST_F(RemoteEndpointTest, TxFail)
 class TestBusAttachment : public BusAttachment {
   public:
     TransportFactoryContainer factories;
-    TestBusAttachment() : BusAttachment(new Internal("RemoteEndpointTest", *this, factories, new DaemonRouter, true, "", 4), 4) { }
+    TestBusAttachment() : BusAttachment(new Internal("RemoteEndpointTest", *this, factories, new DaemonRouter, true, "")) { }
 };
 
 TEST_F(RemoteEndpointTest, TxMaxControlMessages)

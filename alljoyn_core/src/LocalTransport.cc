@@ -67,7 +67,7 @@ static const uint32_t LOCAL_ENDPOINT_MAXALARMS = 10;
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
     Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) :
-        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, LOCAL_ENDPOINT_MAXALARMS),
+        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, LOCAL_ENDPOINT_MAXALARMS, true),
         AlarmListener(), endpoint(endpoint), pendingWork(),
         needDeferredCallbacks(false), needObserverWork(false),
         needCachedPropertyReplyWork(false),
@@ -207,9 +207,9 @@ class _LocalEndpoint::CachedGetPropertyReplyContext {
 
 };
 
-_LocalEndpoint::_LocalEndpoint(BusAttachment& bus, uint32_t concurrency) :
+_LocalEndpoint::_LocalEndpoint(BusAttachment& bus) :
     _BusEndpoint(ENDPOINT_TYPE_LOCAL),
-    dispatcher(new Dispatcher(this, concurrency)),
+    dispatcher(new Dispatcher(this)),
     running(false),
     isRegistered(false),
     bus(&bus),

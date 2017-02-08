@@ -373,31 +373,6 @@ TEST(BusAttachmentTest, isstarted_isstopping) {
     alljoyn_busattachment_destroy(bus);
 }
 
-TEST(BusAttachmentTest, getconcurrency) {
-    alljoyn_busattachment bus = NULL;
-    unsigned int concurrency = (unsigned int)-1;
-    bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
-
-    concurrency = alljoyn_busattachment_getconcurrency(bus);
-    //The default value for getconcurrency is 4
-    EXPECT_EQ(4u, concurrency) << "  Expected a concurrency of 4 got " << concurrency;
-
-    alljoyn_busattachment_destroy(bus);
-
-    bus = NULL;
-    concurrency = (unsigned int)-1;
-
-    bus = alljoyn_busattachment_create_concurrency(s_busAttachmentTestName, QCC_TRUE, 8);
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
-
-    concurrency = alljoyn_busattachment_getconcurrency(bus);
-    //The default value for getconcurrency is 8
-    EXPECT_EQ(8u, concurrency) << "  Expected a concurrency of 8 got " << concurrency;
-
-    alljoyn_busattachment_destroy(bus);
-}
-
 TEST(BusAttachmentTest, isconnected)
 {
     QStatus status;
