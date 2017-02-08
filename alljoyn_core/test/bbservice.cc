@@ -763,7 +763,6 @@ int CDECL_CALL main(int argc, char** argv)
     unsigned long reportInterval = 1000;
     const char* keyStore = NULL;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
-    unsigned long concurrencyLevel = 4;
     unsigned long run_time = 0;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -843,15 +842,6 @@ int CDECL_CALL main(int argc, char** argv)
             secPolicy = AJ_IFC_SECURITY_REQUIRED;
         } else if (0 == strcmp("-so", argv[i])) {
             objSecure = true;
-        } else if (0 == strcmp("-con", argv[i])) {
-            ++i;
-            if (i == argc) {
-                printf("option %s requires a parameter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                concurrencyLevel = strtoul(argv[i], NULL, 10);
-            }
         } else if (0 == strcmp("-dcon", argv[i])) {
             g_disableConcurrency = true;
         } else if (0 == strcmp("-dpws", argv[i])) {
@@ -935,7 +925,7 @@ int CDECL_CALL main(int argc, char** argv)
     qcc::String clientArgs = env->Find("BUS_ADDRESS");
 
     /* Create message bus */
-    g_msgBus = new BusAttachment("bbservice", true, concurrencyLevel);
+    g_msgBus = new BusAttachment("bbservice", true);
 
     /* Add org.alljoyn.alljoyn_test interface */
     InterfaceDescription* testIntf = NULL;
