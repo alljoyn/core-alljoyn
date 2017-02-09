@@ -51,7 +51,7 @@ AJNAboutDataListenerImpl::~AJNAboutDataListenerImpl()
     m_delegate = nil;
 }
 
-
+// TODO: add more documentation for the Key/Value pair requirements here.
 /**
  * Creating the MsgArg that is returned when a user calls
  * org.alljoyn.About.GetAboutData. The returned MsgArg must contain the
@@ -59,7 +59,6 @@ AJNAboutDataListenerImpl::~AJNAboutDataListenerImpl()
  *
  * The MsgArg will contain the signature `a{sv}`.
  *
- * TODO add more documentation for the Key/Value pair requirements here.
  *
  * @param[out] msgArg a the dictionary containing all of the AboutData fields for
  *                    the specified language.  If language is not specified the default
