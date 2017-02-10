@@ -1,0 +1,62 @@
+/******************************************************************************
+ * Copyright AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ******************************************************************************/
+
+#import <Foundation/Foundation.h>
+#import "DoorAboutListener.h"
+#import "AJNAboutData.h"
+
+@interface DoorAboutListener ()
+
+@property (nonatomic, strong) id<DoorFoundDelegate> doorFoundDelegate;
+@end
+
+@implementation DoorAboutListener
+
+- (id)initWithDoorFoundDelegate:(id<DoorFoundDelegate>)doorFoundDelegate;
+{
+    self = [super init];
+    if (self != nil) {
+        _doorFoundDelegate = doorFoundDelegate;
+    }
+    return self;
+}
+
+- (void)didReceiveAnnounceOnBus:(NSString *)busName withVersion:(uint16_t)version withSessionPort:(AJNSessionPort)port withObjectDescription:(AJNMessageArgument *)objectDescriptionArg withAboutDataArg:(AJNMessageArgument *)aboutDataArg
+{
+    AJNAboutData* about = [[AJNAboutData alloc] initWithMsgArg:aboutDataArg andLanguage:@"en"];
+    NSString* appName = nil;
+    QStatus status = [about getAppName:&appName andLanguage:@"en"];
+    if (ER_OK != status) {
+        NSLog(@"Failed to GetAppName - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+        return;
+    }
+
+    NSString* deviceName = nil;
+    status = [about getDeviceName:&deviceName andLanguage:@"en"];
+    if (ER_OK != status) {
+        NSLog(@"Failed to GetDeviceName - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+        return;
+    }
+
+    [_doorFoundDelegate foundDoorObjectAt:busName port:port];
+}
+
+- (void)removeDoorName:(NSString*)doorName
+{
+//    [self.doors removeObject:doorName]; TODO: check when door have to be removed and implement it in doorFoundDelegate protocol
+}
+
+@end

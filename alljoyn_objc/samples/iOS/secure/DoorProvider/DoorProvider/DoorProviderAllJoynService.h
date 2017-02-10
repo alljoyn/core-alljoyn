@@ -14,20 +14,26 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#import "alljoyn/Status.h"
+#import "AllJoynStatusMessageListener.h"
 
-@interface ViewController : UIViewController
+typedef enum {
+    STARTED,
+    STOPED,
+    UNDEFINED
+} ServiceState;
 
-@property (weak, nonatomic) IBOutlet UIButton *startButton;
-@property (weak, nonatomic) IBOutlet UIButton *signalButton;
-@property (weak, nonatomic) IBOutlet UITextField *appNameField;
-@property (weak, nonatomic) IBOutlet UITextView *textView;
-@property (weak, nonatomic) IBOutlet UISwitch *autoSignalSwitch;
+@interface DoorProviderAllJoynService : NSObject
 
-- (IBAction)didTouchStartButton:(id)sender;
+@property (nonatomic, readonly) ServiceState serviceState;
+@property (nonatomic, readonly) NSString *appName;
 
-- (IBAction)didTouchSignalButton:(id)sender;
-
-- (IBAction)didToggleAutoSignal:(id)sender;
+- (id)init;
+- (id)initWithMessageListener:(id<AllJoynStatusMessageListener>)messageListener;
+- (QStatus)startWithName:(NSString *)appName;
+- (QStatus)stop;
+- (void)sendDoorEvent;
+- (QStatus)toggleAutoSignal;
 
 @end
