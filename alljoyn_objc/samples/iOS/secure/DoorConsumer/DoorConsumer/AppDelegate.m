@@ -28,8 +28,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AppDelegate.h"
+#import "ViewController.h"
+
+
+static NSString* kApplicationName = @"DoorConsumer";
 
 @interface AppDelegate ()
+
+@property (nonatomic, strong) DoorConsumerAllJoynService *doorConsumerService;
 
 @end
 
@@ -37,7 +43,11 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    ViewController *viewController = (ViewController *) self.window.rootViewController;
+    _doorConsumerService = [[DoorConsumerAllJoynService alloc] initWithMessageListener: viewController];
+    if ([self startConsumer] == ER_OK) {
+        [viewController didReceiveAllJoynStatusMessage:@"DoorConsumer has been started successfully\n"];
+    }
     return YES;
 }
 
@@ -60,7 +70,27 @@
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
-    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
 }
+
+- (DoorConsumerAllJoynService*)doorConsumerAllJoynService {
+    return _doorConsumerService;
+}
+
+- (QStatus)startConsumer {
+    QStatus status = ER_OK;
+    @synchronized (self) {
+        status = [_doorConsumerService startWithName:kApplicationName];
+    }
+    return status;
+}
+
+- (QStatus)stopConsumer {
+    QStatus status = ER_OK;
+    @synchronized (self) {
+        status = [_doorConsumerService stop];
+    }
+    return status;
+}
+
 
 @end
