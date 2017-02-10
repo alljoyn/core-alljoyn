@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//
+//    
 //    SPDX-License-Identifier: Apache-2.0
-//
+//    
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//
+//    
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//
+//    
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//
+//    
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -42,28 +42,12 @@
     _appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
 }
 
-- (IBAction)didTouchSignalButton:(id)sender
-{
-    @synchronized (self) {
-        [_appDelegate.doorProviderAllJoynService sendDoorOpenEvent];
-        [self didReceiveStatusUpdateMessage:@"Open door event is sent\n"];
-    }
-}
-
-- (IBAction)didToggleAutoSignal:(id)sender
-{
-    @synchronized (self) {
-        [_appDelegate.doorProviderAllJoynService toggleAutoSignal];
-        [self didReceiveStatusUpdateMessage:@"Enabling automatic signaling of door events ... \n"];
-        [self.autoSignalSwitch setEnabled:NO];
-    }
-}
-
 - (void)didReceiveAllJoynStatusMessage:(NSString *)message {
     [self didReceiveStatusUpdateMessage:message];
 }
 
-- (void)didReceiveStatusUpdateMessage:(NSString *)message {
+- (void)didReceiveStatusUpdateMessage:(NSString *)message
+{
     dispatch_async(dispatch_get_main_queue(), ^{
         NSMutableString *string = self.textView.text.length ? [self.textView.text mutableCopy] : [[NSMutableString alloc] init];
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
@@ -74,6 +58,22 @@
         [self.textView setText:string];
         NSLog(@"%@",message);
     });
+}
+
+- (IBAction)didTouchOpenButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService openDoors];
+}
+
+- (IBAction)didTouchCloseButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService closeDoors];
+}
+
+- (IBAction)didTouchGetStateButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService getDoorsState];
+}
+
+- (IBAction)didTouchGetStatePropertyButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService getDoorsStateProperty];
 }
 
 @end
