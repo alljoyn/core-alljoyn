@@ -27,14 +27,49 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+#import <Foundation/Foundation.h>
+#import "DoorAboutListener.h"
+#import "AJNAboutData.h"
 
+@interface DoorAboutListener ()
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
+@property (nonatomic, strong) id<DoorFoundDelegate> doorFoundDelegate;
+@end
 
-@property (strong, nonatomic) UIWindow *window;
+@implementation DoorAboutListener
 
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+- (id)initWithDoorFoundDelegate:(id<DoorFoundDelegate>)doorFoundDelegate;
+{
+    self = [super init];
+    if (self != nil) {
+        _doorFoundDelegate = doorFoundDelegate;
+    }
+    return self;
+}
+
+- (void)didReceiveAnnounceOnBus:(NSString *)busName withVersion:(uint16_t)version withSessionPort:(AJNSessionPort)port withObjectDescription:(AJNMessageArgument *)objectDescriptionArg withAboutDataArg:(AJNMessageArgument *)aboutDataArg
+{
+    AJNAboutData* about = [[AJNAboutData alloc] initWithMsgArg:aboutDataArg andLanguage:@"en"];
+    NSString* appName = nil;
+    QStatus status = [about getAppName:&appName andLanguage:@"en"];
+    if (ER_OK != status) {
+        NSLog(@"Failed to GetAppName - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+        return;
+    }
+
+    NSString* deviceName = nil;
+    status = [about getDeviceName:&deviceName andLanguage:@"en"];
+    if (ER_OK != status) {
+        NSLog(@"Failed to GetDeviceName - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+        return;
+    }
+
+    [_doorFoundDelegate foundDoorObjectAt:busName port:port];
+}
+
+- (void)removeDoorName:(NSString*)doorName
+{
+//    [self.doors removeObject:doorName]; TODO: check when door have to be removed and implement it in doorFoundDelegate protocol
+}
 
 @end

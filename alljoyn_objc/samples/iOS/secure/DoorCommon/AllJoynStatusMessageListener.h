@@ -27,14 +27,9 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+@protocol AllJoynStatusMessageListener
 
-
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
-
-@property (strong, nonatomic) UIWindow *window;
-
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+@required
+- (void)didReceiveAllJoynStatusMessage:(NSString *)message;
 
 @end

@@ -27,14 +27,12 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+#import "AJNAuthenticationListener.h"
 
+@interface DefaultECDHEListener : NSObject<AJNAuthenticationListener>
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
-
-@property (strong, nonatomic) UIWindow *window;
-
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+- (id)init;
+- (QStatus)setPSK:(const uint8_t *)secret secretSize:(size_t)secretSize;
+- (QStatus)setPassword:(const uint8_t*)password passwordSize:(size_t)passwordSize;
 
 @end

@@ -27,14 +27,53 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+#import "ViewController.h"
 
+@interface ViewController ()
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
+@property (nonatomic, strong) AppDelegate *appDelegate;
 
-@property (strong, nonatomic) UIWindow *window;
+@end
 
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    _appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
+}
+
+- (void)didReceiveAllJoynStatusMessage:(NSString *)message {
+    [self didReceiveStatusUpdateMessage:message];
+}
+
+- (void)didReceiveStatusUpdateMessage:(NSString *)message
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSMutableString *string = self.textView.text.length ? [self.textView.text mutableCopy] : [[NSMutableString alloc] init];
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        [formatter setTimeStyle:NSDateFormatterMediumStyle];
+        [formatter setDateStyle:NSDateFormatterShortStyle];
+        [string appendFormat:@"[%@] ",[formatter stringFromDate:[NSDate date]]];
+        [string appendString:message];
+        [self.textView setText:string];
+        NSLog(@"%@",message);
+    });
+}
+
+- (IBAction)didTouchOpenButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService openDoors];
+}
+
+- (IBAction)didTouchCloseButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService closeDoors];
+}
+
+- (IBAction)didTouchGetStateButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService getDoorsState];
+}
+
+- (IBAction)didTouchGetStatePropertyButton:(id)sender {
+    [_appDelegate.doorConsumerAllJoynService getDoorsStateProperty];
+}
 
 @end

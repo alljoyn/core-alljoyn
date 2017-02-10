@@ -27,14 +27,20 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+#import <Foundation/Foundation.h>
+#import "AJNBusAttachment.h"
+#import "AJNPermissionConfigurationListener.h"
 
+@protocol DoorServiceToogleToClaimedModeListener <NSObject>
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
+@required
+- (QStatus)setSecurityForClaimedMode;
 
-@property (strong, nonatomic) UIWindow *window;
+@end
 
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+@interface DoorCommonPCL : NSObject<AJNPermissionConfigurationListener>
+
+- (id)initWithBus:(AJNBusAttachment*)bus service:(id<DoorServiceToogleToClaimedModeListener>)doorService;
+- (QStatus)waitForClaimedState;
 
 @end

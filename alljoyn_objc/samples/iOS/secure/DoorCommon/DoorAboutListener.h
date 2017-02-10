@@ -27,14 +27,18 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+#import "AJNAboutListener.h"
 
+@protocol DoorFoundDelegate <NSObject>
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
+@required
+- (void)foundDoorObjectAt:(NSString *)busName port:(AJNSessionPort)port;
 
-@property (strong, nonatomic) UIWindow *window;
+@end
 
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+@interface DoorAboutListener : NSObject<AJNAboutListener>
+
+- (id)initWithDoorFoundDelegate:(id<DoorFoundDelegate>)doorFoundDelegate;
+- (void)removeDoorName:(NSString*)doorName;
 
 @end

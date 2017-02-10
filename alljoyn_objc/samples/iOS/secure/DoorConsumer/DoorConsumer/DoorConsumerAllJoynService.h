@@ -27,14 +27,28 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
-#import "DoorProviderAllJoynService.h"
+#import <Foundation/Foundation.h>
+#import "alljoyn/Status.h"
+#import "AllJoynStatusMessageListener.h"
 
+typedef enum {
+    STARTED,
+    STOPED,
+    UNDEFINED
+} ServiceState;
 
-@interface AppDelegate : UIResponder <UIApplicationDelegate>
+@interface DoorConsumerAllJoynService : NSObject
 
-@property (strong, nonatomic) UIWindow *window;
+@property (nonatomic, readonly) ServiceState serviceState;
+@property (nonatomic, readonly) NSString *appName;
 
-- (DoorProviderAllJoynService*)doorProviderAllJoynService;
+- (id)init;
+- (id)initWithMessageListener:(id<AllJoynStatusMessageListener>)messageListener;
+- (QStatus)startWithName:(NSString *)appName;
+- (QStatus)stop;
+- (BOOL)openDoors;
+- (BOOL)closeDoors;
+- (BOOL)getDoorsState;
+- (BOOL)getDoorsStateProperty;
 
 @end

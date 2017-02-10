@@ -28,10 +28,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <UIKit/UIKit.h>
+#import "DoorConsumerAllJoynService.h"
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
 
+- (DoorConsumerAllJoynService*)doorConsumerAllJoynService;
 
 @end
