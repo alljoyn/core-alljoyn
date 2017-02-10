@@ -35,12 +35,13 @@ public class PermissionConfiguratorTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
-    private PermissionConfigurator permissionConfigurator;
     private BusAttachment busAttachment;
-    private BusAttachment peer1Bus;
-    private BusAttachment securityManagerBus;
+    private PermissionConfigurator permissionConfigurator;
 
-    private String defaultManifestTemplate = "<manifest>" +
+    private BusAttachment peer1Bus;
+    private PermissionConfigurator pcPeer1;
+
+    private static final String defaultManifestTemplate = "<manifest>" +
     "<node>" +
     "<interface name=\"org.alljoyn.security2.test\">" +
     "<method name=\"Up\">" +
@@ -58,17 +59,17 @@ public class PermissionConfiguratorTest extends TestCase {
     "</node>" +
     "</manifest>";
 
+    private static final String AUTH_NULL = "ALLJOYN_ECDHE_NULL";
+
     public void setUp() throws Exception {
         busAttachment = new BusAttachment("PermissionConfiguratorTest");
         busAttachment.connect();
+        permissionConfigurator = busAttachment.getPermissionConfigurator();
 
         peer1Bus = new BusAttachment("peer1Bus");
         peer1Bus.connect();
         registerAuthListener(peer1Bus);
-
-        securityManagerBus = new BusAttachment("securityManagerBus");
-        securityManagerBus.connect();
-        registerAuthListener(securityManagerBus);
+        pcPeer1 = peer1Bus.getPermissionConfigurator();
     }
 
     public void tearDown() throws Exception {
@@ -81,7 +82,7 @@ public class PermissionConfiguratorTest extends TestCase {
     private Status registerAuthListener(BusAttachment bus) throws Exception {
         Status status = Status.OK;
         if (System.getProperty("os.name").startsWith("Windows")) {
-            status = bus.registerAuthListener("ALLJOYN_ECDHE_NULL", null, null, false, pclistener);
+            status = bus.registerAuthListener(AUTH_NULL, null, null, false, pclistener);
         } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
             /*
              * on some Android devices File.createTempFile trys to create a file in
@@ -90,18 +91,17 @@ public class PermissionConfiguratorTest extends TestCase {
              * This code assumes that the junit tests will have file IO permission
              * for /data/data/org.alljoyn.bus
              */
-            status = bus.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
+            status = bus.registerAuthListener(AUTH_NULL, null,
                             "/data/data/org.alljoyn.bus/files/alljoyn.ks", false, pclistener);
         } else {
-            status = bus.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
+            status = bus.registerAuthListener(AUTH_NULL, null,
                             File.createTempFile(bus.getUniqueName().replaceAll(":", ""), "ks").getAbsolutePath(), false, pclistener);
         }
         return status;
     }
 
-    public void testVeryBasic() throws Exception {
+    public void testError() throws Exception {
         //Need to register AuthListener to be able to use permissionConfigurator
-        permissionConfigurator = busAttachment.getPermissionConfigurator();
         try {
             permissionConfigurator.getApplicationState();
             fail("didn't fail from unregistered AuthListener");
@@ -112,20 +112,13 @@ public class PermissionConfiguratorTest extends TestCase {
 
     public void testNotClaimable() throws Exception {
         assertEquals(Status.OK, registerAuthListener(busAttachment));
-        SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,busAttachment.getUniqueName(),(short)0);
-        assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, sap.getApplicationState());
+        assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, permissionConfigurator.getApplicationState());
     }
 
-    public void testBasic() throws Exception {
+    public void testSettersAndGetters() throws Exception {
         assertEquals(Status.OK, registerAuthListener(busAttachment));
 
-        SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,busAttachment.getUniqueName(),(short)0);
-        assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, sap.getApplicationState());
-
-        permissionConfigurator = busAttachment.getPermissionConfigurator();
         permissionConfigurator.setManifestTemplateFromXml(defaultManifestTemplate);
-
-        assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE, sap.getApplicationState());
 
         assertNotNull(permissionConfigurator.getManifestTemplateAsXml());
         permissionConfigurator.setApplicationState(PermissionConfigurator.ApplicationState.CLAIMED);
@@ -162,31 +155,27 @@ public class PermissionConfiguratorTest extends TestCase {
      */
     public void testGetAndUpdateIdentity() throws Exception {
 
-        PermissionConfigurator pcPeer1 = peer1Bus.getPermissionConfigurator();
         pcPeer1.setManifestTemplateFromXml(ManifestTestHelper.MANIFEST_ALL_INCLUSIVE);
 
         assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE,
                 pcPeer1.getApplicationState());
 
-        //Create admin group key
-        PermissionConfigurator permissionConfigurator = securityManagerBus.getPermissionConfigurator();
-        KeyInfoNISTP256 securityManagerKey = permissionConfigurator.getSigningPublicKey();
-
-        //Random GUID used for the SecurityManager
-        UUID securityManagerGuid = UUID.randomUUID();
+        //Getting Parameters for claim call
+        KeyInfoNISTP256 pcPeer1Key = pcPeer1.getSigningPublicKey();
+        UUID guid = UUID.randomUUID();
 
         //Peer public key used to generate the identity certificate chain
-        ECCPublicKey peer1PublicKey = pcPeer1.getSigningPublicKey().getPublicKey();
+        ECCPublicKey peer1PublicKey = pcPeer1Key.getPublicKey();
 
         //Create identityCertChain
         CertificateX509 identityCertChain[] = CertificateTestHelper.createIdentityCert("0",
-                    securityManagerGuid,
+                    guid,
                     peer1PublicKey,
                     "Alias",
                     3600,
-                    securityManagerBus);
+                    peer1Bus);
 
-        String signedManifest = securityManagerBus.getPermissionConfigurator().computeThumbprintAndSignManifestXml(
+        String signedManifest = pcPeer1.computeThumbprintAndSignManifestXml(
                 identityCertChain[0],
                 ManifestTestHelper.MANIFEST_ALL_INCLUSIVE);
 
@@ -194,15 +183,15 @@ public class PermissionConfiguratorTest extends TestCase {
          * Claim Peer1
          * the certificate authority is self signed so the certificateAuthority
          * key is the same as the adminGroup key.
-         * For this test the adminGroupId is a randomly generated GUID. As long as the
+         * For this test the guid is a randomly generated GUID. As long as the
          * GUID is consistent it's unimportant that the GUID is random.
          * Use generated identity certificate signed by the securityManager
          * Since we are only interested in claiming the peer we are using an all
          * inclusive manifest.
          */
-        pcPeer1.claim(securityManagerKey,
-                    securityManagerGuid,
-                    securityManagerKey,
+        pcPeer1.claim(pcPeer1Key,
+                    guid,
+                    pcPeer1Key,
                     identityCertChain,
                     new String[]{signedManifest});
 
@@ -211,29 +200,114 @@ public class PermissionConfiguratorTest extends TestCase {
         CertificateX509[] returnedCertChain = pcPeer1.getIdentity();
         assertEquals(1, returnedCertChain.length);
 
-        byte[] encodedReturnedCert = returnedCertChain[0].encodeCertificateDER();
-        assertNotNull(encodedReturnedCert);
-        assertTrue(0 != encodedReturnedCert.length);
-
-        byte[] encodedSourceCert = identityCertChain[0].encodeCertificateDER();
-        assertArrayEquals(encodedSourceCert, encodedReturnedCert);
+        assertArrayEquals(identityCertChain[0].encodeCertificateDER(), returnedCertChain[0].encodeCertificateDER());
 
         CertificateId certId = pcPeer1.getIdentityCertificateId();
-        assertNotNull(certId.getSerial());
+        assertArrayEquals(identityCertChain[0].getSerial(), certId.getSerial().getBytes());
 
         //Create identityCertChain
         CertificateX509 identityCertChain2[] = CertificateTestHelper.createIdentityCert("01234",
-                    securityManagerGuid,
+                    guid,
                     peer1PublicKey,
                     "Alias",
                     3600,
-                    securityManagerBus);
+                    peer1Bus);
 
         pcPeer1.updateIdentity(identityCertChain2, new String[]{signedManifest});
 
         CertificateId certId2 = pcPeer1.getIdentityCertificateId();
         assertEquals(certId2.getSerial(), new String(identityCertChain2[0].getSerial()));
-        assertEquals(certId2.getIssuerKeyInfo().getPublicKey(), securityManagerBus.getPermissionConfigurator().getSigningPublicKey().getPublicKey());
+        assertEquals(certId2.getIssuerKeyInfo().getPublicKey(), peer1PublicKey);
+
+        returnedCertChain = pcPeer1.getIdentity();
+        assertEquals(1, returnedCertChain.length);
+
+        assertArrayEquals(identityCertChain2[0].encodeCertificateDER(), returnedCertChain[0].encodeCertificateDER());
+    }
+
+    public void testReset() throws Exception {
+
+        testGetAndUpdateIdentity();
+
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMED,
+                pcPeer1.getApplicationState());
+
+        policyChanged = false;
+        pcPeer1.resetPolicy();
+        assertTrue(policyChanged);
+
+        factoryReset = false;
+        pcPeer1.reset();
+        assertTrue(factoryReset);
+
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE,
+                pcPeer1.getApplicationState());
+
+    }
+
+    public void testGetConnectedPeerPublicKey() throws Exception {
+        /**
+         * see alljoyn_core/unit_test/PermissionMgmtUseCaseTest.cc
+         * this test uses CredentialAccessor, a private class,
+         * to use GetConnectedPeerPublicKey.
+         */
+    }
+
+    public void testInstallMembershipsAndManifests() throws Exception {
+        testGetAndUpdateIdentity();
+
+        UUID guid = UUID.randomUUID();
+        ECCPublicKey peer1PublicKey = pcPeer1.getSigningPublicKey().getPublicKey();
+
+        //Create identityCertChain
+        CertificateX509 identityCertChain[] = CertificateTestHelper.createIdentityCert("0",
+                    guid,
+                    peer1PublicKey,
+                    "Alias",
+                    3600,
+                    peer1Bus);
+
+        String signedManifest = pcPeer1.computeThumbprintAndSignManifestXml(
+                identityCertChain[0],
+                defaultManifestTemplate);
+
+        pcPeer1.installManifests(new String[] {signedManifest}, true);
+
+        assertEquals(pcPeer1.getMembershipSummaries().length, 0);
+
+        CertificateX509[] membership = CertificateTestHelper.createMembershipCert(
+                "0123",
+                guid,
+                false,
+                peer1PublicKey,
+                10000,
+                peer1Bus);
+
+        pcPeer1.installMembership(membership);
+        assertEquals(pcPeer1.getMembershipSummaries().length, 1);
+
+        CertificateX509[] membership2 = CertificateTestHelper.createMembershipCert(
+                "01234",
+                guid,
+                false,
+                peer1PublicKey,
+                10000,
+                peer1Bus);
+
+        pcPeer1.installMembership(membership2);
+        assertEquals(pcPeer1.getMembershipSummaries().length, 2);
+    }
+
+    public void testStartAndEndManagement() throws Exception {
+        testGetAndUpdateIdentity();
+
+        startManagement = false;
+        pcPeer1.startManagement();
+        assertTrue(startManagement);
+
+        endManagement = false;
+        pcPeer1.endManagement();
+        assertTrue(endManagement);
     }
 
     private boolean factoryReset = false;

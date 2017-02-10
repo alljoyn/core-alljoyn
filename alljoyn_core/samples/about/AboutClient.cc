@@ -23,20 +23,18 @@
 #include <alljoyn/Session.h>
 #include <alljoyn/SessionListener.h>
 
+#include <qcc/Mutex.h>
+
 #include <signal.h>
 #include <stdio.h>
+#include <queue>
 
-/*
- * Note the removal of almost all Error handling to make the sample code more
- * straight forward to read.  This is only used here for demonstration actual
- * programs should check the return values of all method calls.
- */
 using namespace ajn;
 
 static volatile sig_atomic_t s_interrupt = false;
 
-// The interface name should be the only thing required to find and form a
-// connection between the service and the client using the about feature.
+/* The interface name should be the only thing required to find and form a
+   connection between the service and the client using the about feature. */
 static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample";
 
 static void CDECL_CALL SigIntHandler(int sig) {
@@ -44,184 +42,344 @@ static void CDECL_CALL SigIntHandler(int sig) {
     s_interrupt = true;
 }
 
-BusAttachment* g_bus = NULL;
+BusAttachment* g_bus = nullptr;
+
+struct JoinedSessionData {
+    JoinedSessionData(const qcc::String& hostBusName, SessionId sessionId)
+        : hostBusName(hostBusName), sessionId(sessionId) {
+    }
+
+    qcc::String hostBusName;
+    SessionId sessionId;
+};
+
+static std::queue<JoinedSessionData> s_joinedSessions;
+static qcc::Mutex* s_joinedSessionsLock = nullptr;
+
+void printHorizontalLine() {
+    const qcc::String horizontalLine = "*********************************************************************************";
+    std::cout << horizontalLine << std::endl;
+}
+
+/* Print out the fields found in the AboutData. Only fields with known signatures
+   are printed out. All others will be treated as an unknown field. */
+void printAboutDataForLanguage(AboutData& aboutData, const char* language, int tabLevel)
+{
+    std::ios::fmtflags initialFlags(std::cout.flags());
+    size_t numFields = aboutData.GetFields();
+
+    const char** fields = new const char*[numFields];
+    aboutData.GetFields(fields, numFields);
+
+    for (size_t i = 0; i < numFields; ++i) {
+        for (int j = 0; j < tabLevel; ++j) {
+            std::cout << "\t";
+        }
+        std::cout << "Key: " << fields[i];
+
+        MsgArg* fieldArg;
+        QStatus status = aboutData.GetField(fields[i], fieldArg, language);
+        if (status != ER_OK) {
+            std::cout << "printAboutDataForLanguage: AboutData.GetField failed for ";
+            if (language == nullptr) {
+                std::cout << "default language";
+            } else {
+                std::cout << "language " << language;
+            }
+            std::cout << " (" << status << ")" << std::endl;
+            continue;
+        }
+        std::cout << "\t";
+        if (fieldArg->Signature() == "s") {
+            const char* toPrint;
+            fieldArg->Get("s", &toPrint);
+            std::cout << toPrint;
+        } else if (fieldArg->Signature() == "as") {
+            size_t asLen;
+            MsgArg* asArg;
+            fieldArg->Get("as", &asLen, &asArg);
+            for (size_t j = 0; j < asLen; ++j) {
+                const char* toPrint;
+                asArg[j].Get("s", &toPrint);
+                std::cout << toPrint << " ";
+            }
+        } else if (fieldArg->Signature() == "ay") {
+            size_t ayLen;
+            uint8_t* toPrint;
+            fieldArg->Get("ay", &ayLen, &toPrint);
+            for (size_t j = 0; j < ayLen; ++j) {
+                std::cout << std::hex << static_cast<int>(toPrint[j]) << " ";
+            }
+        } else {
+            std::cout << "User Defined Value\tSignature: " << fieldArg->Signature();
+        }
+        std::cout << std::endl;
+    }
+    std::cout.flags(initialFlags);
+    delete [] fields;
+}
+
+void printObjectDescription(const AboutObjectDescription& objectDescription, size_t tabLevel) {
+    size_t pathCount = objectDescription.GetPaths(nullptr, 0);
+    const char** paths = new const char*[pathCount];
+    objectDescription.GetPaths(paths, pathCount);
+
+    for (size_t p = 0; p < pathCount; ++p) {
+        for (size_t t = 0; t < tabLevel; ++t) {
+            std::cout << "\t";
+        }
+        std::cout << paths[p] << std::endl;
+
+        size_t intfCount = objectDescription.GetInterfaces(paths[p], nullptr, 0);
+        const char** intfs = new const char*[intfCount];
+        objectDescription.GetInterfaces(paths[p], intfs, intfCount);
+        for (size_t i = 0; i < intfCount; ++i) {
+            for (size_t t = 0; t < tabLevel + 1; ++t) {
+                std::cout << "\t";
+            }
+            std::cout << intfs[i] << std::endl;
+        }
+        delete [] intfs;
+    }
+    delete [] paths;
+}
+
+QStatus printObjectDescription(AboutProxy& aboutProxy) {
+    MsgArg objArg;
+    QStatus status = aboutProxy.GetObjectDescription(objArg);
+    if (status != ER_OK) {
+        std::cout << "AboutProxy.GetObjectDescription failed(" << status << ")" << std::endl;
+        return status;
+    }
+
+    AboutObjectDescription aboutObjectDescription(objArg);
+    std::cout << "AboutProxy.GetObjectDescription:" << std::endl;
+    printObjectDescription(aboutObjectDescription, 1);
+    return ER_OK;
+}
+
+QStatus printAboutData(AboutProxy& aboutProxy) {
+    MsgArg aboutArg;
+    QStatus status = aboutProxy.GetAboutData(nullptr, aboutArg);
+    if (status != ER_OK) {
+        std::cout << "printAboutData: AboutProxy.GetAboutData for default language failed "
+                  << "(" << status << ")" << std::endl;
+        return status;
+    }
+
+    AboutData defaultLangAboutData(aboutArg);
+    std::cout << "AboutProxy.GetAboutData: (Default Language)" << std::endl;
+    printAboutDataForLanguage(defaultLangAboutData, nullptr, 1);
+    size_t langCount;
+    langCount = defaultLangAboutData.GetSupportedLanguages();
+    /* If the langCount == 1 we only have a default language. */
+    if (langCount > 1) {
+        const char** langs = new const char*[langCount];
+        defaultLangAboutData.GetSupportedLanguages(langs, langCount);
+        char* defaultLanguage;
+        QStatus defaultLanguageStatus = defaultLangAboutData.GetDefaultLanguage(&defaultLanguage);
+        if (defaultLanguageStatus != ER_OK) {
+            std::cout << "printAboutData: AboutData.GetDefaultLanguage failed "
+                      << "(" << defaultLanguageStatus << ")" << std::endl;
+        }
+        /* Print out the AboutData for every language but the
+           default as it has already been printed. */
+        for (size_t l = 0; l < langCount; ++l) {
+            if (defaultLanguageStatus == ER_OK && strcmp(defaultLanguage, langs[l]) == 0) {
+                continue;
+            }
+            status = aboutProxy.GetAboutData(langs[l], aboutArg);
+            if (status != ER_OK) {
+                std::cout << "printAboutData: AboutProxy.GetAboutData for language "
+                          << langs[l] << " failed (" << status << ")" << std::endl;
+                continue;
+            }
+
+            AboutData nonDefaultAboutData;
+            nonDefaultAboutData.CreatefromMsgArg(aboutArg, langs[l]);
+            std::cout << "AboutProxy.GetAboutData: (" << langs[l] << ")" << std::endl;
+            printAboutDataForLanguage(nonDefaultAboutData, langs[l], 1);
+        }
+        delete [] langs;
+    }
+    return ER_OK;
+}
+
+QStatus printVersion(AboutProxy& aboutProxy) {
+    uint16_t ver;
+    QStatus status = aboutProxy.GetVersion(ver);
+    if (status != ER_OK) {
+        std::cout << "printVersion: AboutProxy.GetVersion failed(" << status << ")" << std::endl;
+        return status;
+    }
+
+    std::cout << "AboutProxy.GetVersion: " << ver << std::endl;
+    return ER_OK;
+}
+
+QStatus callEchoMethod(AboutProxy& aboutProxy, const JoinedSessionData& joinedSession) {
+    MsgArg objArg;
+    QStatus status = aboutProxy.GetObjectDescription(objArg);
+    if (status != ER_OK) {
+        std::cout << "callEchoMethod: AboutProxy.GetObjectDescription failed(" << status << ")" << std::endl;
+        return status;
+    }
+
+    AboutObjectDescription aboutObjectDescription(objArg);
+    const char* path;
+    aboutObjectDescription.GetInterfacePaths(INTERFACE_NAME, &path, 1);
+
+    ProxyBusObject proxyObject(*g_bus, joinedSession.hostBusName.c_str(), path, joinedSession.sessionId);
+    status = proxyObject.IntrospectRemoteObject();
+    if (status != ER_OK) {
+        std::cout << "callEchoMethod: Failed to introspect remote object." << std::endl;
+        return status;
+    }
+
+    MsgArg arg("s", "ECHO Echo echo...\n");
+    Message replyMsg(*g_bus);
+    std::cout << "Calling " << path << "/" << INTERFACE_NAME << std::endl;
+    status = proxyObject.MethodCall(INTERFACE_NAME, "Echo", &arg, 1, replyMsg);
+    if (status != ER_OK) {
+        std::cout << "callEchoMethod: Failed to call Echo method." << std::endl;
+        return status;
+    }
+    char* echoReply;
+    status = replyMsg->GetArg(0)->Get("s", &echoReply);
+    if (status != ER_OK) {
+        std::cout << "callEchoMethod: Failed to read Echo method reply." << std::endl;
+        return status;
+    }
+    std::cout << "Echo method reply: " << echoReply << std::endl;
+    return ER_OK;
+}
+
+QStatus processJoinedSession(const JoinedSessionData& joinedSession) {
+    MsgArg objArg;
+    AboutProxy aboutProxy(*g_bus, joinedSession.hostBusName.c_str(), joinedSession.sessionId);
+
+    printHorizontalLine();
+    QStatus status = printObjectDescription(aboutProxy);
+    if (status != ER_OK) {
+        return status;
+    }
+    printHorizontalLine();
+    status = printAboutData(aboutProxy);
+    if (status != ER_OK) {
+        return status;
+    }
+    printHorizontalLine();
+    status = printVersion(aboutProxy);
+    if (status != ER_OK) {
+        return status;
+    }
+    printHorizontalLine();
+    status = callEchoMethod(aboutProxy, joinedSession);
+    return status;
+}
 
 class MySessionListener : public SessionListener {
     void SessionLost(SessionId sessionId, SessionLostReason reason) {
-        printf("SessionLost sessionId = %u, Reason = %d\n", sessionId, reason);
+        std::cout << "SessionLost. SessionId = " << sessionId << ", Reason = " << reason << std::endl;
     }
 };
 
-// Print out the fields found in the AboutData. Only fields with known signatures
-// are printed out.  All others will be treated as an unknown field.
-void printAboutData(AboutData& aboutData, const char* language, int tabNum)
-{
-    size_t count = aboutData.GetFields();
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        qcc::String* busName = reinterpret_cast<qcc::String*>(context);
 
-    const char** fields = new const char*[count];
-    aboutData.GetFields(fields, count);
-
-    for (size_t i = 0; i < count; ++i) {
-        for (int j = 0; j < tabNum; ++j) {
-            printf("\t");
-        }
-        printf("Key: %s", fields[i]);
-
-        MsgArg* tmp;
-        aboutData.GetField(fields[i], tmp, language);
-        printf("\t");
-        if (tmp->Signature() == "s") {
-            const char* tmp_s;
-            tmp->Get("s", &tmp_s);
-            printf("%s", tmp_s);
-        } else if (tmp->Signature() == "as") {
-            size_t las;
-            MsgArg* as_arg;
-            tmp->Get("as", &las, &as_arg);
-            for (size_t j = 0; j < las; ++j) {
-                const char* tmp_s;
-                as_arg[j].Get("s", &tmp_s);
-                printf("%s ", tmp_s);
-            }
-        } else if (tmp->Signature() == "ay") {
-            size_t lay;
-            uint8_t* pay;
-            tmp->Get("ay", &lay, &pay);
-            for (size_t j = 0; j < lay; ++j) {
-                printf("%02x ", pay[j]);
-            }
-        } else {
-            printf("User Defined Value\tSignature: %s", tmp->Signature().c_str());
-        }
-        printf("\n");
+        printHorizontalLine();
+        std::cout << "SessionJoined sessionId = " << sessionId << ", status = " << QCC_StatusText(status) << std::endl;
+        /* Instead of processing the joined session data in the callback thread, we add the data to the
+           application's work queue (s_joinedSessions). This way, the processing will be
+           delegated to the application thread and the callback thread will not be overloaded with
+           time-consuming work.
+           See also the documentation for BusAttachment::EnableConcurrentCallbacks(). */
+        s_joinedSessionsLock->Lock(MUTEX_CONTEXT);
+        s_joinedSessions.push(JoinedSessionData(*busName, sessionId));
+        s_joinedSessionsLock->Unlock(MUTEX_CONTEXT);
+        delete busName;
     }
-    delete [] fields;
+};
+
+void printAnnouncedParameters(const char* busName, uint16_t version, SessionPort port) {
+    std::cout << "Announce signal discovered" << std::endl;
+    std::cout << "\tFrom bus " << busName << std::endl;
+    std::cout << "\tAbout version " << version << std::endl;
+    std::cout << "\tSessionPort " << port << std::endl;
+}
+
+void printAnnouncedObjectDescription(const MsgArg& objectDescriptionArg) {
+    AboutObjectDescription objectDescription(objectDescriptionArg);
+    std::cout << "\tObjectDescription:" << std::endl;
+    const size_t tabLevel = 2;
+    printObjectDescription(objectDescription, tabLevel);
+}
+
+void printAnnouncedAboutData(const MsgArg& aboutDataArg) {
+    std::cout << "\tAboutData:" << std::endl;
+    AboutData aboutData(aboutDataArg);
+    const size_t tabLevel = 2;
+    printAboutDataForLanguage(aboutData, nullptr, tabLevel);
 }
 
 class MyAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port, const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
         AboutObjectDescription objectDescription;
         objectDescription.CreateFromMsgArg(objectDescriptionArg);
-        printf("*********************************************************************************\n");
-        printf("Announce signal discovered\n");
-        printf("\tFrom bus %s\n", busName);
-        printf("\tAbout version %hu\n", version);
-        printf("\tSessionPort %hu\n", port);
-        printf("\tObjectDescription:\n");
-        AboutObjectDescription aod(objectDescriptionArg);
-        size_t path_num = aod.GetPaths(NULL, 0);
-        const char** paths = new const char*[path_num];
-        aod.GetPaths(paths, path_num);
-        for (size_t i = 0; i < path_num; ++i) {
-            printf("\t\t%s\n", paths[i]);
-            size_t intf_num = aod.GetInterfaces(paths[i], NULL, 0);
-            const char** intfs = new const char*[intf_num];
-            aod.GetInterfaces(paths[i], intfs, intf_num);
-            for (size_t j = 0; j < intf_num; ++j) {
-                printf("\t\t\t%s\n", intfs[j]);
-            }
-            delete [] intfs;
-        }
-        delete [] paths;
-        printf("\tAboutData:\n");
-        AboutData aboutData(aboutDataArg);
-        printAboutData(aboutData, NULL, 2);
-        printf("*********************************************************************************\n");
+
+        printHorizontalLine();
+        printAnnouncedParameters(busName, version, port);
+        printAnnouncedObjectDescription(objectDescriptionArg);
+        printAnnouncedAboutData(aboutDataArg);
+
         QStatus status;
-
-        if (g_bus != NULL) {
-            SessionId sessionId;
+        if (g_bus != nullptr) {
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            g_bus->EnableConcurrentCallbacks();
-            status = g_bus->JoinSession(busName, port, &sessionListener, sessionId, opts);
-            printf("SessionJoined sessionId = %u, status = %s\n", sessionId, QCC_StatusText(status));
-            if (ER_OK == status && 0 != sessionId) {
-                AboutProxy aboutProxy(*g_bus, busName, sessionId);
-
-                MsgArg objArg;
-                aboutProxy.GetObjectDescription(objArg);
-                printf("*********************************************************************************\n");
-                printf("AboutProxy.GetObjectDescription:\n");
-                AboutObjectDescription aboutObjectDescription(objArg);
-                path_num = aboutObjectDescription.GetPaths(NULL, 0);
-                paths = new const char*[path_num];
-                aboutObjectDescription.GetPaths(paths, path_num);
-                for (size_t i = 0; i < path_num; ++i) {
-                    printf("\t%s\n", paths[i]);
-                    size_t intf_num = aboutObjectDescription.GetInterfaces(paths[i], NULL, 0);
-                    const char** intfs = new const char*[intf_num];
-                    aboutObjectDescription.GetInterfaces(paths[i], intfs, intf_num);
-                    for (size_t j = 0; j < intf_num; ++j) {
-                        printf("\t\t%s\n", intfs[j]);
-                    }
-                    delete [] intfs;
-                }
-                delete [] paths;
-
-                MsgArg aArg;
-                aboutProxy.GetAboutData("en", aArg);
-                printf("*********************************************************************************\n");
-                printf("AboutProxy.GetAboutData: (Default Language)\n");
-                AboutData defaultLangAboutData(aArg);
-                printAboutData(defaultLangAboutData, NULL, 1);
-                size_t lang_num;
-                lang_num = defaultLangAboutData.GetSupportedLanguages();
-                // If the lang_num == 1 we only have a default language
-                if (lang_num > 1) {
-                    const char** langs = new const char*[lang_num];
-                    defaultLangAboutData.GetSupportedLanguages(langs, lang_num);
-                    char* defaultLanguage;
-                    defaultLangAboutData.GetDefaultLanguage(&defaultLanguage);
-                    // print out the AboutData for every language but the
-                    // default it has already been printed.
-                    for (size_t i = 0; i < lang_num; ++i) {
-                        if (strcmp(defaultLanguage, langs[i]) != 0) {
-                            status = aboutProxy.GetAboutData(langs[i], aArg);
-                            if (ER_OK == status) {
-                                AboutData nonDefaultAboutData;
-                                nonDefaultAboutData.CreatefromMsgArg(aArg, langs[i]);
-                                printf("AboutProxy.GetAboutData: (%s)\n", langs[i]);
-                                printAboutData(nonDefaultAboutData, langs[i], 1);
-                            }
-                        }
-                    }
-                    delete [] langs;
-                }
-
-                uint16_t ver;
-                aboutProxy.GetVersion(ver);
-                printf("*********************************************************************************\n");
-                printf("AboutProxy.GetVersion %hd\n", ver);
-                printf("*********************************************************************************\n");
-
-                const char* path;
-                objectDescription.GetInterfacePaths(INTERFACE_NAME, &path, 1);
-                printf("Calling %s/%s\n", path, INTERFACE_NAME);
-                ProxyBusObject proxyObject(*g_bus, busName, path, sessionId);
-                status = proxyObject.IntrospectRemoteObject();
-                if (status != ER_OK) {
-                    printf("Failed to introspect remote object.\n");
-                }
-                MsgArg arg("s", "ECHO Echo echo...\n");
-                Message replyMsg(*g_bus);
-                status = proxyObject.MethodCall(INTERFACE_NAME, "Echo", &arg, 1, replyMsg);
-                if (status != ER_OK) {
-                    printf("Failed to call Echo method.\n");
-                    return;
-                }
-                char* echoReply;
-                status = replyMsg->GetArg(0)->Get("s", &echoReply);
-                if (status != ER_OK) {
-                    printf("Failed to read Echo method reply.\n");
-                }
-                printf("Echo method reply: %s\n", echoReply);
+            /* Use the asynchronous variant of JoinSession. Calling a synchronous remote method call from
+               a callback (and Announced() is one) would require using the BusAttachment::EnableConcurrentCallbacks()
+               functionality which is resource-consuming and may lead to a deadlock if there are not enough
+               callback-processing threads.
+               For details, see the documentation for BusAttachment::EnableConcurrentCallbacks(). */
+            status = g_bus->JoinSessionAsync(busName, port, &sessionListener, opts, &joinCb, new qcc::String(busName));
+            if (status != ER_OK) {
+                std::cout << "Error joining session: " << QCC_StatusText(status) << std::endl;
             }
         } else {
-            printf("BusAttachment is NULL\n");
+            std::cout << "BusAttachment is NULL" << std::endl;
         }
     }
+
+  private:
     MySessionListener sessionListener;
+    MyJoinCallback joinCb;
 };
+
+QStatus processJoinedSessions() {
+    if (!s_joinedSessions.empty()) {
+        /* Process a single entry from the application's work queue:
+           print out a joined session's About data and try to do a remote method call,
+           then leave the session. */
+        s_joinedSessionsLock->Lock(MUTEX_CONTEXT);
+        JoinedSessionData joinedSession = s_joinedSessions.front();
+        s_joinedSessions.pop();
+        s_joinedSessionsLock->Unlock(MUTEX_CONTEXT);
+        QStatus status = processJoinedSession(joinedSession);
+        if (status != ER_OK) {
+            std::cout << "processJoinedSessions: processJoinedSession failed (" << status << ")" << std::endl;
+            return status;
+        }
+
+        std::cout << "Leaving session id = " << joinedSession.sessionId << " with " << joinedSession.hostBusName.c_str() << " status: " << QCC_StatusText(status) << std::endl;
+        status = g_bus->LeaveSession(joinedSession.sessionId);
+        if (status != ER_OK) {
+            std::cout << "processJoinedSessions: LeaveSession failed (" << status << ")" << std::endl;
+            return status;
+        }
+    }
+    return ER_OK;
+}
 
 int CDECL_CALL main(int argc, char** argv)
 {
@@ -238,29 +396,30 @@ int CDECL_CALL main(int argc, char** argv)
     }
 #endif
 
-    /* Install SIGINT handler so Ctrl + C deallocates memory properly */
+    /* Install SIGINT handler so Ctrl + C deallocates memory properly. */
     signal(SIGINT, SigIntHandler);
-
-
-    QStatus status;
 
     g_bus = new BusAttachment("AboutServiceTest", true);
 
-    status = g_bus->Start();
+    QStatus status = g_bus->Start();
     if (ER_OK == status) {
-        printf("BusAttachment started.\n");
+        std::cout << "BusAttachment started." << std::endl;
     } else {
-        printf("FAILED to start BusAttachment (%s)\n", QCC_StatusText(status));
+        std::cout << "FAILED to start BusAttachment (" << QCC_StatusText(status) << ")" << std::endl;
+        delete g_bus;
         exit(1);
     }
 
     status = g_bus->Connect();
     if (ER_OK == status) {
-        printf("BusAttachment connect succeeded.\n");
+        std::cout << "BusAttachment connect succeeded." << std::endl;
     } else {
-        printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
+        std::cout << "FAILED to connect to router node (" << QCC_StatusText(status) << ")" << std::endl;
+        delete g_bus;
         exit(1);
     }
+
+    s_joinedSessionsLock = new qcc::Mutex();
 
     MyAboutListener aboutListener;
     g_bus->RegisterAboutListener(aboutListener);
@@ -268,9 +427,11 @@ int CDECL_CALL main(int argc, char** argv)
     const char* interfaces[] = { INTERFACE_NAME };
     status = g_bus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
     if (ER_OK == status) {
-        printf("WhoImplements called.\n");
+        std::cout << "WhoImplements called." << std::endl;
     } else {
-        printf("WhoImplements call FAILED with status %s\n", QCC_StatusText(status));
+        std::cout << "WhoImplements call FAILED with status " << QCC_StatusText(status) << std::endl;
+        delete g_bus;
+        delete s_joinedSessionsLock;
         exit(1);
     }
 
@@ -282,10 +443,16 @@ int CDECL_CALL main(int argc, char** argv)
 #else
             usleep(100 * 1000);
 #endif
+            /* Process the work queue. */
+            status = processJoinedSessions();
+            if (status != ER_OK) {
+                std::cout << "processJoinedSessions failed (" << status << ")" << std::endl;
+            }
         }
     }
 
     g_bus->UnregisterAboutListener(aboutListener);
+    delete s_joinedSessionsLock;
     delete g_bus;
 #ifdef ROUTER
     AllJoynRouterShutdown();

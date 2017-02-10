@@ -22,6 +22,7 @@
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/ProxyBusObject.h>
 #include <qcc/Log.h>
+#include <qcc/Mutex.h>
 #include <qcc/String.h>
 #include <cstdio>
 #include <cstdlib>
@@ -36,13 +37,14 @@ static const char* CHAT_SERVICE_OBJECT_PATH = "/chatService";
 static const SessionPort CHAT_PORT = 27;
 
 /* static data. */
-static ajn::BusAttachment* s_bus = NULL;
+static ajn::BusAttachment* s_bus = nullptr;
 static qcc::String s_advertisedName;
 static qcc::String s_joinName;
 static qcc::String s_sessionHost;
 static SessionId s_sessionId = 0;
 static bool s_joinComplete = false;
 static volatile sig_atomic_t s_interrupt = false;
+static qcc::Mutex* s_sessionLock = nullptr;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
@@ -68,21 +70,21 @@ char*get_line(char*str, size_t num, FILE*fp)
 
     // fgets will capture the '\n' character if the string entered is shorter than
     // num. Remove the '\n' from the end of the line and replace it with nul '\0'.
-    if (p != NULL) {
+    if (p != nullptr) {
         size_t last = strlen(str) - 1;
         if (str[last] == '\n') {
             str[last] = '\0';
         }
     }
 
-    return s_interrupt ? NULL : p;
+    return s_interrupt ? nullptr : p;
 }
 
 /* Bus object */
 class ChatObject : public BusObject {
   public:
 
-    ChatObject(BusAttachment& bus, const char* path) : BusObject(path), chatSignalMember(NULL)
+    ChatObject(BusAttachment& bus, const char* path) : BusObject(path), chatSignalMember(nullptr)
     {
         QStatus status;
 
@@ -99,7 +101,7 @@ class ChatObject : public BusObject {
         status =  bus.RegisterSignalHandler(this,
                                             static_cast<MessageReceiver::SignalHandler>(&ChatObject::ChatSignalHandler),
                                             chatSignalMember,
-                                            NULL);
+                                            nullptr);
 
         if (ER_OK != status) {
             printf("Failed to register signal handler for ChatObject::Chat (%s)\n", QCC_StatusText(status));
@@ -111,10 +113,14 @@ class ChatObject : public BusObject {
 
         MsgArg chatArg("s", msg);
         uint8_t flags = 0;
-        if (0 == s_sessionId) {
+        s_sessionLock->Lock(MUTEX_CONTEXT);
+        SessionId sessionId = s_sessionId;
+        s_sessionLock->Unlock(MUTEX_CONTEXT);
+        if (0 == sessionId) {
             printf("Sending Chat signal without a session id\n");
         }
-        return Signal(NULL, s_sessionId, *chatSignalMember, &chatArg, 1, 0, flags);
+        QStatus status = Signal(nullptr, sessionId, *chatSignalMember, &chatArg, 1, 0, flags);
+        return status;
     }
 
     /** Receive a signal from another Chat client */
@@ -129,34 +135,44 @@ class ChatObject : public BusObject {
     const InterfaceDescription::Member* chatSignalMember;
 };
 
+/** Inform the app thread that JoinSession is complete, store the session ID. */
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
+        if (ER_OK == status) {
+            printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+            s_sessionLock->Lock(MUTEX_CONTEXT);
+            s_sessionId = sessionId;
+            s_joinComplete = true;
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
+        } else {
+            printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+        }
+    }
+};
+
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
         printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
+        s_sessionLock->Lock(MUTEX_CONTEXT);
         if (s_sessionHost.empty()) {
+            s_sessionHost = name;
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
             const char* convName = name + strlen(NAME_PREFIX);
             printf("Discovered chat conversation: \"%s\"\n", convName);
 
             /* Join the conversation */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
-            s_sessionHost = name;
-            s_bus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = s_bus->JoinSession(name, CHAT_PORT, this, s_sessionId, opts);
-            if (ER_OK == status) {
-                printf("Joined conversation \"%s\"\n", convName);
-            } else {
-                printf("JoinSession failed (status=%s)\n", QCC_StatusText(status));
+            QStatus status = s_bus->JoinSessionAsync(name, CHAT_PORT, this, opts, &joinCb);
+            if (ER_OK != status) {
+                printf("JoinSessionAsync failed (status=%s)", QCC_StatusText(status));
             }
-            uint32_t timeout = 20;
-            status = s_bus->SetLinkTimeout(s_sessionId, timeout);
-            if (ER_OK == status) {
-                printf("Set link timeout to %d\n", timeout);
-            } else {
-                printf("Set link timeout failed\n");
-            }
-            s_joinComplete = true;
+        } else {
+            s_sessionLock->Unlock(MUTEX_CONTEXT);
         }
     }
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
@@ -185,21 +201,27 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
     {
         QCC_UNUSED(sessionPort);
 
+        s_sessionLock->Lock(MUTEX_CONTEXT);
         s_sessionId = id;
+        s_sessionLock->Unlock(MUTEX_CONTEXT);
         printf("SessionJoined with %s (id=%d)\n", joiner, id);
+
         s_bus->EnableConcurrentCallbacks();
         uint32_t timeout = 20;
-        QStatus status = s_bus->SetLinkTimeout(s_sessionId, timeout);
+        QStatus status = s_bus->SetLinkTimeout(id, timeout);
         if (ER_OK == status) {
             printf("Set link timeout to %d\n", timeout);
         } else {
             printf("Set link timeout failed\n");
         }
     }
+
+  private:
+    MyJoinCallback joinCb;
 };
 
 /* More static data. */
-static ChatObject* s_chatObj = NULL;
+static ChatObject* s_chatObj = nullptr;
 static MyBusListener s_busListener;
 
 #ifdef __cplusplus
@@ -260,7 +282,7 @@ void ValidateCommandLine()
 QStatus CreateInterface(void)
 {
     /* Create org.alljoyn.bus.samples.chat interface */
-    InterfaceDescription* chatIntf = NULL;
+    InterfaceDescription* chatIntf = nullptr;
     QStatus status = s_bus->CreateInterface(CHAT_SERVICE_INTERFACE_NAME, chatIntf);
 
     if (ER_OK == status) {
@@ -395,6 +417,20 @@ QStatus WaitForJoinSessionCompletion(void)
     return s_joinComplete && !s_interrupt ? ER_OK : ER_ALLJOYN_JOINSESSION_REPLY_CONNECT_FAILED;
 }
 
+QStatus SetLinkTimeout(uint32_t timeout) {
+    s_sessionLock->Lock(MUTEX_CONTEXT);
+    SessionId sessionId = s_sessionId;
+    s_sessionLock->Unlock(MUTEX_CONTEXT);
+    QStatus status = s_bus->SetLinkTimeout(sessionId, timeout);
+    if (ER_OK == status) {
+        printf("Set link timeout to %d\n", timeout);
+    } else {
+        printf("Set link timeout failed\n");
+    }
+    return status;
+}
+
+
 /** Take input from stdin and send it as a chat message, continue until an error or
  * SIGINT occurs, return the result status. */
 QStatus DoTheChat(void)
@@ -432,8 +468,9 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Create message bus */
     s_bus = new BusAttachment("chat", true);
+    s_sessionLock = new qcc::Mutex();
 
-    if (s_bus) {
+    if ((s_bus != nullptr) && (s_sessionLock != nullptr)) {
         if (ER_OK == status) {
             status = CreateInterface();
         }
@@ -490,6 +527,11 @@ int CDECL_CALL main(int argc, char** argv)
             if (ER_OK == status) {
                 status = WaitForJoinSessionCompletion();
             }
+
+            if (ER_OK == status) {
+                const uint32_t timeout = 20;
+                status = SetLinkTimeout(timeout);
+            }
         }
 
         if (ER_OK == status) {
@@ -501,7 +543,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Cleanup */
     delete s_bus;
-    s_bus = NULL;
+    delete s_sessionLock;
 
     printf("Chat exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 

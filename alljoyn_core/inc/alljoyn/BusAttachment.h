@@ -200,6 +200,9 @@ class BusAttachment : public MessageReceiver {
      * @param applicationName       Name of the application.
      * @param allowRemoteMessages   True if this attachment is allowed to receive messages from remote devices.
      * @param concurrency           The maximum number of concurrent method and signal handlers locally executing.
+     *                              Warning: if synchronous remote procedure calls or other blocking calls are made
+     *                              from within AllJoyn callbacks and this value is too low, the application may deadlock.
+     *                              Please see the documentation for BusAttachment::EnableConcurrentCallbacks() for details.
      */
     BusAttachment(const char* applicationName, bool allowRemoteMessages = false, uint32_t concurrency = 4);
 
@@ -250,6 +253,14 @@ class BusAttachment : public MessageReceiver {
      * responsibility to make sure the maximum number of concurrent callbacks is
      * not exceeded. If the maximum number is exceeded the application will
      * deadlock.
+     *
+     * For the above reasons, if time-consuming blocking calls from within AllJoyn
+     * callbacks are needed, it is recommended to delegate them to application-owned
+     * threads. If remote procedure calls (e.g., JoinSession()) from within AllJoyn
+     * callbacks are needed, it is recommended to use the asynchronous variants
+     * (e.g., JoinSessionAsync()) and process their callbacks in threads owned
+     * by the application. Please refer to the AboutClient sample for an implementation
+     * example.
      */
     void EnableConcurrentCallbacks();
 
