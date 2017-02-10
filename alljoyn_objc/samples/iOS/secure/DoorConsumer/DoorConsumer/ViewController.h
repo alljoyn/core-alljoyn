@@ -25,7 +25,6 @@
 @property (weak, nonatomic) IBOutlet UIButton *startButton;
 @property (weak, nonatomic) IBOutlet UITextField *appNameField;
 
-- (void)didReceiveStatusUpdateMessage:(NSString *)message;
 - (IBAction)didTouchOpenButton:(id)sender;
 - (IBAction)didTouchCloseButton:(id)sender;
 - (IBAction)didTouchStartButton:(id)sender;

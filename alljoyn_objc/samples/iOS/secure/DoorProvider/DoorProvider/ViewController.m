@@ -15,125 +15,31 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "ViewController.h"
-#import "DoorCommon.h"
+#import "DoorProviderAllJoynService.h"
 
-@interface ViewController ()
+@interface ViewController () <AllJoynStatusMessageListener>
 
-@property (nonatomic, strong) DoorCommon* doorCommon;
-@property (nonatomic, strong) DoorCommonPCL* doorCommonPCL;
-@property (nonatomic, strong) Door* door;
-@property (nonatomic) BOOL isServiceStarted;
+@property (nonatomic, strong) DoorProviderAllJoynService *doorProviderService;
 @property (nonatomic, strong) NSCondition* waitCondition;
 
 @end
 
 @implementation ViewController
 
-@synthesize startButton;
-@synthesize appNameField;
-@synthesize textView;
-@synthesize autoSignalSwitch;
-
-
-- (QStatus)run:(AJNBusAttachment*)withBus
-{
-    QStatus status = ER_FAIL;
-    // Create bus object
-    self.door = [[Door alloc] initWithBus:withBus andView:self];
-
-    status = [self.door initialize];
-    if (ER_OK != status) {
-        NSLog(@"Failed to initialize Door - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    status = [withBus registerBusObject:self.door];
-    if (ER_OK != status) {
-        NSLog(@"Failed to RegisterBusObject - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    status = [self.doorCommon announceAbout];
-    if (ER_OK != status) {
-        NSLog(@"Failed to AnnounceAbout - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    //Wait until we are claimed
-    [self didReceiveStatusUpdateMessage:@"Waiting to be claimed..."];
-    status = [self.doorCommonPCL waitForClaimedState];
-    if (ER_OK != status) {
-        NSLog(@"Failed to WaitForClaimedState - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    // After claiming, only allow ALLJOYN_ECDHE_ECDSA connections
-    status = [self.doorCommon setSecurityForClaimedMode];
-    if (ER_OK != status) {
-        NSLog(@"Failed to SetSecurityForClaimedMode - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    [self didReceiveStatusUpdateMessage:@"Door provider initialized; Waiting for consumers ...\n"];
-
-    [self.waitCondition lock];
-    [self.waitCondition wait];
-    [self.waitCondition unlock];
-
-    self.doorCommon = nil;
-    self.door = nil;
-    self.doorCommonPCL = nil;
-
-    return ER_OK;
-}
-
-- (QStatus)startDoorProvider:(NSString*)appName
-{
-    // Do the common set-up
-    self.doorCommon = [[DoorCommon alloc] initWithAppName:appName andView:self];
-    if (self.doorCommon == nil) {
-        return ER_FAIL;
-    }
-
-    AJNBusAttachment* ba = self.doorCommon.BusAttachment;
-    self.doorCommonPCL = [[DoorCommonPCL alloc] initWithBus:ba];
-
-    QStatus status = [self.doorCommon initialize:YES withListener:self.doorCommonPCL];
-    if (ER_OK != status) {
-        NSLog(@"Failed to initialize DoorCommon - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    dispatch_queue_t serviceQueue = dispatch_queue_create("org.alljoyn.DoorProvider.serviceQueue", NULL);
-    dispatch_async( serviceQueue, ^{
-        [self run:ba];
-    });
-
-    return status;
-}
-
-- (QStatus)stopDoorProvider
-{
-    [self.waitCondition signal];
-    return ER_OK;
-}
-
 - (IBAction)didTouchStartButton:(id)sender
 {
-    NSString* appName = [appNameField text];
     [self.waitCondition lock];
+    NSString* appName = [_appNameField text];
     if (appName != nil && appName.length != 0) {
         QStatus status = ER_OK;
-        if (!self.isServiceStarted) {
-            status = [self startDoorProvider:appName];
+        if (_doorProviderService.serviceState == STOPED) {
+            status = [_doorProviderService startWithName:appName];
             if (status == ER_OK) {
                 [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
-                self.isServiceStarted = YES;
             }
         } else {
-            status = [self stopDoorProvider];
+            status = [_doorProviderService stop];
             [self.startButton setTitle:@"Start" forState:UIControlStateNormal];
-            self.isServiceStarted = NO;
         }
     } else {
         UIAlertController * alert = [UIAlertController
@@ -158,35 +64,33 @@
 - (IBAction)didTouchSignalButton:(id)sender
 {
     @synchronized (self) {
-        QStatus status = [self.door sendDoorEvent];
-        if (ER_OK != status) {
-            [self didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"Failed to SendDoorEvent - status (%@)", [AJNStatus descriptionForStatusCode:status]]];
-        }
+        [_doorProviderService sendDoorEvent];
     }
 }
 
 - (IBAction)didToggleAutoSignal:(id)sender
 {
     @synchronized (self) {
-
         [self didReceiveStatusUpdateMessage:@"Enabling automatic signaling of door events ... "];
-        QStatus status = [DoorCommon updateDoorProviderManifest:self.doorCommon];
-        if (ER_OK != status) {
-            NSLog(@"Failed to UpdateDoorProviderManifest - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        }
-        self.door.autoSignal = self.autoSignalSwitch.on;
+        [_doorProviderService toggleAutoSignal];
     }
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.waitCondition = [[NSCondition alloc] init];
+    _doorProviderService = [[DoorProviderAllJoynService alloc] initWithMessageListener:self];
+    _waitCondition = [[NSCondition alloc] init];
     // Do any additional setup after loading the view, typically from a nib.
 }
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+
+- (void)didReceiveAllJoynStatusMessage:(NSString *)message
+{
+    [self didReceiveStatusUpdateMessage:message];
 }
 
 - (void)didReceiveStatusUpdateMessage:(NSString *)message
