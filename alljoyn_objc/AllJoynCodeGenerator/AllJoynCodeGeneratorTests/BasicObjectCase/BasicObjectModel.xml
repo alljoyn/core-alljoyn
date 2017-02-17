@@ -28,7 +28,9 @@
                 <arg name="str2" type="s" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="withString:"/>
                 </arg>
-                <arg name="outStr" type="s" direction="out"/>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outString:"/>
+                </arg>
             </method>
             <method name="MethodWithOneInAndMultipleOutArgs">
                 <arg name="str" type="s" direction="in">
@@ -65,7 +67,9 @@
             </method>
             <method name="MethodWithNoReturnAndNoArgs"/>
             <method name="MethodWithReturnAndNoInArgs">
-                <arg name="outStr" type="s" direction="out"/>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="methodWithReturnAndNoInArgs:"/>
+                </arg>
             </method>
             <method name="MethodWithComplexTypesForArgs">
                 <arg name="stringArray" type="as" direction="in">
@@ -74,7 +78,9 @@
                 <arg name="aStruct" type="(si)" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="structWithStringAndInt:"/>
                 </arg>
-                <arg name="outStr" type="s" direction="out"/>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outStr:"/>
+                </arg>
             </method>
             <property name="testArrayProperty" type="a(ssssssis)" access="readwrite"/>
             <property name="testStringProperty" type="s" access="readwrite"/>
