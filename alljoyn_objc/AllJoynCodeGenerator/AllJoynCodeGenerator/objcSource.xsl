@@ -544,7 +544,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 
 <xsl:template match="property" mode="objc-proxy-property">
     <xsl:if test="@access='read' or @access='readwrite'">
-- (<xsl:call-template name="objcArgType"/>)<xsl:value-of select="@name"/>
+- (QStatus)get<xsl:call-template name="capitalizeFirstLetterOfNameAttr"/>:(<xsl:call-template name="objcArgType"/>*)prop
 {
     [self addInterfaceNamed:@"<xsl:value-of select="../@name"/>"];
 
@@ -557,14 +557,15 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
         <xsl:if test="@type='b'">
-        return NO;
+        *prop = NO;
         </xsl:if>
         <xsl:if test="not(@type='b')">
-        return nil;
+        *prop = nil;
         </xsl:if>
+    } else {
+    <xsl:apply-templates select="." mode="objc-proxy-prop-accessor"/>
     }
-
-    <xsl:apply-templates select="." mode="objc-prop-accessor-return"/>
+    return status;
         </xsl:when>
         <xsl:otherwise>
     MsgArg *propValue = new MsgArg();
@@ -573,36 +574,37 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
-
-        return nil;
+        *prop = nil;
+    } else {
+        *prop = [[AJNMessageArgument alloc] initWithHandle:propValue shouldDeleteHandleOnDealloc:YES];
     }
-
-    return [[AJNMessageArgument alloc] initWithHandle:propValue shouldDeleteHandleOnDealloc:YES];
+    return status;
         </xsl:otherwise>
     </xsl:choose>
 }
     </xsl:if>
     <xsl:if test="@access='write' or @access='readwrite'">
-- (void)set<xsl:call-template name="capitalizeFirstLetterOfNameAttr"/>:(<xsl:call-template name="objcArgType"/>)propertyValue
+- (QStatus)set<xsl:call-template name="capitalizeFirstLetterOfNameAttr"/>:(<xsl:call-template name="objcArgType"/>)propertyValue
 {
     [self addInterfaceNamed:@"<xsl:value-of select="../@name"/>"];
-
+    QStatus status;
     <xsl:choose>
         <xsl:when test="@type='y' or @type='b' or @type='n' or @type='q' or @type='i' or @type='u' or @type='x' or @type='t' or @type='d' or @type='s' or @type='o' or @type='g'">
     MsgArg arg;
 
-    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"><xsl:text> </xsl:text><xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);
+    status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"><xsl:text> </xsl:text><xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to set property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
+        return status;
     }
 
-    self.proxyBusObject->SetProperty("<xsl:value-of select="../@name"/>", "<xsl:value-of select="@name"/>", arg);
+    status = self.proxyBusObject->SetProperty("<xsl:value-of select="../@name"/>", "<xsl:value-of select="@name"/>", arg);
         </xsl:when>
         <xsl:otherwise>
-    self.proxyBusObject->SetProperty("<xsl:value-of select="../@name"/>", "<xsl:value-of select="@name"/>", *(MsgArg*)(propertyValue.handle));
+    status = self.proxyBusObject->SetProperty("<xsl:value-of select="../@name"/>", "<xsl:value-of select="@name"/>", *(MsgArg*)(propertyValue.handle));
         </xsl:otherwise>
     </xsl:choose>
-
+    return status;
 }
     </xsl:if>
 </xsl:template>
@@ -610,6 +612,13 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 <xsl:template match="method" mode="objc-proxy-method">
     <xsl:text>&#10;</xsl:text>
     <xsl:apply-templates select="." mode="objc-proxy-declaration"/>
+{
+    QStatus status;
+    <xsl:apply-templates select="." mode="objc-proxy-redirect"/>
+    return status;
+}
+    <xsl:text>&#10;</xsl:text>
+    <xsl:apply-templates select="." mode="objc-proxy-declaration-with-reply"/>
 {
     [self addInterfaceNamed:@"<xsl:value-of select="../@name"/>"];
 
@@ -626,30 +635,23 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
     QStatus status = self.proxyBusObject->MethodCall("<xsl:value-of select="../@name"/>", "<xsl:value-of select="@name"/>", inArgs, <xsl:value-of select="count(./arg[@direction='in'])"/>, reply, 5000);
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on <xsl:value-of select="../@name"/> failed. %@", [AJNStatus descriptionForStatusCode:status]);
-        <xsl:choose>
-            <xsl:when test="count(./arg[@direction='out']) = 1">
-        return nil;
-            </xsl:when>
-            <xsl:otherwise>
-        return;
-            </xsl:otherwise>
-        </xsl:choose>
+        <xsl:if test="count(./arg[@direction='out']) > 0">
+        // pass nil to the output arguments back after fail
+        //
+            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-proxy-method-multiple-nil-return"/>
+        </xsl:if>
+    } else {
+        <xsl:if test="count(./arg[@direction='out']) > 0">
+        // pass the output arguments back to the caller
+        //
+            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-proxy-method-multiple-return"/>
+        </xsl:if>
     }
-
-    <xsl:if test="count(./arg[@direction='out']) > 0">
-    // pass the output arguments back to the caller
-    //
-
-        <xsl:choose>
-            <xsl:when test="count(./arg[@direction='out'])=1">
-                <xsl:apply-templates select="./arg[@direction='out']" mode="objc-proxy-method-single-return"/>
-            </xsl:when>
-            <xsl:when test="count(./arg[@direction='out'])>1">
-                <xsl:apply-templates select="./arg[@direction='out']" mode="objc-proxy-method-multiple-return"/>
-            </xsl:when>
-        </xsl:choose>
-    </xsl:if>
-
+    
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 </xsl:template>
 
@@ -666,7 +668,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 </xsl:template>
 
 <xsl:template match="signal" mode="objc-signal-definition">
-    <xsl:text>- (void)send</xsl:text>
+    <xsl:text>- (QStatus)send</xsl:text>
     <xsl:choose>
         <xsl:when test="count(./arg) > 0">
             <xsl:apply-templates select="./arg" mode="objc-messageParam"/>
@@ -681,10 +683,10 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 {
     <xsl:choose>
         <xsl:when test="count(arg)>0">
-    self.busObject->Send<xsl:value-of select="@name"/>(<xsl:apply-templates select="./arg" mode="objc-signal-args"/>, [destinationPath UTF8String], sessionId);
+    return self.busObject->Send<xsl:value-of select="@name"/>(<xsl:apply-templates select="./arg" mode="objc-signal-args"/>, [destinationPath UTF8String], sessionId);
         </xsl:when>
         <xsl:otherwise>
-    self.busObject->Send<xsl:value-of select="@name"/>([destinationPath UTF8String], sessionId);
+    return self.busObject->Send<xsl:value-of select="@name"/>([destinationPath UTF8String], sessionId);
         </xsl:otherwise>
     </xsl:choose>
 }
@@ -746,6 +748,44 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
     </xsl:choose>
 </xsl:template>
 
+<xsl:template match="property" mode="objc-proxy-prop-accessor">
+    <xsl:choose>
+        <xsl:when test="@type='y'">
+    *prop = [NSNumber numberWithUnsignedChar:propValue.v_variant.val->v_byte];
+        </xsl:when>
+        <xsl:when test="@type='b'">
+    *prop = propValue.v_variant.val->v_bool;
+        </xsl:when>
+        <xsl:when test="@type='n'">
+    *prop = [NSNumber numberWithShort:propValue.v_variant.val->v_int16];
+        </xsl:when>
+        <xsl:when test="@type='q'">
+    *prop = [NSNumber numberWithUnsignedShort:propValue.v_variant.val->v_uint16];
+        </xsl:when>
+        <xsl:when test="@type='i'">
+    *prop = [NSNumber numberWithInt:propValue.v_variant.val->v_int32];
+        </xsl:when>
+        <xsl:when test="@type='u'">
+    *prop = [NSNumber numberWithUnsignedInt:propValue.v_variant.val->v_uint32];
+        </xsl:when>
+        <xsl:when test="@type='x'">
+    *prop = [NSNumber numberWithLongLong:propValue.v_variant.val->v_int64];
+        </xsl:when>
+        <xsl:when test="@type='t'">
+    *prop = [NSNumber numberWithUnsignedLongLong:propValue.v_variant.val->v_uint64];
+        </xsl:when>
+        <xsl:when test="@type='d'">
+    *prop = [NSNumber numberWithDouble:propValue.v_variant.val->v_double];
+        </xsl:when>
+        <xsl:when test="@type='s'">
+    *prop = [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
+        </xsl:when>
+        <xsl:when test="@type='o'">
+    *prop = [NSString stringWithCString:propValue.v_variant.val->v_objPath.str encoding:NSUTF8StringEncoding];
+        </xsl:when>
+    </xsl:choose>
+</xsl:template>
+
 <xsl:template match="arg" mode="objc-proxy-method-single-return">
     <xsl:choose>
         <xsl:when test="@type='y'">
@@ -790,60 +830,55 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 <xsl:template match="arg" mode="objc-proxy-method-multiple-return">
     <xsl:choose>
         <xsl:when test="@type='y'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedChar:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_byte];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedChar:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_byte];
         </xsl:when>
         <xsl:when test="@type='b'">
-    *<xsl:value-of select="@name"/> = reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_bool;
+        *<xsl:value-of select="@name"/> = reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_bool;
         </xsl:when>
         <xsl:when test="@type='n'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithShort:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int16];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithShort:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int16];
         </xsl:when>
         <xsl:when test="@type='q'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedShort:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint16];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedShort:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint16];
         </xsl:when>
         <xsl:when test="@type='i'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithInt:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int32];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithInt:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int32];
         </xsl:when>
         <xsl:when test="@type='u'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedInt:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint32];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedInt:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint32];
         </xsl:when>
         <xsl:when test="@type='x'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithLongLong:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int64];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithLongLong:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int64];
         </xsl:when>
         <xsl:when test="@type='t'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedLongLong:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint64];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedLongLong:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint64];
         </xsl:when>
         <xsl:when test="@type='d'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithDouble:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_double];
+        *<xsl:value-of select="@name"/> = [NSNumber numberWithDouble:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_double];
         </xsl:when>
         <xsl:when test="@type='s'">
-    *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_string.str encoding:NSUTF8StringEncoding];
+        *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_string.str encoding:NSUTF8StringEncoding];
         </xsl:when>
         <xsl:when test="@type='o'">
-    *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_objPath.str encoding:NSUTF8StringEncoding];
+        *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_objPath.str encoding:NSUTF8StringEncoding];
         </xsl:when>
     </xsl:choose>
+</xsl:template>
+
+<xsl:template match="arg" mode="objc-proxy-method-multiple-nil-return">
+        *<xsl:value-of select="@name"/> = nil;
 </xsl:template>
 
 <xsl:template match="method" mode="objc-declaration">
-    <xsl:text>- (</xsl:text>
+    <xsl:text>- (QStatus)</xsl:text>
     <xsl:choose>
-        <xsl:when test="count(./arg[@direction='out']) > 1 or count(./arg[@direction='out']) = 0">
-            <xsl:text>void</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-argType"/>
-        </xsl:otherwise>
-    </xsl:choose>
-    <xsl:text>)</xsl:text>
-    <xsl:choose>
-        <xsl:when test="count(./arg) = 0 or (count(./arg) = 1 and count(./arg[@direction='out']) = 1)">
+        <xsl:when test="count(./arg) = 0">
             <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
             <xsl:text>:(AJNMessage *)methodCallMessage</xsl:text>
         </xsl:when>
-        <xsl:when test="count(./arg[@direction='out']) > 1">
+        <xsl:when test="count(./arg[@direction='out']) > 0">
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
-            <xsl:if test="count(./arg[@direction='out']) > 1">
+            <xsl:if test="count(./arg[@direction='out']) > 0">
                 <xsl:text>&#32;</xsl:text>
             </xsl:if>
             <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
@@ -854,33 +889,80 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
             <xsl:text> message:(AJNMessage *)methodCallMessage</xsl:text>
         </xsl:otherwise>
     </xsl:choose>
+    <xsl:text>;&#10;</xsl:text>
 </xsl:template>
 
 <xsl:template match="method" mode="objc-proxy-declaration">
-    <xsl:text>- (</xsl:text>
+    <xsl:text>- (QStatus)</xsl:text>
     <xsl:choose>
-        <xsl:when test="count(./arg[@direction='out']) > 1 or count(./arg[@direction='out']) = 0">
-            <xsl:text>void</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-argType"/>
-        </xsl:otherwise>
-    </xsl:choose>
-    <xsl:text>)</xsl:text>
-    <xsl:choose>
-        <xsl:when test="count(./arg) = 0 or (count(./arg) = 1 and count(./arg[@direction='out']) = 1)">
+        <xsl:when test="count(./arg) = 0">
             <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
-
         </xsl:when>
-        <xsl:when test="count(./arg[@direction='out']) > 1">
+        <xsl:when test="count(./arg[@direction='out']) > 0">
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
-            <xsl:if test="count(./arg[@direction='out']) > 1">
+            <xsl:if test="count(./arg[@direction='out']) > 0">
                 <xsl:text>&#32;</xsl:text>
             </xsl:if>
             <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
         </xsl:when>
         <xsl:otherwise>
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
+        </xsl:otherwise>
+    </xsl:choose>
+    <xsl:text>&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="method" mode="objc-proxy-declaration-with-reply">
+    <xsl:text>- (QStatus)</xsl:text>
+    <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
+            <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
+        </xsl:when>
+        <xsl:when test="count(./arg[@direction='out']) > 0">
+            <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
+            <xsl:if test="count(./arg[@direction='out']) > 0">
+                <xsl:text>&#32;</xsl:text>
+            </xsl:if>
+            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
+        </xsl:otherwise>
+    </xsl:choose>
+        <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
+            <xsl:text>:(AJNMessage **) replyMessage</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:text> replyMessage:(AJNMessage **)replyMessage</xsl:text>
+        </xsl:otherwise>
+    </xsl:choose>
+    <xsl:text>&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="method" mode="objc-proxy-redirect">
+<xsl:text>status = [self </xsl:text>
+    <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
+            <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
+        </xsl:when>
+        <xsl:when test="count(./arg[@direction='out']) > 0">
+            <xsl:apply-templates select="./arg[@direction='in']" mode="objc-params-as-args"/>
+            <xsl:if test="count(./arg[@direction='out']) > 0">
+                <xsl:text>&#32;</xsl:text>
+            </xsl:if>
+            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-params-as-args"/>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:apply-templates select="./arg[@direction='in']" mode="objc-params-as-args"/>
+        </xsl:otherwise>
+    </xsl:choose>
+        <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
+            <xsl:text>:nil];</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:text> replyMessage:nil];</xsl:text>
         </xsl:otherwise>
     </xsl:choose>
 </xsl:template>
@@ -896,6 +978,14 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
             <xsl:text>*</xsl:text>
         </xsl:if>
     <xsl:text>)</xsl:text>
+    <xsl:value-of select="@name"/>
+</xsl:template>
+
+<xsl:template match="arg" mode="objc-params-as-args">
+    <xsl:if test="position() > 1">
+        <xsl:text>&#32;</xsl:text>
+    </xsl:if>
+    <xsl:value-of select="./annotation[@name='org.alljoyn.lang.objc']/@value" />
     <xsl:value-of select="@name"/>
 </xsl:template>
 
@@ -1142,11 +1232,7 @@ void <xsl:value-of select="../../annotation[@name='org.alljoyn.lang.objc']/@valu
     // call the Objective-C delegate method
     //
     <xsl:choose>
-        <xsl:when test="count(arg[@direction='out'])=1">
-            <xsl:text>&#10;&#09;</xsl:text>outArg0 = [(id&lt;<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>&gt;)delegate <xsl:choose><xsl:when test="count(arg)=1"><xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>:[[AJNMessage alloc] initWithHandle:&#38;msg]</xsl:when><xsl:otherwise><xsl:apply-templates select="arg[@direction='in']" mode="objc-messageCall"/> message:[[AJNMessage alloc] initWithHandle:&#38;msg]</xsl:otherwise></xsl:choose>];
-
-        </xsl:when>
-        <xsl:when test="count(arg[@direction='out'])>1">
+        <xsl:when test="count(arg[@direction='out'])>0">
             <xsl:text>&#10;&#09;</xsl:text>[(id&lt;<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>&gt;)delegate <xsl:apply-templates select="arg[@direction='in']" mode="objc-messageCall"/><xsl:if test="count(arg[@direction='in']) > 0"><xsl:text> </xsl:text></xsl:if><xsl:apply-templates select="arg[@direction='out']" mode="objc-messageCall"/>  message:[[AJNMessage alloc] initWithHandle:&#38;msg]];
 
         </xsl:when>

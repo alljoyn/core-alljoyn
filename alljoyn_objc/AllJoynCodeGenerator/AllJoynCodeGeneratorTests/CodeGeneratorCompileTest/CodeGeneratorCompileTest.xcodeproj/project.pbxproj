@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2B3489EF1E5AE1CC00181106 /* GeneratedClassesTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B3489EE1E5AE1CC00181106 /* GeneratedClassesTests.m */; };
+		2B3489FA1E5AE86C00181106 /* BasicObjectExtention.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B3489F91E5AE86C00181106 /* BasicObjectExtention.m */; };
+		2B348A031E5B116600181106 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = FADE35BE1E0BD7E400461C92 /* BasicObject.m */; };
+		2B348A041E5B116900181106 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = FADE35BC1E0BD7E400461C92 /* AJNBasicObject.mm */; };
 		FADE35B41E0BD76100461C92 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = FADE35B31E0BD76100461C92 /* main.m */; };
 		FADE35BF1E0BD7E400461C92 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = FADE35BC1E0BD7E400461C92 /* AJNBasicObject.mm */; };
 		FADE35C01E0BD7E400461C92 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = FADE35BE1E0BD7E400461C92 /* BasicObject.m */; };
@@ -25,6 +29,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2B3489EC1E5AE1CC00181106 /* GeneratedClassesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeneratedClassesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2B3489EE1E5AE1CC00181106 /* GeneratedClassesTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GeneratedClassesTests.m; sourceTree = "<group>"; };
+		2B3489F01E5AE1CC00181106 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2B3489F81E5AE86C00181106 /* BasicObjectExtention.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BasicObjectExtention.h; sourceTree = "<group>"; };
+		2B3489F91E5AE86C00181106 /* BasicObjectExtention.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BasicObjectExtention.m; sourceTree = "<group>"; };
 		FADE35B01E0BD76100461C92 /* CodeGeneratorCompileTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CodeGeneratorCompileTest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FADE35B31E0BD76100461C92 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		FADE35BB1E0BD7E400461C92 /* AJNBasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNBasicObject.h; sourceTree = "<group>"; };
@@ -34,6 +43,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2B3489E91E5AE1CC00181106 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FADE35AD1E0BD76100461C92 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -44,10 +60,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2B3489ED1E5AE1CC00181106 /* GeneratedClassesTests */ = {
+			isa = PBXGroup;
+			children = (
+				2B3489EE1E5AE1CC00181106 /* GeneratedClassesTests.m */,
+				2B3489F01E5AE1CC00181106 /* Info.plist */,
+				2B3489F81E5AE86C00181106 /* BasicObjectExtention.h */,
+				2B3489F91E5AE86C00181106 /* BasicObjectExtention.m */,
+			);
+			path = GeneratedClassesTests;
+			sourceTree = "<group>";
+		};
 		FADE35A71E0BD76100461C92 = {
 			isa = PBXGroup;
 			children = (
 				FADE35B21E0BD76100461C92 /* CodeGeneratorCompileTest */,
+				2B3489ED1E5AE1CC00181106 /* GeneratedClassesTests */,
 				FADE35B11E0BD76100461C92 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				FADE35B01E0BD76100461C92 /* CodeGeneratorCompileTest */,
+				2B3489EC1E5AE1CC00181106 /* GeneratedClassesTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +112,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2B3489EB1E5AE1CC00181106 /* GeneratedClassesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2B3489F31E5AE1CC00181106 /* Build configuration list for PBXNativeTarget "GeneratedClassesTests" */;
+			buildPhases = (
+				2B3489E81E5AE1CC00181106 /* Sources */,
+				2B3489E91E5AE1CC00181106 /* Frameworks */,
+				2B3489EA1E5AE1CC00181106 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GeneratedClassesTests;
+			productName = GeneratedClassesTests;
+			productReference = 2B3489EC1E5AE1CC00181106 /* GeneratedClassesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		FADE35AF1E0BD76100461C92 /* CodeGeneratorCompileTest */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FADE35B71E0BD76100461C92 /* Build configuration list for PBXNativeTarget "CodeGeneratorCompileTest" */;
@@ -110,6 +156,10 @@
 				LastUpgradeCheck = 0820;
 				ORGANIZATIONNAME = "AllSeen Alliance";
 				TargetAttributes = {
+					2B3489EB1E5AE1CC00181106 = {
+						CreatedOnToolsVersion = 8.2.1;
+						ProvisioningStyle = Automatic;
+					};
 					FADE35AF1E0BD76100461C92 = {
 						CreatedOnToolsVersion = 8.2.1;
 						ProvisioningStyle = Automatic;
@@ -129,9 +179,20 @@
 			projectRoot = "";
 			targets = (
 				FADE35AF1E0BD76100461C92 /* CodeGeneratorCompileTest */,
+				2B3489EB1E5AE1CC00181106 /* GeneratedClassesTests */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2B3489EA1E5AE1CC00181106 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		FADE35C21E0BE2E200461C92 /* ShellScript */ = {
@@ -150,6 +211,17 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2B3489E81E5AE1CC00181106 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B348A031E5B116600181106 /* BasicObject.m in Sources */,
+				2B3489FA1E5AE86C00181106 /* BasicObjectExtention.m in Sources */,
+				2B348A041E5B116900181106 /* AJNBasicObject.mm in Sources */,
+				2B3489EF1E5AE1CC00181106 /* GeneratedClassesTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FADE35AC1E0BD76100461C92 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -163,6 +235,63 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		2B3489F11E5AE1CC00181106 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/include/\"";
+				INFOPLIST_FILE = GeneratedClassesTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/$(CONFIGURATION)/\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-DQCC_OS_DARWIN",
+					"-DQCC_OS_GROUP_POSIX",
+				);
+				OTHER_LDFLAGS = (
+					"-lalljoyn",
+					"-lajrouter",
+					"-lAllJoynFramework_macOS",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = AllseenAlliance.DoorProvider.GeneratedClassesTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = x86_64;
+			};
+			name = Debug;
+		};
+		2B3489F21E5AE1CC00181106 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/include/\"";
+				INFOPLIST_FILE = GeneratedClassesTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/$(CONFIGURATION)/\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-DNS_BLOCK_ASSERTIONS=1",
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+				);
+				OTHER_LDFLAGS = (
+					"-lalljoyn",
+					"-lajrouter",
+					"-lAllJoynFramework_macOS",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = AllseenAlliance.DoorProvider.GeneratedClassesTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = x86_64;
+			};
+			name = Release;
+		};
 		FADE35B51E0BD76100461C92 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -293,6 +422,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2B3489F31E5AE1CC00181106 /* Build configuration list for PBXNativeTarget "GeneratedClassesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2B3489F11E5AE1CC00181106 /* Debug */,
+				2B3489F21E5AE1CC00181106 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		FADE35AB1E0BD76100461C92 /* Build configuration list for PBXProject "CodeGeneratorCompileTest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
