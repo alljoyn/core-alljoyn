@@ -81,9 +81,8 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * Constructor
      *
      * @param bus          Bus associated with endpoint.
-     * @param concurrency  The maximum number of concurrent method and signal handlers locally executing.
      */
-    _LocalEndpoint(BusAttachment& bus, uint32_t concurrency);
+    _LocalEndpoint(BusAttachment& bus);
 
     /**
      * Destructor.
@@ -590,10 +589,9 @@ class LocalTransport : public Transport {
      *  Constructor
      *
      * @param bus               The bus
-     * @param concurrency       The maximum number of concurrent method and signal handlers locally executing.
      *
      */
-    LocalTransport(BusAttachment& bus, uint32_t concurrency) : localEndpoint(bus, concurrency), isStoppedEvent() { isStoppedEvent.SetEvent(); }
+    LocalTransport(BusAttachment& bus) : localEndpoint(bus), isStoppedEvent() { isStoppedEvent.SetEvent(); }
 
     /**
      * Destructor

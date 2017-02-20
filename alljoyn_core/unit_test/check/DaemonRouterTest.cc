@@ -270,7 +270,7 @@ class _TestLocalEndpoint : public _LocalEndpoint, public _TestEndpointInfo {
   public:
     _TestLocalEndpoint() { }
     _TestLocalEndpoint(BusAttachment& bus, String uniqueName) :
-        _LocalEndpoint(bus, 1),
+        _LocalEndpoint(bus),
         _TestEndpointInfo(uniqueName, ENDPOINT_TYPE_LOCAL, 0, true, false)
     {
         _BusEndpoint::endpointType = ENDPOINT_TYPE_LOCAL;
