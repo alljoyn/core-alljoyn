@@ -74,7 +74,6 @@ void XmlPoliciesConverter::Shutdown()
 QStatus XmlPoliciesConverter::FromXml(AJ_PCSTR policyXml, ajn::PermissionPolicy& policy)
 {
     QCC_ASSERT(nullptr != policyXml);
-    QCC_ASSERT(nullptr != &policy);
 
     XmlElement* root = nullptr;
     QStatus status = XmlElement::GetRoot(policyXml, &root);

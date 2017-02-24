@@ -2873,15 +2873,7 @@ QStatus BusAttachment::CancelWhoImplements(const char* iface)
 
 QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
 {
-    QStatus status = ER_OK;
-
-    if (nullptr == &applicationStateListener) {
-        status = ER_INVALID_ADDRESS;
-    }
-
-    if (ER_OK == status) {
-        status = busInternal->AddApplicationStateListener(applicationStateListener);
-    }
+    QStatus status = busInternal->AddApplicationStateListener(applicationStateListener);
 
     if (ER_OK == status) {
         status = AddMatch(BusAttachment::Internal::STATE_MATCH_RULE);
@@ -2893,15 +2885,7 @@ QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener
 
 QStatus BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
 {
-    QStatus status = ER_OK;
-
-    if (nullptr == &applicationStateListener) {
-        status = ER_INVALID_ADDRESS;
-    }
-
-    if (ER_OK == status) {
-        status = busInternal->RemoveApplicationStateListener(applicationStateListener);
-    }
+    QStatus status = busInternal->RemoveApplicationStateListener(applicationStateListener);
 
     if (ER_OK == status) {
         status = RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE);
