@@ -51,7 +51,6 @@ namespace ajn {
 QStatus XmlManifestConverter::XmlToManifest(AJ_PCSTR manifestXml, Manifest& manifest)
 {
     QCC_ASSERT(nullptr != manifestXml);
-    QCC_ASSERT(nullptr != &manifest);
 
     QCC_DbgHLPrintf(("%s: Converting signed manifest XML into a Manifest object: %s",
                      __FUNCTION__, manifestXml));
