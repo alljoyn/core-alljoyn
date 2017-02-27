@@ -30,6 +30,18 @@
 #import <Foundation/Foundation.h>
 #import "AJNObject.h"
 
+/** @name Property Annotation flags */
+// @{
+typedef uint8_t AJNInterfacePropertyAnnotationFlags;
+
+/**< EmitsChangedSignal annotate flag. */
+static const AJNInterfacePropertyAnnotationFlags kAJNInterfacePropertyEmitChangedSignal             = 1;
+/**< EmitsChangedSignal annotate flag for notifying invalidation of property instead of value. */
+static const AJNInterfacePropertyAnnotationFlags kAJNInterfacePropertyEmitChangedSignalInvalidates  = 2;
+/**< EmitsChangedSignal annotate flag for const property. */
+static const AJNInterfacePropertyAnnotationFlags kAJNInterfacePropertyEmitChangedSignalConst        = 4;
+// @}
+
 /** @name Annotation flags */
 // @{
 typedef uint8_t AJNInterfaceAnnotationFlags;
@@ -38,6 +50,14 @@ typedef uint8_t AJNInterfaceAnnotationFlags;
 static const AJNInterfaceAnnotationFlags kAJNInterfaceAnnotationNoReplyFlag     = 1;
 /**< Deprecated annotate flag */
 static const AJNInterfaceAnnotationFlags kAJNInterfaceAnnotationDeprecatedFlag  = 2;
+/**< Sessioncast annotate flag */
+static const AJNInterfaceAnnotationFlags kAJNInterfaceAnnotationSessioncastFlag  = 4;
+/**< Sessionless annotate flag */
+static const AJNInterfaceAnnotationFlags kAJNInterfaceAnnotationSessionlessFlag  = 8;
+/**< Unicast annotate flag */
+static const AJNInterfaceAnnotationFlags kAJNInterfaceAnnotationUnicastFlag  = 16;
+/**< Global broadcast annotate flag */
+static const AJNInterfaceAnnotationFlags kAJNInterfaceAnnotationGlobalBroadcastFlag  = 32;
 // @}
 
 ////////////////////////////////////////////////////////////////////////////////
