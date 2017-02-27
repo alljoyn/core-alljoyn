@@ -30,6 +30,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2B3489F61E5AE5A300181106 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FADE35CF1E0BEEEE00461C92 /* CodeGeneratorCompileTest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2B3489EC1E5AE1CC00181106;
+			remoteInfo = GeneratedClassesTests;
+		};
 		FADE35D81E0BF4CB00461C92 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = FADE35CF1E0BEEEE00461C92 /* CodeGeneratorCompileTest.xcodeproj */;
@@ -198,6 +205,7 @@
 			isa = PBXGroup;
 			children = (
 				FADE35D91E0BF4CB00461C92 /* CodeGeneratorCompileTest */,
+				2B3489F71E5AE5A300181106 /* GeneratedClassesTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -306,6 +314,13 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
+		2B3489F71E5AE5A300181106 /* GeneratedClassesTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = GeneratedClassesTests.xctest;
+			remoteRef = 2B3489F61E5AE5A300181106 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 		FADE35D91E0BF4CB00461C92 /* CodeGeneratorCompileTest */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.executable";
@@ -455,7 +470,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				INFOPLIST_FILE = AllJoynCodeGeneratorTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = org.allseenalliance.AllJoynCodeGeneratorTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -480,7 +495,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				INFOPLIST_FILE = AllJoynCodeGeneratorTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.allseenalliance.AllJoynCodeGeneratorTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

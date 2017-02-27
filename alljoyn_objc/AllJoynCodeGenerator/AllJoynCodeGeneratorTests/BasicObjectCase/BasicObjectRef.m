@@ -49,49 +49,56 @@
 
 @implementation BasicObject
 
-- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL*)outBool message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage
+{
+    // TODO: complete the implementation of this method
+    //
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
+}
+
+- (QStatus)methodWithBoolIn:(BOOL)inBool outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
@@ -109,7 +116,7 @@
 
 @implementation PingObject
 
-- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage
+- (QStatus)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
