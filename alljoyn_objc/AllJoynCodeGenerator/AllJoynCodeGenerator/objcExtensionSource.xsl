@@ -125,24 +125,15 @@
 </xsl:template>
 
 <xsl:template match="method" mode="objc-declaration">
-    <xsl:text>- (</xsl:text>
-    <xsl:choose>
-        <xsl:when test="count(./arg[@direction='out']) > 1 or count(./arg[@direction='out']) = 0">
-            <xsl:text>void</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-argType"/>
-        </xsl:otherwise>
-    </xsl:choose>
-    <xsl:text>)</xsl:text>
-    <xsl:choose>
-        <xsl:when test="count(./arg) = 0 or (count(./arg) = 1 and count(./arg[@direction='out']) = 1)">
+    <xsl:text>- (QStatus)</xsl:text>
+     <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
             <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
             <xsl:text>:(AJNMessage *)methodCallMessage</xsl:text>
         </xsl:when>
-        <xsl:when test="count(./arg[@direction='out']) > 1">
+        <xsl:when test="count(./arg[@direction='out']) > 0">
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
-            <xsl:if test="count(./arg[@direction='out']) > 1">
+            <xsl:if test="count(./arg[@direction='out']) > 0">
                 <xsl:text>&#32;</xsl:text>
             </xsl:if>
             <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
