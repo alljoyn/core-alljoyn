@@ -20,7 +20,7 @@
         <annotation name="org.alljoyn.lang.objc" value="BasicObject"/>
         <interface name="org.alljoyn.bus.sample.strings">
             <annotation name="org.alljoyn.lang.objc" value="BasicStringsDelegate"/>
-            <annotation name="org.allJoyn.Bus.Secure" value="true" />
+            <annotation name="org.allJoyn.Bus.Secure" value="false" />
             <method name="Concatentate">
                 <arg name="str1" type="s" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="concatenateString:"/>
@@ -28,7 +28,9 @@
                 <arg name="str2" type="s" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="withString:"/>
                 </arg>
-                <arg name="outStr" type="s" direction="out"/>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outString:"/>
+                </arg>
             </method>
             <method name="MethodWithOneInAndMultipleOutArgs">
                 <arg name="str" type="s" direction="in">
@@ -56,16 +58,18 @@
                 </arg>
             </method>
             <method name="MethodWithOnlyOutArgs">
-                <arg name="outStr1" type="s" direction="out">
+                <arg name="outStr" type="s" direction="out">
                     <annotation name="org.alljoyn.lang.objc" value="methodWithOnlyOutString:"/>
                 </arg>
-                <arg name="outStr2" type="s" direction="out">
-                    <annotation name="org.alljoyn.lang.objc" value="outString2:"/>
+                <arg name="outBool" type="b" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outBool:"/>
                 </arg>
             </method>
             <method name="MethodWithNoReturnAndNoArgs"/>
             <method name="MethodWithReturnAndNoInArgs">
-                <arg name="outStr" type="s" direction="out"/>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="methodWithReturnAndNoInArgs:"/>
+                </arg>
             </method>
             <method name="MethodWithComplexTypesForArgs">
                 <arg name="stringArray" type="as" direction="in">
@@ -74,10 +78,23 @@
                 <arg name="aStruct" type="(si)" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="structWithStringAndInt:"/>
                 </arg>
-                <arg name="outStr" type="s" direction="out"/>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outStr:"/>
+                </arg>
+            </method>
+            <method name="MethodWithBoolInAndReturnArg">
+                <arg name="inBool" type="b" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="methodWithBoolIn:"/>
+                </arg>
+                <arg name="outStr" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outStr:"/>
+                </arg>
             </method>
             <property name="testArrayProperty" type="a(ssssssis)" access="readwrite"/>
             <property name="testStringProperty" type="s" access="readwrite"/>
+            <property name="testBoolProperty" type="b" access="readwrite"/>
+            <property name="testStringOnlyReadProperty" type="s" access="read"/>
+            <property name="testStringOnlyWriteProperty" type="s" access="write"/>
             <signal name="TestStringPropertyChanged">
                 <arg name="oldString" type="s">
                     <annotation name="org.alljoyn.lang.objc" value="TestStringPropertyChangedFrom:"/>
@@ -108,6 +125,7 @@
         <annotation name="org.alljoyn.lang.objc" value="PingObject"/>
         <interface name="org.alljoyn.bus.samples.ping">
             <annotation name="org.alljoyn.lang.objc" value="PingObjectDelegate"/>
+            <annotation name="org.allJoyn.Bus.SecPolicy" value="off" />
             <method name="Ping">
                 <arg name="value" type="y" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="pingWithValue:"/>

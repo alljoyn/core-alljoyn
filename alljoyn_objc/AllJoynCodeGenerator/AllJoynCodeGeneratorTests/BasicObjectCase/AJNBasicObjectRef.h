@@ -49,22 +49,26 @@
 //
 @property (nonatomic, strong) AJNMessageArgument *testArrayProperty;
 @property (nonatomic, strong) NSString *testStringProperty;
+@property (nonatomic,) BOOL testBoolProperty;
+@property (nonatomic, readonly) NSString *testStringOnlyReadProperty;
+@property (nonatomic,) NSString *testStringOnlyWriteProperty;
 
 // methods
 //
-- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
-- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage;
-- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage;
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL *)outBool message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithBoolIn:(BOOL )inBool outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
 
 // signals
 //
-- (void)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
-- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
-- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
 
 @end
 
@@ -111,7 +115,7 @@
 
 // signals
 //
-- (void)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
 
 @end
 
@@ -152,7 +156,7 @@
 
 // methods
 //
-- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
+- (QStatus)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
 
 @end
 
@@ -167,29 +171,42 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 @interface AJNBasicObject : AJNBusObject<BasicStringsDelegate, BasicChatDelegate>
+{
+@protected
+    AJNMessageArgument *_testArrayProperty;
+    NSString *_testStringProperty;
+    BOOL _testBoolProperty;
+    NSString *_testStringOnlyReadProperty;
+    NSString *_testStringOnlyWriteProperty;
+    NSString *_name;
 
+}
 // properties
 //
 @property (nonatomic, strong) AJNMessageArgument *testArrayProperty;
 @property (nonatomic, strong) NSString *testStringProperty;
+@property (nonatomic,) BOOL testBoolProperty;
+@property (nonatomic, readonly) NSString *testStringOnlyReadProperty;
+@property (nonatomic,) NSString *testStringOnlyWriteProperty;
 @property (nonatomic, readonly) NSString *name;
 
 // methods
 //
-- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
-- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage;
-- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage;
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL *)outBool message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+- (QStatus)methodWithBoolIn:(BOOL )inBool outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
 
 // signals
 //
-- (void)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
-- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
-- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
-- (void)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (QStatus)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
 
 @end
 
@@ -206,19 +223,48 @@
 
 // properties
 //
-@property (nonatomic, strong) AJNMessageArgument *testArrayProperty;
-@property (nonatomic, strong) NSString *testStringProperty;
-@property (nonatomic, readonly) NSString *name;
+- (QStatus)getTestArrayProperty:(AJNMessageArgument **)prop;
+- (QStatus)setTestArrayProperty:(AJNMessageArgument *)prop;
+
+- (QStatus)getTestStringProperty:(NSString **)prop;
+- (QStatus)setTestStringProperty:(NSString *)prop;
+
+- (QStatus)getTestBoolProperty:(BOOL *)prop;
+- (QStatus)setTestBoolProperty:(BOOL )prop;
+
+- (QStatus)getTestStringOnlyReadProperty:(NSString **)prop;
+
+- (QStatus)setTestStringOnlyWriteProperty:(NSString *)prop;
+
+- (QStatus)getName:(NSString **)prop;
+
 
 // methods
 //
-- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2;
-- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2;
-- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2;
-- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2;
-- (void)methodWithNoReturnAndNoArgs;
-- (NSString *)methodWithReturnAndNoInArgs;
-- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct;
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr;
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr replyMessage:(AJNMessage **) replyMessage;
+
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2;
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 replyMessage:(AJNMessage **) replyMessage;
+
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2;
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 replyMessage:(AJNMessage **) replyMessage;
+
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL *)outBool;
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL *)outBool replyMessage:(AJNMessage **) replyMessage;
+
+- (QStatus)methodWithNoReturnAndNoArgs;
+- (QStatus)methodWithNoReturnAndNoArgs:(AJNMessage **) replyMessage;
+
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr;
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr replyMessage:(AJNMessage **) replyMessage;
+
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr;
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr replyMessage:(AJNMessage **) replyMessage;
+
+- (QStatus)methodWithBoolIn:(BOOL )inBool outStr:(NSString **)outStr;
+- (QStatus)methodWithBoolIn:(BOOL )inBool outStr:(NSString **)outStr replyMessage:(AJNMessage **) replyMessage;
+
 
 @end
 
@@ -232,13 +278,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 @interface AJNPingObject : AJNBusObject<PingObjectDelegate>
+{
+@protected
 
+}
 // properties
 //
 
 // methods
 //
-- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
+- (QStatus)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
 
 // signals
 //
@@ -261,7 +310,9 @@
 
 // methods
 //
-- (void)pingWithValue:(NSNumber *)value;
+- (QStatus)pingWithValue:(NSNumber *)value;
+- (QStatus)pingWithValue:(NSNumber *)value replyMessage:(AJNMessage **) replyMessage;
+
 
 @end
 
