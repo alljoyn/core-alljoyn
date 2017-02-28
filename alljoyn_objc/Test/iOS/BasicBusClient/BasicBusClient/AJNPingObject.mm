@@ -423,7 +423,7 @@ QStatus PingObjectImpl::Sendmy_signal( const char* destination, SessionId sessio
         // add the signals to the interface description
         //
     
-        status = [interfaceDescription addSignalWithName:@"my_signal" inputSignature:@"" argumentNames:[NSArray arrayWithObjects: nil]];
+        status = [interfaceDescription addSignalWithName:@"my_signal" inputSignature:@"" argumentNames:[[NSArray alloc] init]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  my_signal" userInfo:nil];

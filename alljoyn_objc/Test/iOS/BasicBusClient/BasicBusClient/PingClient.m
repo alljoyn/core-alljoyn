@@ -120,7 +120,7 @@ static PingClient *s_sharedInstance;
 
     // disconnect the bus
     //
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     if (status != ER_OK) {
         [self.delegate receivedStatusMessage:[NSString stringWithFormat:@"Failed to disconnect from bus. %@",[AJNStatus descriptionForStatusCode:status]]];
         @throw [NSException exceptionWithName:@"PingClient::stop: Failed" reason:@"Failed to disconnect from bus" userInfo:nil];
