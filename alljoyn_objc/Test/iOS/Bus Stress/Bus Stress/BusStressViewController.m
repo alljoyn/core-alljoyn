@@ -176,7 +176,7 @@
 - (IBAction)didTouchStartButton:(id)sender
 {
     if (self.hasTestStarted == NO) {
-        [BusStressManager runStress:(NSInteger)self.numberOfIterationsSlider.value threadCount:(NSInteger)self.numberOfThreadsSlider.value deleteBusFlag:self.deleteBusAttachmentsSwitch.isOn stopThreadsFlag:self.stopThreadsBeforeJoinSwitch.isOn operationMode:self.operationModeSegmentedControl.selectedSegmentIndex delegate:self];
+        [BusStressManager runStress:(NSInteger)self.numberOfIterationsSlider.value threadCount:(NSInteger)self.numberOfThreadsSlider.value deleteBusFlag:self.deleteBusAttachmentsSwitch.isOn stopThreadsFlag:self.stopThreadsBeforeJoinSwitch.isOn operationMode:(BusStressManagerOperationMode)self.operationModeSegmentedControl.selectedSegmentIndex delegate:self];
         self.startButton.hidden = YES;
         self.stopButton.hidden = NO;
         [self.stressTestActivityIndicatorView startAnimating];
@@ -199,12 +199,12 @@
 
 - (IBAction)numberOfIterationsValueChanged:(id)sender
 {
-    self.numberOfIterationsLabel.text = [NSString stringWithFormat:@"%d", (NSInteger)self.numberOfIterationsSlider.value];
+    self.numberOfIterationsLabel.text = [NSString stringWithFormat:@"%ld", (long)self.numberOfIterationsSlider.value];
 }
 
 - (IBAction)numberOfThreadsValueChanged:(id)sender
 {
-    self.numberOfThreadsLabel.text = [NSString stringWithFormat:@"%d", (NSInteger)self.numberOfThreadsSlider.value];
+    self.numberOfThreadsLabel.text = [NSString stringWithFormat:@"%ld", (long)self.numberOfThreadsSlider.value];
 }
 
 - (AJNTransportMask)transportMask
@@ -216,7 +216,7 @@
 {
     dispatch_async(dispatch_get_main_queue(), ^{
         self.iterationsCompletedProgressView.progress = (float)iterationNumber / (float)totalInterations;
-        self.iterationsCompletedLabel.text = [NSString stringWithFormat:@"%d", iterationNumber];
+        self.iterationsCompletedLabel.text = [NSString stringWithFormat:@"%ld", (long)iterationNumber];
     });
 }
 
