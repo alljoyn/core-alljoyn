@@ -190,7 +190,7 @@ static PingClient *s_sharedInstance;
         if (sessionId > 0) {
             // let our delegate know that we connected to the service
             //
-            if ([self.delegate respondsToSelector:@selector(didConnectWithService)]) {
+            if ([self.delegate respondsToSelector:@selector(didConnectWithService:)]) {
                 [self.delegate didConnectWithService:name];
             }
             
