@@ -253,11 +253,13 @@ static void list_claimable_applications(shared_ptr<SecurityAgent>& secAgent)
 
         vector<OnlineApplication>::const_iterator it = claimableApps.begin();
         int i = 0;
+        ostringstream ss;
         for (; it < claimableApps.end(); ++it) {
             const OnlineApplication& info = *it;
             if (ER_OK == secAgent->PingApplication(info)) {
+                ss << i;
                 tempStr += "  "
-                           + to_string(i)
+                           + ss.str()
                            + ". id: "
                            + toKeyID(info.keyInfo)
                            + " -  bus name: "
@@ -266,6 +268,7 @@ static void list_claimable_applications(shared_ptr<SecurityAgent>& secAgent)
                            + PermissionConfigurator::ToString(info.applicationState)
                            + "\n";
                 ++i;
+                ss.str("");
             }
         }
         outStr = (0 == i) ? outStr : tempStr;
