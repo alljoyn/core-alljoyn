@@ -39,10 +39,21 @@ static NSString * const kBusObjectTestsInterfaceName = @"org.alljoyn.bus.sample.
 static NSString * const kBusObjectTestsObjectPath = @"/basic_object";
 static NSString * const kBusObjectTestsMethodName= @"Concatentate";
 static NSString * const kBusObjectTestsStringPropertyName= @"testStringProperty";
+
+static NSString * const kExpectedChangedProperyArgXml =
+@"<array type_sig=\"{sv}\">\n\
+  <dict_entry>\n\
+    <string>testStringProperty</string>\n\
+    <variant signature=\"s\">\n\
+      <string>newValue</string>\n\
+    </variant>\n\
+  </dict_entry>\n\
+</array>";
+
 const NSTimeInterval kBusObjectTestsWaitTimeBeforeFailure = 5.0;
 const NSInteger kBusObjectTestsServicePort = 999;
 
-@interface BusObjectTests()<AJNBusListener, AJNSessionListener, AJNSessionPortListener, BasicStringsDelegateSignalHandler>
+@interface BusObjectTests()<AJNBusListener, AJNSessionListener, AJNSessionPortListener, BasicStringsDelegateSignalHandler, AJNPropertiesChangedDelegate>
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic) BOOL listenerDidRegisterWithBusCompleted;
@@ -63,6 +74,8 @@ const NSInteger kBusObjectTestsServicePort = 999;
 @property (nonatomic) BOOL clientConnectionCompleted;
 @property (nonatomic) BOOL didSuccessfullyCallMethodSynchronously;
 @property (nonatomic) BOOL didReceiveSignal;
+@property (nonatomic) BOOL didReceivePropertieChange;
+@property (nonatomic, strong) NSString *receivedChangedProperty;
 
 @end
 
@@ -335,6 +348,92 @@ const NSInteger kBusObjectTestsServicePort = 999;
 
     [client shutdownAJNApplication];
 }
+
+- (void)testShouldNotificatePropertiesChangedListener
+{
+    BusObjectTests *client = [[BusObjectTests alloc] init];
+
+    [client startAJNApplication];
+
+    client.isTestClient = YES;
+
+    [self.bus registerBusListener:self];
+    [client.bus registerBusListener:client];
+
+    QStatus status = [self.bus start];
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [client.bus start];
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+
+    status = [self.bus connectWithArguments:@"null:"];
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    status = [client.bus connectWithArguments:@"null:"];
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+
+    status = [self.bus requestWellKnownName:kBusObjectTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
+
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+
+    [self.bus registerBusObject:basicObject];
+
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+
+    status = [self.bus bindSessionOnPort:kBusObjectTestsServicePort withOptions:sessionOptions withDelegate:self];
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusObjectTestsServicePort);
+
+    status = [self.bus advertiseName:kBusObjectTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
+
+    status = [client.bus findAdvertisedName:kBusObjectTestsAdvertisedName];
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusObjectTestsAdvertisedName);
+
+    XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+
+    AJNProxyBusObject *proxy = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
+    status = [proxy introspectRemoteObject];
+    XCTAssertTrue(status == ER_OK, @"Introspect of Remote Object failed.");
+
+    [self.bus enableConcurrentCallbacks];
+    [client.bus enableConcurrentCallbacks];
+    NSArray *properties = [[NSArray alloc] initWithObjects:kBusObjectTestsStringPropertyName, nil];
+    status = [proxy registerPropertiesChangedListener:kBusObjectTestsInterfaceName properties:properties delegate:self context:nil];
+    XCTAssertTrue(status == ER_OK, @"Unable to register properties changed listener.");
+
+    AJNMessageArgument *changeToValue = [[AJNMessageArgument alloc] init];
+    [changeToValue setValue:@"s","newValue"];
+    [changeToValue stabilize];
+    [basicObject emitPropertyWithName:kBusObjectTestsStringPropertyName onInterfaceWithName:kBusObjectTestsInterfaceName changedToValue:changeToValue inSession:self.testSessionId];
+    [self waitForPropertieChangeToBeReceived:kBusObjectTestsWaitTimeBeforeFailure];
+    XCTAssert(_didReceivePropertieChange == true, @"Client didn't receive property change signal.");
+    XCTAssert([_receivedChangedProperty isEqualToString: @"newValue"], @"Client received incorrect changed property.");
+
+    status = [client.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus failed.");
+    status = [self.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus failed.");
+
+    status = [client.bus stop];
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    status = [self.bus stop];
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
+
+    XCTAssertTrue([self waitForBusToStop:kBusObjectTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([client waitForBusToStop:kBusObjectTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+
+    proxy = nil;
+
+    [client.bus unregisterBusListener:client];
+    [self.bus unregisterBusListener:self];
+    XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    
+    [client shutdownAJNApplication];
+}
+
 - (void)testShouldSendAndReceiveSignalSuccessfully
 {
     BusObjectTests *client = [[BusObjectTests alloc] init];
@@ -440,6 +539,11 @@ const NSInteger kBusObjectTestsServicePort = 999;
 - (BOOL)waitForSignalToBeReceived:(NSTimeInterval)timeoutSeconds
 {
     return [self waitForCompletion:timeoutSeconds onFlag:&_didReceiveSignal];
+}
+
+- (BOOL)waitForPropertieChangeToBeReceived:(NSTimeInterval)timeoutSeconds
+{
+    return [self waitForCompletion:timeoutSeconds onFlag:&_didReceivePropertieChange];
 }
 
 - (BOOL)waitForCompletion:(NSTimeInterval)timeoutSeconds onFlag:(BOOL*)flag
@@ -575,6 +679,17 @@ const NSInteger kBusObjectTestsServicePort = 999;
 - (void)didReceiveTestSignalWithNoArgsInSession:(AJNSessionId)sessionId fromSender:(NSString*)sender
 {
 
+}
+
+#pragma mark - AJNPropertiesChangedDelegate implementation
+
+- (void) didPropertiesChanged:(AJNProxyBusObject *)obj inteface:(NSString *)ifaceName changedMsgArg:(AJNMessageArgument *)changed invalidatedMsgArg:(AJNMessageArgument *)invalidated context:(AJNHandle)context
+{
+    //TODO:refactor this part with AJNMessageArgument parser
+    if ([kExpectedChangedProperyArgXml compare:changed.xml] == NSOrderedSame) {
+        _receivedChangedProperty = @"newValue";
+    }
+    self.didReceivePropertieChange = YES;
 }
 
 @end
