@@ -161,18 +161,14 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
         print("+ Destroying bus attachment                                                               +")
         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-        // Unregister listener
+        // Unregister and destroy listener
         //
         self.bus!.unregisterBusListener(self)
-
-        // Destroy listener (temporary decision). When framework unregistering is fixed,
-        // direct destroy calling will be removed.
-        //
         self.bus!.destroy(self)
 
         print("destroyed bus")
 
-        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered.\n")
+        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered and destroyed.\n")
     }
 
     func ping() {
