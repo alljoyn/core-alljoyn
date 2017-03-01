@@ -241,9 +241,25 @@ public:
 class AJNPropertiesChangedListenerImpl : public ajn::ProxyBusObject::PropertiesChangedListener {
     public:
         AJNPropertiesChangedListenerImpl(id<AJNPropertiesChangedDelegate> delegate): m_delegate(delegate) {}
+
+        /**
+         * Callback to receive property changed events.
+         *
+         * @param obj           Remote bus object that owns the property that changed.
+         * @param ifaceName     Name of the interface that defines the property.
+         * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
+         * @param invalidated   Properties whose values have been invalidated, signature "as".
+         * @param context       Caller provided context passed in to RegisterPropertiesChangedListener
+         */
         void PropertiesChanged(ajn::ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
         {
-
+            if ([m_delegate respondsToSelector:@selector(didPropertiesChanged:inteface:changedMsgArg:invalidatedMsgArg:context:)]) {
+                [m_delegate didPropertiesChanged:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)&obj]
+                                        inteface:[NSString stringWithCString:ifaceName encoding:NSUTF8StringEncoding]
+                                   changedMsgArg:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)(&changed)]
+                               invalidatedMsgArg:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)(&invalidated)]
+                                         context:context];
+            }
         }
     private:
         __weak id<AJNPropertiesChangedDelegate> m_delegate;
@@ -759,7 +775,7 @@ using namespace ajn;
     return status;
 }
 
-- (QStatus)registerPropertiesChangedListener:(NSString*)iface properties:(NSArray*)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle*)context
+- (QStatus)registerPropertiesChangedListener:(NSString*)iface properties:(NSArray*)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle)context
 {
     AJNPropertiesChangedListenerImpl *impl = new AJNPropertiesChangedListenerImpl(listener);
     const char **propArray = new const char*[properties.count];

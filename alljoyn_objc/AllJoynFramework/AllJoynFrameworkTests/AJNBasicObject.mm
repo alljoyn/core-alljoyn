@@ -543,6 +543,12 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  testStringProperty" userInfo:nil];
         }
 
+        status = [interfaceDescription addPropertyAnnotationWithName:@"org.freedesktop.DBus.Property.EmitsChangedSignal" value:@"true" forPropertyWithName:@"testStringProperty"];
+
+        if (status != ER_OK) {
+            @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property annotation for interface:  testStringProperty" userInfo:nil];
+        }
+
         // add the methods to the interface description
         //
 
