@@ -134,6 +134,8 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
 
             basicObjectProxy!.introspectRemoteObject()
 
+            printIntrospectedInterfaces(proxyBusObject: basicObjectProxy)
+
 
             let resultOptional = basicObjectProxy!.concatenateString("Code ", with: "monkeys!")
 
@@ -161,14 +163,18 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
         print("+ Destroying bus attachment                                                               +")
         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-        // Unregister and destroy listener
+        // unregister listener
         //
         self.bus!.unregisterBusListener(self)
+
+        // destroy listener
+        //
         self.bus!.destroy(self)
 
-        print("destroyed bus")
+        self.bus!.disconnect()
+        self.bus!.stop()
 
-        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered and destroyed.\n")
+        delegate?.didReceiveStatusUpdateMessage(message: "Bus stopped")
     }
 
     func ping() {
