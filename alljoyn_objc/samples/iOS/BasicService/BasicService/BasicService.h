@@ -39,6 +39,8 @@
 
 @property (strong, nonatomic) id<BasicServiceDelegate> delegate;
 
-- (void)startService;
+- (void)startServiceAsync;
+- (void)stopServiceAsync;
+- (void)printVersionInformation;
 
 @end
