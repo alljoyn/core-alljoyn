@@ -27,41 +27,10 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "ViewController.h"
-#import "BasicClient.h"
+#import <Cocoa/Cocoa.h>
 
-@interface ViewController () <BasicClientDelegate>
+@interface ViewController : NSViewController
 
-@property (nonatomic, strong) BasicClient *basicClient;
-
-@end
-
-@implementation ViewController
-
-- (void)viewDidLoad {
-    [super viewDidLoad];
-    self.basicClient = [[BasicClient alloc] init];
-    self.basicClient.delegate = self;
-}
-
-- (IBAction)didTouchCallServiceButton:(id)sender {
-    [self.basicClient sendHelloMessage];
-}
-
-- (void)didReceiveStatusUpdateMessage:(NSString *)message {
-
-    dispatch_async(dispatch_get_main_queue(), ^{
-        NSMutableString *string = self.eventsTextView.text.length ? [self.eventsTextView.text mutableCopy] : [[NSMutableString alloc] init];
-        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-        [formatter setTimeStyle:NSDateFormatterMediumStyle];
-        [formatter setDateStyle:NSDateFormatterShortStyle];
-
-        [string appendFormat:@"[%@] ",[formatter stringFromDate:[NSDate date]]];
-        [string appendString:message];
-
-        [self.eventsTextView setText:string];
-        NSLog(@"%@", string);
-    });
-}
+@property (unsafe_unretained) IBOutlet NSTextView *eventsTextView;
 
 @end

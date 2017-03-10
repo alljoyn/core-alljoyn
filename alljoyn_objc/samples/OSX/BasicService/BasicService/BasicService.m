@@ -102,7 +102,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 
     // create the message bus
     //
-    self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicService" allowRemoteMessages:YES];
+    self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"MyApp" allowRemoteMessages:YES];
 
     // register a bus listener
     //
@@ -189,7 +189,7 @@ static const AJNSessionPort kBasicServicePort = 25;
     // destroy listener
     //
     [self.bus destroyBusListener:self];
-    [self.delegate didReceiveStatusUpdateMessage:@"Bus listener is unregistered and destroyed.\n"];
+    [self.delegate didReceiveStatusUpdateMessage:@"Bus listener unregistered and destroyed\n"];
 
     [self.bus disconnect];
     [self.bus stop];
@@ -198,6 +198,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 
     _isActive = NO;
 }
+
 
 #pragma mark - AJNBusListener delegate methods
 
@@ -247,6 +248,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 - (void)didRemoveMemberNamed:(NSString*)memberName fromSession:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::didRemoveMemberNamed:%@ fromSession:%u", memberName, sessionId);
 }
+
 
 #pragma mark - AJNSessionPortListener implementation
 
