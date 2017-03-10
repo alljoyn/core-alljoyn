@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -39,7 +39,6 @@
 // Constants
 //
 
-static NSString* kBasicServiceInterfaceName = @"org.alljoyn.Bus.sample";
 static NSString* kBasicServiceName = @"org.alljoyn.Bus.sample";
 static NSString* kBasicServicePath = @"/sample";
 static const AJNSessionPort kBasicServicePort = 25;
@@ -56,8 +55,10 @@ static const AJNSessionPort kBasicServicePort = 25;
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic, strong) BasicObject *basicObject;
 @property (nonatomic, strong) NSCondition *waitCondition;
+@property (nonatomic) BOOL isActive;
 
-- (void)run;
+- (void)startService;
+- (void)stopService;
 
 @end
 
@@ -70,28 +71,29 @@ static const AJNSessionPort kBasicServicePort = 25;
 
 @implementation BasicService
 
-@synthesize bus = _bus;
-@synthesize basicObject = _basicObject;
-@synthesize waitCondition = _waitCondition;
-@synthesize delegate = _delegate;
+- (void)startAsync {
 
-- (void)startService
-{
-    dispatch_queue_t serviceQueue = dispatch_queue_create("org.alljoyn.basic-service.serviceQueue", NULL);
-    dispatch_async( serviceQueue, ^{
-        [self run];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [self startService];
     });
-
 }
 
-- (void)run
-{
+- (void)stopAsync {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [self stopService];
+    });
+}
 
-    NSLog(@"AllJoyn Library version: %@", AJNVersion.versionInformation);
-    NSLog(@"AllJoyn Library build info: %@\n", AJNVersion.buildInformation);
+- (BOOL)isActive {
+    return _isActive;
+}
+
+- (void)printVersionInformation {
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library version: %@\n", [AJNVersion versionInformation]]];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library build info: %@\n", [AJNVersion buildInformation]]];
+}
 
+- (void)startService {
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Creating bus attachment                                                                 +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -101,9 +103,6 @@ static const AJNSessionPort kBasicServicePort = 25;
     // create the message bus
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicService" allowRemoteMessages:YES];
-
-    self.waitCondition = [[NSCondition alloc] init];
-    [self.waitCondition lock];
 
     // register a bus listener
     //
@@ -117,31 +116,22 @@ static const AJNSessionPort kBasicServicePort = 25;
     //
     status =  [self.bus start];
 
-    if (ER_OK != status) {
+    if (status != ER_OK) {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Start failed\n"];
-
-        NSLog(@"Bus start failed.");
+        return;
     }
+
+    _isActive = YES;
 
     // register the bus object
     //
     status = [self.bus registerBusObject:self.basicObject];
-    if (ER_OK != status) {
-        NSLog(@"ERROR: Could not register bus object");
-    }
-
-    [self.delegate didReceiveStatusUpdateMessage:@"Object registered successfully.\n"];
+    [self.delegate didReceiveStatusUpdateMessage: status == ER_OK ? @"Object registered successfully.\n" : @"ERROR: Could not register bus object\n"];
 
     // connect to the message bus
     //
     status = [self.bus connectWithArguments:@"null:"];
-
-    if (ER_OK != status) {
-        NSLog(@"Bus connect failed.");
-        [self.delegate didReceiveStatusUpdateMessage:@"Failed to connect to null: transport"];
-    }
-
-    [self.delegate didReceiveStatusUpdateMessage:@"Bus now connected to null: transport\n"];
+    [self.delegate didReceiveStatusUpdateMessage: status == ER_OK ? @"Bus is connected to null: transport\n" : @"Failed to connect to null: transport\n"];
 
     // Advertise this service on the bus
     // There are three steps to advertising this service on the bus
@@ -154,18 +144,17 @@ static const AJNSessionPort kBasicServicePort = 25;
     // request the name
     //
     status = [self.bus requestWellKnownName:kBasicServiceName withFlags:kAJNBusNameFlagReplaceExisting | kAJNBusNameFlagDoNotQueue];
-    if (ER_OK != status) {
-        NSLog(@"ERROR: Request for name failed (%@)", kBasicServiceName);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: Request for name %@ is failed", kBasicServiceName);
     }
-
 
     // bind a session to a service port
     //
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
 
     status = [self.bus bindSessionOnPort:kBasicServicePort withOptions:sessionOptions withDelegate:self];
-    if (ER_OK != status) {
-        NSLog(@"ERROR: Could not bind session on port (%d)", kBasicServicePort);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: Could not bind session on port %d", kBasicServicePort);
     }
 
     // advertise a name
@@ -174,103 +163,108 @@ static const AJNSessionPort kBasicServicePort = 25;
     if (ER_OK != status) {
         NSLog(@"Could not advertise (%@)", kBasicServiceName);
     }
+}
 
-    // wait until the client leaves before tearing down the service
+- (void)stopService {
+    NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+    NSLog(@"+ Destroying bus attachment                                                               +");
+    NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+
+    //cancel name advertising
     //
-    [self.waitCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:600]];
+    [self.bus cancelAdvertisedName:kBasicServiceName withTransportMask:kAJNTransportMaskAny];
+
+    // unbind session
+    //
+    [self.bus unbindSessionFromPort:kBasicServicePort];
 
     // clean up
     //
     [self.bus unregisterBusObject:self.basicObject];
 
-    [self.waitCondition unlock];
-
-    NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    NSLog(@"+ Destroying bus attachment                                                               +");
-    NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-
-    // deallocate the bus
+    // unregister listener
     //
-    self.bus = nil;
+    [self.bus unregisterBusListener:self];
+
+    // destroy listener
+    //
+    [self.bus destroyBusListener:self];
+    [self.delegate didReceiveStatusUpdateMessage:@"Bus listener is unregistered and destroyed.\n"];
+
+    [self.bus disconnect];
+    [self.bus stop];
+
+    [self.delegate didReceiveStatusUpdateMessage:@"Bus stopped\n"];
+
+    _isActive = NO;
 }
 
 #pragma mark - AJNBusListener delegate methods
 
-- (void)listenerDidRegisterWithBus:(AJNBusAttachment*)busAttachment
-{
+- (void)listenerDidRegisterWithBus:(AJNBusAttachment*)busAttachment {
     NSLog(@"AJNBusListener::listenerDidRegisterWithBus:%@",busAttachment);
 }
 
-- (void)listenerDidUnregisterWithBus:(AJNBusAttachment*)busAttachment
-{
+- (void)listenerDidUnregisterWithBus:(AJNBusAttachment*)busAttachment {
     NSLog(@"AJNBusListener::listenerDidUnregisterWithBus:%@",busAttachment);
 }
 
-- (void)didFindAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
-{
+- (void)didFindAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix {
     NSLog(@"AJNBusListener::didFindAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport, namePrefix);
 }
 
-- (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
-{
-    NSLog(@"AJNBusListener::listenerDidUnregisterWithBus:%@ withTransportMask:%u namePrefix:%@",name,transport,namePrefix);
+- (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix {
+    NSLog(@"AJNBusListener::didLoseAdvertisedName:%@ withTransportMask:%u namePrefix:%@",name,transport,namePrefix);
 }
 
-- (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner
-{
+- (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner {
     NSLog(@"AJNBusListener::nameOwnerChanged:%@ to:%@ from:%@", name, newOwner, previousOwner);
 }
 
-- (void)busWillStop
-{
+- (void)busWillStop {
     NSLog(@"AJNBusListener::busWillStop");
 }
 
-- (void)busDidDisconnect
-{
+- (void)busDidDisconnect {
     NSLog(@"AJNBusListener::busDidDisconnect");
 }
 
 #pragma mark - AJNSessionListener methods
 
-- (void)sessionWasLost:(AJNSessionId)sessionId
-{
+- (void)sessionWasLost:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::sessionWasLost %u", sessionId);
 }
 
 
-- (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason
-{
+- (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason {
     NSLog(@"AJNBusListener::sessionWasLost %u forReason:%u", sessionId, reason);
 }
 
-- (void)didAddMemberNamed:(NSString*)memberName toSession:(AJNSessionId)sessionId
-{
+- (void)didAddMemberNamed:(NSString*)memberName toSession:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::didAddMemberNamed:%@ toSession:%u", memberName, sessionId);
 }
 
-- (void)didRemoveMemberNamed:(NSString*)memberName fromSession:(AJNSessionId)sessionId
-{
+- (void)didRemoveMemberNamed:(NSString*)memberName fromSession:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::didRemoveMemberNamed:%@ fromSession:%u", memberName, sessionId);
 }
 
 #pragma mark - AJNSessionPortListener implementation
 
-- (BOOL)shouldAcceptSessionJoinerNamed:(NSString*)joiner onSessionPort:(AJNSessionPort)sessionPort withSessionOptions:(AJNSessionOptions*)options
-{
+- (BOOL)shouldAcceptSessionJoinerNamed:(NSString*)joiner onSessionPort:(AJNSessionPort)sessionPort withSessionOptions:(AJNSessionOptions*)options {
     NSLog(@"AJNSessionPortListener::shouldAcceptSessionJoinerNamed:%@ onSessionPort:%u withSessionOptions:", joiner, sessionPort);
     BOOL shouldAcceptSessionJoiner = kBasicServicePort == sessionPort;
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"Request from %@ to join session is %@.\n", joiner, shouldAcceptSessionJoiner ? @"accepted" : @"rejected"]];
     return shouldAcceptSessionJoiner;
 }
 
-- (void)didJoin:(NSString*)joiner inSessionWithId:(AJNSessionId)sessionId onSessionPort:(AJNSessionPort)sessionPort
-{
+- (void)didJoin:(NSString*)joiner inSessionWithId:(AJNSessionId)sessionId onSessionPort:(AJNSessionPort)sessionPort {
     NSLog(@"AJNSessionPortListener::didJoin:%@ inSessionWithId:%u onSessionPort:%u withSessionOptions:", joiner, sessionId, sessionPort);
+
+    //set session listener to be able get callbacks of AJNSessionListener delegate
+    //
     [self.bus enableConcurrentCallbacks];
     [self.bus setSessionListener:self toSession:sessionId];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"%@ successfully joined session %u on port %d.\n", joiner, sessionId, sessionPort]];
-
 }
 
 @end
