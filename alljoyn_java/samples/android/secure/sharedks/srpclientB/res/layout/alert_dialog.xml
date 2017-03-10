@@ -13,6 +13,6 @@
         android:scrollHorizontally="true"
         android:gravity="fill_horizontal"
         android:numeric="integer"
-        android:textAppearance="?android:attr/textAppearanceMedium" 
+        android:textAppearance="?android:attr/textAppearanceMedium"
         />
 </LinearLayout>

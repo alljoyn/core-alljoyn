@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -59,15 +59,15 @@ import android.widget.TextView;
 
 public class RulesFragment extends Fragment {
 	private final static String TAG = "RulesFragment";
-    
+
     private final static String KEY_RULE = "rule";
-   
+
     private ListView rulesListView;
 	private static MySimpleAdapter simpleAdapter;
 	public static Vector<Rules> getRules() { return simpleAdapter.mRules; }
 	public static void addRules(Rules r) { simpleAdapter.mRules.add(r);  saveRule(r.toString()); simpleAdapter.notifyChanged(); }
 	public static void updateRules(String sessionName, String friendlyName) { simpleAdapter.updateRules(sessionName, friendlyName); }
-	
+
 	 private static String getParentDir() {
  	    String parentDirPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DEMO";
  	    File parentDir = new File(parentDirPath);
@@ -76,21 +76,21 @@ public class RulesFragment extends Fragment {
  	    }
  	    return parentDirPath;
  	}
-     
+
      private static void saveRule(String data) {
  		String rules = readFromFile();
  		rules += data + ";";
  		writeToFile(rules);
  		Log.d(TAG, "Saved Rule: "+data);
  	}
- 	
+
  	public static void loadRules() {
  		String ruleString = readFromFile();
  		Log.d(TAG, "Read saved string: "+ruleString);
  		if(ruleString.length() > 0) {
  			String[] rules = ruleString.split("\\;");
  			for (int i = 0; i < rules.length; i++) {
- 				if (rules[i] != null && rules[i].length() > 0) { 
+ 				if (rules[i] != null && rules[i].length() > 0) {
  					Log.d(TAG, "Parsing saved rule: "+rules[i]);
  					Rules r = new Rules();
  					r.createFromString(rules[i]);
@@ -101,14 +101,14 @@ public class RulesFragment extends Fragment {
  			}
  		}
  	}
- 	
+
  	private static void writeToFile(String data) {
          try {
          	Log.d(TAG, "saving out: "+data);
          	File saveFile = new File(getParentDir() + "/ruleData.conf");
          	if(!saveFile.exists()) {
          		saveFile.createNewFile();
-         	} 
+         	}
          	FileOutputStream outputStreamWriter = new FileOutputStream(saveFile);
              outputStreamWriter.write(data.getBytes());
              outputStreamWriter.close();
@@ -116,7 +116,7 @@ public class RulesFragment extends Fragment {
          catch (Exception e) {
          	e.printStackTrace();
      		Log.d(TAG, "ERROR: "+e);
-         } 
+         }
      }
 
      private static String readFromFile() {
@@ -126,7 +126,7 @@ public class RulesFragment extends Fragment {
          	File saveFile = new File(getParentDir() + "/ruleData.conf");
          	if(!saveFile.exists()) {
          		saveFile.createNewFile();
-         	} 
+         	}
          	FileInputStream inputStream = new FileInputStream(saveFile);
 
              if ( inputStream != null ) {
@@ -151,15 +151,15 @@ public class RulesFragment extends Fragment {
 
          return ret;
      }
-	
+
 	private static Description mSelectedEvent;
-	
+
 	public Description getSelectedEvent() { return mSelectedEvent; }
-	
+
 	private List<Map<String, String>> mapList = new ArrayList<Map<String, String>>();
 	private String[] from = new String[] {KEY_RULE};
 	private int[] to = new int[] {R.id.rule_text};
-	
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstance) {
 		View view = inflater.inflate(R.layout.rule_fragment, container, false);
@@ -170,38 +170,38 @@ public class RulesFragment extends Fragment {
 		rulesListView.setAdapter(simpleAdapter);
 		return view;
 	}
-	
+
 	public void clearAllRules() {
 	    mapList.clear();
 	    simpleAdapter.clearChecked();
 	    notifyChanged();
 	}
-	
+
 	public void clearChecked() {
 	    simpleAdapter.clearChecked();
 	    notifyChanged();
 	}
-	
+
 	public void removeSelected() {
 		simpleAdapter.removeSelected();
 	    notifyChanged();
 	}
-	
+
 	public void deleteAllRules() {
 		simpleAdapter.deleteAllRules();
 		writeToFile("");
 		notifyChanged();
 	}
-	
+
 	private void notifyChanged() {
 		simpleAdapter.notifyChanged();
 	}
-	
+
     @Override
     public void onStart() {
         super.onStart();
     };
-    
+
     @Override
     public void onStop() {
         super.onStop();
@@ -211,17 +211,17 @@ public class RulesFragment extends Fragment {
     	private Vector<Rules> mRules = new Vector<Rules>();
         private List<Boolean> checkedList = new ArrayList<Boolean>();
         private LayoutInflater inflater;
-        
+
         public MySimpleAdapter(Context context, List<? extends Map<String, ?>> data, int resource, String[] from, int[] to) {
             super(context, data, resource, from, to);
             this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         }
-        
+
         @Override
         public int getCount() {
 			return mRules.size();
         }
-        
+
         @Override
         public View getView(final int position, View convertView, ViewGroup parent) {
             if (null == convertView) {
@@ -253,11 +253,11 @@ public class RulesFragment extends Fragment {
             	}
             }
             textViewRuleText.setText(mRules.get(position).getEvent().getDescription() + ", " +actionDescs);
-            
+
             return convertView;
         }
-        
-        
+
+
         private void notifyChanged() {
     		getActivity().runOnUiThread(new Runnable() {
     			@Override
@@ -266,13 +266,13 @@ public class RulesFragment extends Fragment {
     			}
     		});
     	}
-        
+
         public void clearChecked() {
             for (int i=0; i<checkedList.size(); i++) {
                 checkedList.set(i, false);
             }
         }
-        
+
         public void removeSelected() {
         	for (int i=0; i<checkedList.size(); i++) {
                 if(checkedList.get(i) == true) {
@@ -282,7 +282,7 @@ public class RulesFragment extends Fragment {
                 checkedList.set(i, false);
             }
         }
-        
+
         public void deleteAllRules() {
         	for (int i=0; i<checkedList.size(); i++) {
                 checkedList.set(i, false);
@@ -293,7 +293,7 @@ public class RulesFragment extends Fragment {
             }
         	mRules.clear();
         }
-        
+
         public void updateRules(String sessionName, String friendlyName)  {
         	boolean change = false;
         	for(Rules r : mRules) {

@@ -4,7 +4,7 @@ Interface Description {#interface_description}
 Copyright AllSeen Alliance
 
 THIS DOCUMENT AND ALL INFORMATION CONTAINED HEREIN ARE PROVIDED ON AN AS-IS
-BASIS WITHOUT WARRANTY OF ANY KIND.  
+BASIS WITHOUT WARRANTY OF ANY KIND.
 ------------------------------------------------------------------------------->
 
 @brief specifying and activating AllJoyn interfaces

@@ -3,49 +3,49 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-   
+
     <TableLayout
         android:layout_width="match_parent"
     	android:layout_height="wrap_content">
-    
-        <TableRow android:gravity="center"> 
-   	        
+
+        <TableRow android:gravity="center">
+
    	        <TextView
     	        android:text="Channel Name:  "
             />
-         
+
             <TextView
                 android:id="@+id/useChannelName"
     	        android:text="1234567890"
             />
         </TableRow>
-        
-        <TableRow android:gravity="center"> 
+
+        <TableRow android:gravity="center">
             <TextView
     	         android:text="Channel Status:  "
             />
-         
+
             <TextView
                 android:id="@+id/useChannelStatus"
     	        android:text="1234567890"
             />
         </TableRow>
     </TableLayout>
-    
+
     <LinearLayout
         android:orientation="horizontal"
         android:gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp">
-        
+
         <Button
-            android:id="@+id/useJoin"        
+            android:id="@+id/useJoin"
             android:layout_width="120dp"
             android:layout_height="wrap_content"
     	    android:text="Join Channel"
         />
-        
+
         <Button
             android:id="@+id/useLeave"
             android:layout_width="120dp"
@@ -53,7 +53,7 @@
     	    android:text="Leave Channel"
         />
     </LinearLayout>
-    
+
     <EditText
         android:id="@+id/useMessage"
         android:layout_width="match_parent"
@@ -62,9 +62,9 @@
         android:hint="Enter message here"
         android:imeOptions="actionDone"
     />
-       
-    <ListView 
-        android:id="@+id/useHistoryList"           
+
+    <ListView
+        android:id="@+id/useHistoryList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"

@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -61,14 +61,14 @@ static PingClient *s_sharedInstance;
 - (void)connectToService:(NSString *)serviceName
 {
     QStatus status = ER_OK;
-    
+
     self.serviceName = serviceName;
-    
+
     @try {
         // allocate and initalize the bus
         //
         self.bus = [[AJNBusAttachment alloc] initWithApplicationName:kAppName allowRemoteMessages:YES];
-        
+
         // start the bus
         //
         status = [self.bus start];
@@ -77,7 +77,7 @@ static PingClient *s_sharedInstance;
             @throw [NSException exceptionWithName:@"connectToService Failed" reason:@"Unable to start bus" userInfo:nil];
         }
         [self.delegate receivedStatusMessage:@"Bus started successfully."];
-        
+
         // connect the bus using the null transport
         //
         status = [self.bus connectWithArguments:@"null:"];
@@ -86,13 +86,13 @@ static PingClient *s_sharedInstance;
             @throw [NSException exceptionWithName:@"connectToService Failed" reason:@"Unable to connect to bus" userInfo:nil];
         }
         [self.delegate receivedStatusMessage:@"Bus connected successfully."];
-        
+
         // register the PingClient object as a bus listener, which allows us to find
         // well known names that are advertised on the bus.
         //
         [self.bus registerBusListener:self];
         [self.delegate receivedStatusMessage:@"Bus listener registered successfully."];
-        
+
         // begin searching for the name of the service on the bus that we
         // are interested in connecting with. Services let clients know of their existence
         // by advertising a well-known name.
@@ -112,12 +112,12 @@ static PingClient *s_sharedInstance;
 - (void)disconnect
 {
     QStatus status = ER_OK;
-    
+
     // unregister as a listener
     //
     [self.bus unregisterBusListener:self];
     [self.delegate receivedStatusMessage:@"Bus listener registered successfully."];
-    
+
     // disconnect the bus
     //
     status = [self.bus disconnect];
@@ -127,7 +127,7 @@ static PingClient *s_sharedInstance;
     }
     [self.delegate receivedStatusMessage:@"Bus disconnected successfully."];
 
-    
+
     // stop the bus
     //
     status = [self.bus stop];
@@ -136,20 +136,20 @@ static PingClient *s_sharedInstance;
         @throw [NSException exceptionWithName:@"PingClient::stop: Failed" reason:@"Failed to stop the bus" userInfo:nil];
     }
     [self.delegate receivedStatusMessage:@"Bus stopped successfully."];
-    
+
     // let our proxy object deallocate
     //
     self.pingObjectProxy = nil;
     [self.delegate receivedStatusMessage:@"Deallocated proxy object."];
-    
+
     // destroy the listener
     //
     [self.bus destroyBusListener:self];
     [self.delegate receivedStatusMessage:@"Destroyed bus listener."];
-    
+
     // deallocate the bus
     //
-    self.bus = nil;    
+    self.bus = nil;
     [self.delegate receivedStatusMessage:@"Deallocated bus attachment."];
 }
 
@@ -170,53 +170,53 @@ static PingClient *s_sharedInstance;
     NSLog(@"PingClient::didFindAdvertisedName:%@ withTransportMask:%i namePrefix:%@", name, transport, namePrefix);
     [self.delegate receivedStatusMessage:[NSString stringWithFormat:@"Discovered advertised name [%@] on the bus.", name]];
     if ([name compare:self.serviceName] == NSOrderedSame) {
-        
+
         // enable concurrency within the handler
         //
         [self.bus enableConcurrentCallbacks];
-        
+
         // we found the name of the service we are looking for, so attempt to
         // connect to the service and establish a session
         //
         AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-        
+
         NSString *message = [NSString stringWithFormat:@"Attempting to join session with service %@ using transport %@...", name, @"Any"];
-        
+
         NSLog(@"%@", message);
         [self.delegate receivedStatusMessage:message];
-        
+
         AJNSessionId sessionId = [self.bus joinSessionWithName:name onPort:kServicePort withDelegate:self options:sessionOptions];
-        
+
         if (sessionId > 0) {
             // let our delegate know that we connected to the service
             //
             if ([self.delegate respondsToSelector:@selector(didConnectWithService)]) {
                 [self.delegate didConnectWithService:name];
             }
-            
+
             [self.delegate receivedStatusMessage:[NSString stringWithFormat:@"Successfully joined session [%u].", sessionId]];
-            
+
             // once we successfully join the session with service, create a proxy bus
             // object that we can use to communicate with the service.
             //
             self.pingObjectProxy = [[PingObjectProxy alloc] initWithBusAttachment:self.bus serviceName:self.serviceName objectPath:kServicePath sessionId:sessionId];
             [self.delegate receivedStatusMessage:@"Allocated Ping object proxy."];
 
-            
+
             // next we need to dynamically get the interface descriptions for the remote
             // object we created above. Introspect the object to determine what
-            // interfaces it supports and what members are included in those 
+            // interfaces it supports and what members are included in those
             // interfaces.
-            // 
+            //
             QStatus status = [self.pingObjectProxy introspectRemoteObject];
             if (status != ER_OK) {
                 [self.delegate receivedStatusMessage:[NSString stringWithFormat:@"Failed to introspect remote ping object. %@", [AJNStatus descriptionForStatusCode:status]]];
             }
-            
+
             // now send a ping string
             //
             [self sendPingToService:@"Ping String 1"];
-         
+
             // we are done so let the client know it should do a disconnect
             //
             [self.delegate shouldDisconnectFromService:name];
@@ -225,7 +225,7 @@ static PingClient *s_sharedInstance;
             NSLog(@"%@", @"ERROR: Failed to join session with service.");
         }
     }
-    
+
 }
 
 - (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
@@ -233,7 +233,7 @@ static PingClient *s_sharedInstance;
     NSString *message = [NSString stringWithFormat:@"PingClient::didLoseAdvertisedName:%@ withTransportMask:%i namePrefix:%@", name, transport, namePrefix];
     NSLog(@"%@", message);
     [self.delegate receivedStatusMessage:message];
-   
+
 }
 
 - (void)nameOwnerChanged:(NSString *)name to:(NSString *)newOwner from:(NSString *)previousOwner

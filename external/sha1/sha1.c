@@ -2,7 +2,7 @@
  * sha1.c
  *
  * Originally witten by Steve Reid <steve@edmweb.com>
- * 
+ *
  * Modified by Aaron D. Gifford <agifford@infowest.com>
  *
  * NO COPYRIGHT - THIS IS 100% IN THE PUBLIC DOMAIN

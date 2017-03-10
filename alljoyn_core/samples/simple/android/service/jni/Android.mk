@@ -81,7 +81,7 @@ LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_
 LOCAL_SRC_FILES := \
 	Service_jni.cpp
 
-# The LOCAL_STATIC_LIBRARIES variables must contain a list of static 
+# The LOCAL_STATIC_LIBRARIES variables must contain a list of static
 # libraries that will be linked into a module.
 #
 LOCAL_STATIC_LIBRARIES := \
