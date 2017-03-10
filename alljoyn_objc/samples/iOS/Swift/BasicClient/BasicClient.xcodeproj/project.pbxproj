@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		9A1854AA1E112A110005E738 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A1854A91E112A110005E738 /* AJNBasicObject.mm */; };
 		9A3C63141DCB5DF900EF04D8 /* BasicClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A3C63131DCB5DF900EF04D8 /* BasicClient.swift */; };
+		9A3C63171DCB6B7400EF04D8 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A3C63161DCB6B7400EF04D8 /* SystemConfiguration.framework */; };
+		9A3C631B1DCB6DF600EF04D8 /* libstdc++.6.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A3C631A1DCB6DF600EF04D8 /* libstdc++.6.tbd */; };
 		9AC16E1F1DCB1D090082A228 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC16E1E1DCB1D090082A228 /* AppDelegate.swift */; };
 		9AC16E211DCB1D090082A228 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC16E201DCB1D090082A228 /* ViewController.swift */; };
 		9AC16E241DCB1D090082A228 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9AC16E221DCB1D090082A228 /* Main.storyboard */; };
@@ -21,6 +23,9 @@
 		9A1854A81E112A110005E738 /* AJNBasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNBasicObject.h; sourceTree = "<group>"; };
 		9A1854A91E112A110005E738 /* AJNBasicObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNBasicObject.mm; sourceTree = "<group>"; };
 		9A3C63131DCB5DF900EF04D8 /* BasicClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BasicClient.swift; sourceTree = "<group>"; };
+		9A3C63161DCB6B7400EF04D8 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		9A3C63181DCB6BF300EF04D8 /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
+		9A3C631A1DCB6DF600EF04D8 /* libstdc++.6.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.6.tbd"; path = "usr/lib/libstdc++.6.tbd"; sourceTree = SDKROOT; };
 		9AC16E1B1DCB1D090082A228 /* BasicClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BasicClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AC16E1E1DCB1D090082A228 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		9AC16E201DCB1D090082A228 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -35,6 +40,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A3C631B1DCB6DF600EF04D8 /* libstdc++.6.tbd in Frameworks */,
+				9A3C63171DCB6B7400EF04D8 /* SystemConfiguration.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,11 +57,22 @@
 			name = object;
 			sourceTree = "<group>";
 		};
+		9A3C63151DCB6B7300EF04D8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9A3C631A1DCB6DF600EF04D8 /* libstdc++.6.tbd */,
+				9A3C63181DCB6BF300EF04D8 /* libstdc++.tbd */,
+				9A3C63161DCB6B7400EF04D8 /* SystemConfiguration.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		9AC16E121DCB1D090082A228 = {
 			isa = PBXGroup;
 			children = (
 				9AC16E1D1DCB1D090082A228 /* BasicClient */,
 				9AC16E1C1DCB1D090082A228 /* Products */,
+				9A3C63151DCB6B7300EF04D8 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};

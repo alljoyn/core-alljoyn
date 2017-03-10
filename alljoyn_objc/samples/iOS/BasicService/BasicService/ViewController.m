@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -38,34 +38,36 @@
 
 @implementation ViewController
 
-@synthesize basicService = _basicService;
-
-- (void)viewDidLoad
-{
+- (void)viewDidLoad {
     [super viewDidLoad];
-	// Do any additional setup after loading the view, typically from a nib.
-    self.basicService = [[BasicService alloc] init];
-    self.basicService.delegate = self;
-    [self.basicService startService];
-}
+    _basicService = [[BasicService alloc] init];
+    _basicService.delegate = self;
+    [_basicService printVersionInformation];
 
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+    [_basicService startAsync];
+    [_serviceButton setTitle:@"Stop Service" forState:UIControlStateNormal];
+}
+- (IBAction)didTouchServiceButton:(id)sender {
+    if (_basicService.isActive) {
+        [_basicService stopAsync];
+        [_serviceButton setTitle:@"Start Service" forState:UIControlStateNormal];
+    } else {
+        [_basicService startAsync];
+        [_serviceButton setTitle:@"Stop Service" forState:UIControlStateNormal];
+    }
 }
 
 - (void)didReceiveStatusUpdateMessage:(NSString *)message
 {
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSMutableString *string = self.eventTextView.text.length ? [self.eventTextView.text mutableCopy] : [[NSMutableString alloc] init];
+        NSMutableString *string = self.eventsTextView.text.length ? [self.eventsTextView.text mutableCopy] : [[NSMutableString alloc] init];
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
         [formatter setTimeStyle:NSDateFormatterMediumStyle];
         [formatter setDateStyle:NSDateFormatterShortStyle];
         [string appendFormat:@"[%@] ",[formatter stringFromDate:[NSDate date]]];
         [string appendString:message];
-        [self.eventTextView setText:string];
-        NSLog(@"%@",message);
+        [self.eventsTextView setText:string];
+        NSLog(@"%@", string);
     });
 }
 
