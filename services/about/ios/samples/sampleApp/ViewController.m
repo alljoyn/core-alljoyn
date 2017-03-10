@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -89,9 +89,9 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	if (alertView == self.busNameAlert) {
 		if (buttonIndex == 1) { // User pressed OK
 			self.realmBusName = [[alertView textFieldAtIndex:0] text];
-            
+
 			NSLog(@"[%@] [%@] realmBusName: %@", @"DEBUG", [[self class] description], self.realmBusName);
-            
+
 			[self startAboutClient];
 		}
 		else {   // User pressed Cancel
@@ -158,28 +158,28 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 {
 	NSString *announcementUniqueName; // Announcement unique name in a format of <busName DeviceName>
 	ClientInformation *clientInformation = [[ClientInformation alloc] init];
-    
+
 	// Save the announcement in a AJNAnnouncement
 	clientInformation.announcement = [[AJNAnnouncement alloc] initWithVersion:version port:port busName:busName objectDescriptions:objectDescs aboutData:aboutData];
-    
+
 	// Generate an announcement unique name in a format of <busName DeviceName>
 	announcementUniqueName = [NSString stringWithFormat:@"%@ %@", [clientInformation.announcement busName], [AJNAboutDataConverter messageArgumentToString:[clientInformation.announcement aboutData][@"DeviceName"]]];
-    
+
     NSLog(@"[%@] [%@] Announcement unique name [%@]", @"DEBUG", [[self class] description], announcementUniqueName);
-    
+
 	AJNMessageArgument *annObjMsgArg = [clientInformation.announcement aboutData][@"AppId"];
 	uint8_t *appIdBuffer;
 	size_t appIdNumElements;
 	QStatus status;
 	status = [annObjMsgArg value:@"ay", &appIdNumElements, &appIdBuffer];
-    
+
 	// Add the received announcement
 	if (status != ER_OK) {
         NSLog(@"[%@] [%@] Failed to read appId for key [%@]", @"DEBUG", [[self class] description], announcementUniqueName);
 
 		return;
 	}
-    
+
 	// Dealing with announcement entries should be syncronized, so we add it to a queue
 	dispatch_sync(self.annBtnCreationQueue, ^{
 	    bool isAppIdExists = false;
@@ -187,32 +187,32 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	    size_t tmpAppIdNumElements;
 	    QStatus tStatus;
 	    int res;
-        
+
 	    // Iterate over the announcements dictionary
 	    for (NSString *key in self.clientInformationDict.allKeys) {
 	        ClientInformation *clientInfo = [self.clientInformationDict valueForKey:key];
 	        AJNAnnouncement *announcement = [clientInfo announcement];
 	        AJNMessageArgument *tmpMsgrg = [announcement aboutData][@"AppId"];
-            
+
 	        tStatus = [tmpMsgrg value:@"ay", &tmpAppIdNumElements, &tmpAppIdBuffer];
 	        if (tStatus != ER_OK) {
                 NSLog(@"[%@] [%@] Failed to read appId for key [%@]", @"DEBUG", [[self class] description], key);
 
 	            return;
 			}
-            
+
 	        res = 1;
 	        if (appIdNumElements == tmpAppIdNumElements) {
 	            res = memcmp(appIdBuffer, tmpAppIdBuffer, appIdNumElements);
 			}
-            
+
 	        // Found a matched appId - res=0
 	        if (!res) {
 	            isAppIdExists = true;
 	            // Same AppId and the same announcementUniqueName
 	            if ([key isEqualToString:announcementUniqueName]) {
 	                // Update only announcements dictionary
-                    
+
                      NSLog(@"[%@] [%@] Got an announcement from a known device - updating the announcement object", @"DEBUG", [[self class] description]);
 
                     (self.clientInformationDict)[announcementUniqueName] = clientInformation;
@@ -220,7 +220,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 				}
 	            else {
                      NSLog(@"[%@] [%@] Got an announcement from a known device(different bus name) - updating the announcement object and UI ", @"DEBUG", [[self class] description]);
-                    
+
 	                // Cancel advertise name if the bus name has changed
 	                NSString *prevBusName = [announcement busName];
 	                if (!([busName isEqualToString:prevBusName])) {
@@ -237,17 +237,17 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	            break;
 			} //if
 		} //for
-        
+
 	    //appId doesn't exist and  there is no match announcementUniqueName
 	    if (!(self.clientInformationDict)[announcementUniqueName] && !isAppIdExists) {
 	        // Add new pair with this AboutService information (version,port,bus name, object description and about data)
 	        [self.clientInformationDict setValue:clientInformation forKey:announcementUniqueName];
 	        [self addNewAnnouncemetEntry];
-            
+
 	        // AppId doesn't exist and BUT there is no match announcementUniqueName
 		} // else No OP
     });
-    
+
 	// Register interest in a well-known name prefix for the purpose of discovery (didLoseAdertise)
 	[self.clientBusAttachment enableConcurrentCallbacks];
 	status = [self.clientBusAttachment findAdvertisedName:busName];
@@ -283,7 +283,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 			[self.clientInformationDict removeObjectForKey:key];
 		}
 	}
-    
+
 	[self.servicesTable reloadData];
 	[self.view setNeedsDisplay];
 }
@@ -293,9 +293,9 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 {
 	// About flags
 	self.isAboutClientConnected  = false;
-    
+
 	self.annBtnCreationQueue = dispatch_queue_create("org.alljoyn.announcementbuttoncreationQueue", NULL);
-    
+
 	// Set About Client strings
 	self.ajconnect = @"Connect to AllJoyn";
 	self.ajdisconnect = @"Disconnect from AllJoyn";
@@ -305,9 +305,9 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	self.connectButton.backgroundColor = [UIColor darkGrayColor]; //button bg color
 	[self.connectButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; //button font color
 	[self.connectButton setTitle:self.ajconnect forState:UIControlStateNormal]; //default text
-    
+
 	[self prepareAlerts];
-    
+
 }
 
 //  Initialize alerts
@@ -317,15 +317,15 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	self.busNameAlert = [[UIAlertView alloc] initWithTitle:@"" message:@"Set realm name" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil];
 	self.busNameAlert.alertViewStyle = UIAlertViewStylePlainTextInput;
 	self.alertDefaultBusName = [self.busNameAlert textFieldAtIndex:0]; //connect the UITextField with the alert
-    
+
 	// disconnectAlert.tag = 2
 	self.disconnectAlert = [[UIAlertView alloc] initWithTitle:@"" message:@"Are you sure you want to disconnect from alljoyn?" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil];
 	self.disconnectAlert.alertViewStyle = UIAlertViewStyleDefault;
-    
+
 	// announcementOptionsAlert.tag = 3
 	self.announcementOptionsAlert = [[UIAlertView alloc] initWithTitle:@"Choose option:" message:@"" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Show Announce", @"About", @"Icon", nil];
 	self.announcementOptionsAlert.alertViewStyle = UIAlertViewStyleDefault;
-    
+
 	// announcementOptionsAlert.tag = 4
 	self.announcementOptionsAlertNoIcon = [[UIAlertView alloc] initWithTitle:@"Choose option:" message:@"" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Show Announce", @"About", nil];
 	self.announcementOptionsAlertNoIcon.alertViewStyle = UIAlertViewStyleDefault;
@@ -336,26 +336,26 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	switch (opt) {
 		case 0: // "Cancel"
 			break;
-            
+
 		case 1: // "Show Announce"
 		{
 			[self performSegueWithIdentifier:@"AboutShowAnnounceSegue" sender:self];
 		}
             break;
-            
+
 		case 2: // "About"
 		{
 			[self performSegueWithIdentifier:@"AboutClientSegue" sender:self]; // get the announcment object
-            
+
 		}
             break;
-            
+
 		case 3: // "Icon"
 		{
 			[self performSegueWithIdentifier:@"AboutIconSegue" sender:self];
 		}
             break;
-            
+
 		default:
 			break;
 	}
@@ -367,13 +367,13 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 - (void)startAboutClient
 {
 	QStatus status;
-    
+
      NSLog(@"[%@] [%@] Start About Client", @"DEBUG", [[self class] description]);
 
-    
+
 	// Init AJNBusAttachment
 	self.clientBusAttachment = [[AJNBusAttachment alloc] initWithApplicationName:APPNAME allowRemoteMessages:ALLOWREMOTEMESSAGES];
-    
+
 	// Start AJNBusAttachment
 	status = [self.clientBusAttachment start];
 	if (status != ER_OK) {
@@ -381,7 +381,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 
 		exit(1);
 	}
-    
+
 	// Connect AJNBusAttachment
 	status = [self.clientBusAttachment connectWithArguments:@""];
 	if (status != ER_OK) {
@@ -393,7 +393,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
  NSLog(@"[%@] [%@] Register aboutClientListener", @"DEBUG", [[self class] description]);
 
 	[self.clientBusAttachment registerBusListener:self];
-    
+
 	self.announcementReceiver = [[AJNAnnouncementReceiver alloc] initWithAnnouncementListener:self andBus:self.clientBusAttachment];
     const char* interfaces[] = { [ABOUT_INTERFACE_NAME UTF8String] };
 	status = [self.announcementReceiver registerAnnouncementReceiverForInterfaces:interfaces withNumberOfInterfaces:1];
@@ -401,25 +401,25 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
         NSLog(@"[%@] [%@] Failed to registerAnnouncementReceiver - exiting application", @"FATAL", [[self class] description]);
         exit(1);
 	}
-    
+
 	// Create a dictionary to contain announcements using a key in the format of: "announcementUniqueName + announcementObj"
 	self.clientInformationDict = [[NSMutableDictionary alloc] init];
-    
+
 	// Advertise Daemon for tcl
 	status = [self.clientBusAttachment requestWellKnownName:self.realmBusName withFlags:kAJNBusNameFlagDoNotQueue];
 	if (status == ER_OK) {
 		// Advertise the name with a quite prefix for TC to find it
 		NSUUID *UUID = [NSUUID UUID];
 		NSString *stringUUID = [UUID UUIDString];
-        
+
 		self.realmBusName = [self.realmBusName stringByAppendingFormat:@"-%@", stringUUID];
-        
+
 		status = [self.clientBusAttachment advertiseName:[NSString stringWithFormat:@"%@%@", DAEMON_QUIET_PREFIX, self.realmBusName] withTransportMask:kAJNTransportMaskAny];
 		if (status != ER_OK) {
             NSLog(@"[%@] [%@] Failed to advertise name - exiting application %@", @"FATAL", [[self class] description],[AJNStatus descriptionForStatusCode:status]);
 
 			status = [self.clientBusAttachment releaseWellKnownName:self.realmBusName];
-            
+
 			exit(1);
 		}
 		else {
@@ -431,7 +431,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 
 		exit(1);
 	}
-    
+
 	[self.connectButton setTitle:self.ajdisconnect forState:UIControlStateNormal]; //change title to "Disconnect from AllJoyn"
 	self.isAboutClientConnected = true;
 }
@@ -447,9 +447,9 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 {
 	// set the announcementButtonCurrentTitle
 	self.announcementButtonCurrentTitle = [self.clientInformationDict allKeys][requestedRow];
-    
+
      NSLog(@"[%@] [%@] Getting data for [%@]", @"DEBUG", [[self class] description],self.announcementButtonCurrentTitle);
-    
+
 	if ([self announcementHasIcon:self.announcementButtonCurrentTitle]) {
 		[self.announcementOptionsAlert show]; // Event is forward to alertView: clickedButtonAtIndex:
 	}
@@ -464,7 +464,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	bool hasIconInterface = false;
 	AJNAnnouncement *announcement = [(ClientInformation *)[self.clientInformationDict valueForKey:announcementKey] announcement];
 	NSMutableDictionary *announcementObjDecs = [announcement objectDescriptions]; //Dictionary of ObjectDescriptions NSStrings
-    
+
 	// iterate over the object descriptions dictionary
 	for (NSString *key in announcementObjDecs.allKeys) {
 		if ([key isEqualToString:ABOUT_ICON_OBJECT_PATH]) {
@@ -484,7 +484,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 {
 	QStatus status;
      NSLog(@"[%@] [%@] Stop About Client", @"DEBUG", [[self class] description]);
-    
+
 	// Bus attachment cleanup
 	status = [self.clientBusAttachment cancelAdvertisedName:[NSString stringWithFormat:@"%@%@", DAEMON_QUIET_PREFIX, self.realmBusName] withTransportMask:kAJNTransportMaskAny];
 	if (status == ER_OK) {
@@ -494,7 +494,7 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully release WellKnownName", @"DEBUG", [[self class] description]);
 	}
-    
+
 	// Cancel advertise name for each announcement bus
 	for (NSString *key in[self.clientInformationDict allKeys]) {
 		ClientInformation *clientInfo = (self.clientInformationDict)[key];
@@ -504,31 +504,31 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 		}
 	}
 	self.clientInformationDict = nil;
-    
+
     const char* interfaces[] = { [ABOUT_INTERFACE_NAME UTF8String] };
 	status = [self.announcementReceiver unRegisterAnnouncementReceiverForInterfaces:interfaces withNumberOfInterfaces:1];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully unregistered AnnouncementReceiver", @"DEBUG", [[self class] description]);
 	}
-    
+
 	self.announcementReceiver = nil;
-    
+
 	// Stop bus attachment
 	status = [self.clientBusAttachment stop];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully stopped bus", @"DEBUG", [[self class] description]);
     }
 	self.clientBusAttachment = nil;
-    
+
 	// Set flag
 	self.isAboutClientConnected  = false;
-    
+
 	// UI cleanup
 	[self.connectButton setTitle:self.ajconnect forState:UIControlStateNormal];
-    
+
 	[self.servicesTable reloadData];
 	[self.view setNeedsDisplay];
-    
+
      NSLog(@"[%@] [%@] About Client is stopped", @"DEBUG", [[self class] description]);
 }
 
@@ -547,11 +547,11 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
          cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	static NSString *MyIdentifier = @"AnnouncementCell";
-    
+
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:MyIdentifier forIndexPath:indexPath];
-    
+
 	cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    
+
 	cell.textLabel.text = [self.clientInformationDict allKeys][indexPath.row];
 	return cell;
 }

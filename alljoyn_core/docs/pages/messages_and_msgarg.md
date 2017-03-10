@@ -161,7 +161,7 @@ self.
 
 **Note**, MsgArg.Stabilize works for any data type being pointed to by the
 `MsgArg` not just strings.  When constructing nested container types the use of
-temporary `MsgArg`s may require the use of `MsgArg.Stabilize`.  
+temporary `MsgArg`s may require the use of `MsgArg.Stabilize`.
 See [Nested Containers](@ref nested_containers) section.
 
 Not only do we need to know how to put information into a `MsgArg` we need to

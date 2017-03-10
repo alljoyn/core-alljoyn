@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -48,7 +48,7 @@ public interface GenericInterface {
      * arg types passed in should be based on the input arguments defined by the SignalDef
      * definition corresponding to the given signal name.
      */
-    public void signal(String interfaceName, String signalName, Object... args) throws BusException; 
+    public void signal(String interfaceName, String signalName, Object... args) throws BusException;
 
     /**
      * Generic method call operation used as part of an AllJoyn bus interface.
@@ -64,7 +64,7 @@ public interface GenericInterface {
      * Generic get property operation used as part of an AllJoyn bus interface.
      *
      * Note: When used in conjunction with dynamic interface definitions, the runtime
-     * return type should be based on the type field defined by the PropertyDef 
+     * return type should be based on the type field defined by the PropertyDef
      * definition corresponding to the given property name.
      */
     public Object getProperty(String interfaceName, String propertyName) throws BusException;
@@ -73,7 +73,7 @@ public interface GenericInterface {
      * Generic set property operation used as part of an AllJoyn bus interface.
      *
      * Note: When used in conjunction with dynamic interface definitions, the runtime input
-     * arg type passed in should be based on the type field defined by the PropertyDef 
+     * arg type passed in should be based on the type field defined by the PropertyDef
      * definition corresponding to the given property name.
      */
     public void setProperty(String interfaceName, String propertyName, Object arg) throws BusException;
