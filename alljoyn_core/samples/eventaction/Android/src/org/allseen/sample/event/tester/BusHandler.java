@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -54,7 +54,7 @@ import android.util.Log;
 
 public class BusHandler extends Handler {
 	public static final String TAG = "EventBusHandler";
-	
+
 	private Context mContext;
 	private EventActionListener listener;
 
@@ -63,13 +63,13 @@ public class BusHandler extends Handler {
     public static final int CALL_ACTION = 2;
     public static final int ENABLE_EVENT = 3;
     public static final int SHUTDOWN = 100;
-   
+
     private ArrayList<Rules> pendingRuleList = new ArrayList<Rules>();
-    
+
     private HashMap<String,Device> remoteInfo = new HashMap<String, Device>();
-    
+
     private HashMap<String,String> didFind = new HashMap<String,String>();
-   
+
     private String getParentDir() {
 	    String parentDirPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DEMO";
 	    File parentDir = new File(parentDirPath);
@@ -78,7 +78,7 @@ public class BusHandler extends Handler {
 	    }
 	    return parentDirPath;
 	}
-    
+
     /*
      * Native JNI methods
      */
@@ -89,10 +89,10 @@ public class BusHandler extends Handler {
 
 	 /** Initialize AllJoyn in JNI(C++) */
     public native void initialize(String packageName);
-    
+
     /** Perform introspection with description in JNI(C++) */
     private native String doIntrospection(String sessionName, String path, int sessionId);
-    
+
     private native void introspectionDone(int sessionId);
 
     /** Enable listening for an event */
@@ -103,7 +103,7 @@ public class BusHandler extends Handler {
 			//action
 			  String jAUniqueName, String jAPath,
 			  String jAIface, String jAMember, String jASig);
-    
+
     public native void setEngine(String jEngineName);
 
     /** Clean up and shutdown AllJoyn in JNI(C++) */
@@ -117,7 +117,7 @@ public class BusHandler extends Handler {
         this.mContext = context;
         this.listener = listener;
     }
-    
+
     /**
      * Callback from jni code invoked via an About Annouce callback
      * @param sessionName	name of the remote application
@@ -144,7 +144,7 @@ public class BusHandler extends Handler {
 			}
 		}});
 	}
-	
+
 	public void failedJoinEventActionApplication(String sessionName) {
 		Log.d(TAG, "Failed to join application: "+sessionName);
 	}
@@ -157,7 +157,7 @@ public class BusHandler extends Handler {
 		Log.d(TAG, "Lost application with bus name: "+busName);
 		listener.onAppLost(busName);
 	}
-	
+
 	/**
      * Callback from jni code invoked when a device goes away
      * @param busName		busName that failed to respond to a BusAttachment::Ping
@@ -166,14 +166,14 @@ public class BusHandler extends Handler {
 		Log.d(TAG, "Application with bus name returned: "+busName);
 		listener.onAppReturned(busName);
 	}
-	
+
 	public void callAction(Bundle b) {
 		Message msg = this.obtainMessage(CALL_ACTION);
 		msg.setData(b);
 		msg.arg1 = 1;
 		this.sendMessage(msg);
 	}
-	
+
 	public void onEventReceived(final String from, final String path,
 			  final String iface, final String member, final String sig) {
 		Log.d(TAG, "Received an event from "+from+" - "+path+" "+iface+"::"+member+"("+sig+")");
@@ -199,7 +199,7 @@ public class BusHandler extends Handler {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * Helper method to send an Add Rule request to the message Handler
 	 */
@@ -216,7 +216,7 @@ public class BusHandler extends Handler {
 		msg.obj = r;
 		this.sendMessage(msg);
 	}
-	
+
 	public void enablePendingRules(String sessionName, String friendlyName) {
 		int currLen = pendingRuleList.size();
 		/*
@@ -244,7 +244,7 @@ public class BusHandler extends Handler {
 			}
 		}
 	}
-	
+
 	public boolean rawEnable(Rules r) {
 		for(Rules rule : RulesFragment.getRules()) {
 			EventDescription e = rule.getEvent();
@@ -266,7 +266,7 @@ public class BusHandler extends Handler {
 		}
 		return ret;
 	}
-    
+
 
 	/**
 	 * Helper method to start the introspection process on a remote AllJoyn Appliction
@@ -299,11 +299,11 @@ public class BusHandler extends Handler {
 	    		 */
 	    		introspect(sessionName, sessionId, in.getPath(), in);
 	    	}
-	    	
+
 	    	/*
 	    	 * If the root node then parsing complete, inform listener of events/actions found
 	    	 */
-	    	if(node.getPath().equals("/")) { //root node, recursive parsing complete 
+	    	if(node.getPath().equals("/")) { //root node, recursive parsing complete
 	    		if(info.getEvents().size() > 0) { //We have events so inform as such to the UI
 	    			listener.onEventFound(info);
 	    		}
@@ -316,7 +316,7 @@ public class BusHandler extends Handler {
     		e.printStackTrace();
     	}
     }
-    
+
 
 	/**
 	 * Helper method used by Handler to call into JNI to save the rule.
@@ -339,7 +339,7 @@ public class BusHandler extends Handler {
     			r.getEvent().getMemberName(),
     			r.getEvent().getSignature());
     }
-    
+
 	/**
 	 * Handles the messages so that the UI thread is not blocked
 	 */
@@ -385,13 +385,13 @@ public class BusHandler extends Handler {
         /* Release all resources acquired in connect. */
         case SHUTDOWN: {
             shutdown();
-            break;   
+            break;
         }
 
         default:
             break;
         }
     }
-    
-    
+
+
 }

@@ -3,22 +3,22 @@
 <!--
       Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
       Project (AJOSP) Contributors and others.
-      
+
       SPDX-License-Identifier: Apache-2.0
-      
+
       All rights reserved. This program and the accompanying materials are
       made available under the terms of the Apache License, Version 2.0
       which accompanies this distribution, and is available at
       http://www.apache.org/licenses/LICENSE-2.0
-      
+
       Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
       Alliance. All rights reserved.
-      
+
       Permission to use, copy, modify, and/or distribute this software for
       any purpose with or without fee is hereby granted, provided that the
       above copyright notice and this permission notice appear in all
       copies.
-      
+
       THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
       WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
       WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -42,9 +42,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         layout="@layout/current_network_layout"/>
-    
+
     <!-- Config version -->
-    <LinearLayout 
+    <LinearLayout
         android:layout_width="fill_parent"
     	android:layout_height="wrap_content"
     	android:orientation="horizontal"
@@ -53,28 +53,28 @@
         android:id="@+id/config_version_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/version"        
+        android:text="@string/version"
         android:textSize="20sp"
         android:padding="5dp" />
-    
+
     <TextView
         android:id="@+id/config_version_value"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" 
+        android:layout_height="wrap_content"
         android:textSize="20sp"
         android:padding="5dp" />
 </LinearLayout>
-    
+
     <!-- Config data -->
     <TextView
         android:id="@+id/config_map_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/config_data_label"        
+        android:text="@string/config_data_label"
         android:textSize="20sp"
         android:padding="5dp" />
-    
-  	<LinearLayout 
+
+  	<LinearLayout
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:padding="7dp"
@@ -82,12 +82,12 @@
     android:orientation="horizontal"
     >
 
-    <CheckBox 
+    <CheckBox
         android:id="@+id/configNameCheckBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         />
-	    
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -106,7 +106,7 @@
         android:imeOptions="actionDone"
         >
     </EditText>
-        
+
 
 </LinearLayout>
 
@@ -118,12 +118,12 @@
     android:background="#357EC7"
     >
 
-    <CheckBox 
+    <CheckBox
         android:id="@+id/configLangCheckBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         />
-	    
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -142,10 +142,10 @@
         android:imeOptions="actionDone"
         >
     </EditText>
-        
+
 
 </LinearLayout>
-        
+
   	<LinearLayout
   	    android:id="@+id/configButtons"
   	    android:layout_width="match_parent"

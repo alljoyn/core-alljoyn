@@ -1,21 +1,21 @@
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -24,16 +24,16 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 # This doxygen builder does not parse the input file and populate the file list
 # using an emmitter for this reason to use this builder it is best to specify
-# env.Doxygen(source='<doxygen_config_file>', target=Dir('tmp')) 
+# env.Doxygen(source='<doxygen_config_file>', target=Dir('tmp'))
 #    Where the tmp directory is never created meaning that doxygen is run every
 #    time the SCons is run
 # env.Clean('Doxygen_html', Dir('html'))
-#    Where 'html' is the output directory if building latex the output directory 
-#    would be latex 
+#    Where 'html' is the output directory if building latex the output directory
+#    would be latex
 import SCons.Builder
 import os
 import ConfigParser
@@ -41,7 +41,7 @@ import fnmatch
 import re
 
 # this class will allow us to use Pythons built in config parser.
-# The Config parser is designed to understand ini files with headers Doxygen's 
+# The Config parser is designed to understand ini files with headers Doxygen's
 # Config file is in the form of an ini file without an headers.  this will add
 # a fake section header to the file when it is being read.
 class FakeSecHead(object):
@@ -124,7 +124,7 @@ def _doxygen_scanner(node, env, path):
     ############################################################################
     if config.has_option('doxy_config', 'file_patterns'):
          file_patterns_from_config = config.get('doxy_config', 'file_patterns').replace('\\', '').split()
-         if file_patterns_from_config: 
+         if file_patterns_from_config:
              file_patterns = file_patterns_from_config
 
     if config.has_option('doxy_config', 'recursive'):
@@ -135,15 +135,15 @@ def _doxygen_scanner(node, env, path):
         input = config.get('doxy_config', 'input').replace('\\', '').split()
 
     # if no input is found in the config file the current directory is search
-    # otherwise it will check to see if the input file found is a file or a 
+    # otherwise it will check to see if the input file found is a file or a
     # directory.  If it is a directory is will search the directory. If recursive
     # search was specified in the config file a recursive directory search will
-    # be done.  Only files that match the FILE_PATTERNS option will be added to 
+    # be done.  Only files that match the FILE_PATTERNS option will be added to
     # the source list
     # TODO when processing the input take into account the following tags
     #    EXCLUDE
     #    EXLUDE_SYMLINKS
-    #    EXLUDE_PATTERNS 
+    #    EXLUDE_PATTERNS
     if not input:
         for filename in os.listdir(os.path.abspath(config_file_path)):
                         for f_pattern in file_patterns:
@@ -340,8 +340,8 @@ def _doxygen_scanner(node, env, path):
                  if os.path.isfile(lef):
                      source.append(os.path.abspath(lef))
 
-    # TODO list of tags that effect the source and target list that are not 
-    #    processed. Since none of our config files currently use these tags not 
+    # TODO list of tags that effect the source and target list that are not
+    #    processed. Since none of our config files currently use these tags not
     #    processing them should not affect the output. If any of these tags are
     #    used then this emitter may need to be expanded.
     #    EXCLUDE
@@ -486,11 +486,11 @@ def _doxygen_emitter(target, source, env):
 
     # Debug print statments used while developing
     #print "*** Doxygen Emiter***"
-    #print "*** list of source files ***" 
+    #print "*** list of source files ***"
     #for s in source:
     #     print str(s)
     #print "\n\n"
-    #print "*** list of target files ***" 
+    #print "*** list of target files ***"
     #for t in target:
     #     print str(t)
     #print "\n\n"
@@ -518,7 +518,7 @@ def generate(env):
         DOXYGENFLAGS = '',
         DOXYGENCOM = 'cd ${SOURCE.dir} && ${DOXYGEN} ${DOXYGENFLAGS} ${SOURCE.file}'
     )
-    
+
     # SystemDrive environment variable is used by doxygen on some systems to write
     # cach files.  If the OS defines the enviroment variable 'SystemDrive' make
     # sure it is imported into the scons environment.

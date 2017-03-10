@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -38,14 +38,14 @@ static NSString *ERRORSTRING = @"";
 {
 	AJNMessageArgument *ajnMsgArgContent;
 	NSMutableString *qnsAboutDataContent = [[NSMutableString alloc] init];
-    
+
 	// Iterate over dictionary in the format of NSString/AJNMessageArgument
 	for (NSString *key in aboutDataDict) {
 		// Add the dictionary key
 		[qnsAboutDataContent appendString:([NSString stringWithFormat:@"%@: ", key])];
 		// Get the dictionary value
 		ajnMsgArgContent = aboutDataDict[key];
-        
+
 		if (ajnMsgArgContent != nil) {
 			[qnsAboutDataContent appendString:([NSString stringWithFormat:@"%@ ", [self messageArgumentToString:(ajnMsgArgContent)]])];
 		}
@@ -66,7 +66,7 @@ static NSString *ERRORSTRING = @"";
 	QStatus status;
 	const char *ajnMsgArgContent_id;
     uint16_t short_number;
-    
+
 	// AJNMessageArgument is a string
 	if ([ajnMsgArgSignature isEqualToString:(@"s")]) {
 		status = [ajnMsgArg value:ajnMsgArgSignature, &ajnMsgArgContent_id];
@@ -111,7 +111,7 @@ static NSString *ERRORSTRING = @"";
 	NSString *ajnAboutDataKey;
 	AJNMessageArgument *ajnAboutDataValue;
 	NSMutableDictionary *ajnAboutData = [[NSMutableDictionary alloc] init];
-    
+
 	//  iterate over std::map<qcc::String, ajn::MsgArg>
 	for (ajn::services::AnnounceHandler::AboutData::const_iterator mapIt = aboutData.begin(); mapIt != aboutData.end(); mapIt++) {
 		ajnAboutDataKey = [AJNConvertUtil convertQCCStringtoNSString:(mapIt->first)];
@@ -132,7 +132,7 @@ static NSString *ERRORSTRING = @"";
 	NSMutableArray *intrfArray;
 	std::vector <qcc::String> intrfVector;
 	NSMutableDictionary *ajnObjectDescsDict = [[NSMutableDictionary alloc] init];
-    
+
 	// Iterate over the c++ object descriptions map
 	for (ajn::services::AnnounceHandler::ObjectDescriptions::const_iterator mapIt = objectDescs.begin(); mapIt != objectDescs.end(); mapIt++) {
 		// Convert key to NSString
@@ -156,7 +156,7 @@ static NSString *ERRORSTRING = @"";
 + (NSString *)objectDescriptionsDictionaryToString:(NSMutableDictionary *)objectDescDict
 {
 	NSMutableString *qnsObjectDescContent = [[NSMutableString alloc] init];
-    
+
 	for (NSString *key in objectDescDict.allKeys) {
 		//  Iterate over the NSMutableDictionary
 		[qnsObjectDescContent appendString:([NSString stringWithFormat:@"path: %@ \n", key])];

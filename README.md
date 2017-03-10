@@ -1,4 +1,4 @@
-Notice of Export Control Law  
+Notice of Export Control Law
 ============================
 Cryptographic software is subject to the US government export control and
 economic sanctions laws (“US export laws”) including the US Department of

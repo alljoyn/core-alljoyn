@@ -3,13 +3,13 @@
     android:orientation="vertical"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
-    
+
     <View
         android:layout_width="match_parent"
     	android:layout_height="5dip">
     </View>
-    
-    <TextView 
+
+    <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -23,20 +23,20 @@
         android:gravity="center"
         android:text="No error (ER_OK)"
     />
-      
+
     <LinearLayout
         android:orientation="horizontal"
         android:gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp">
-        
+
         <Button
             android:id="@+id/errorOk"
             android:layout_width="120dp"
             android:layout_height="wrap_content"
     	    android:text="OK"
         />
-        
+
     </LinearLayout>
 </LinearLayout>

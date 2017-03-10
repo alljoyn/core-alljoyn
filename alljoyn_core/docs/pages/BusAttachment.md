@@ -8,7 +8,7 @@ BusAttachment {#using_bus_attachment}
 <!------------------------------------------------------------------------------
 Copyright AllSeen Alliance.
 
-THIS DOCUMENT AND ALL INFORMATION CONTAINED HEREIN ARE PROVIDED ON AN AS-IS 
+THIS DOCUMENT AND ALL INFORMATION CONTAINED HEREIN ARE PROVIDED ON AN AS-IS
 BASIS WITHOUT WARRANTY OF ANY KIND.
 ------------------------------------------------------------------------------->
 

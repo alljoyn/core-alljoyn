@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -104,7 +104,7 @@
 - (void)resetPerformanceStatistics
 {
     int kilobitsPerTransfer;
-    
+
     switch(self.messageSizeSegmentedControl.selectedSegmentIndex) {
         case 0:
             kilobitsPerTransfer = 1;
@@ -124,7 +124,7 @@
     }
 
     [self.performanceStatistics resetStatisticsWithPacketSize:kilobitsPerTransfer];
-    
+
     self.progressView.progress = 0;
     self.statusTextField1.text = nil;
     self.statusTextField2.text = nil;
@@ -159,7 +159,7 @@
 
     // Uncomment the following line to preserve selection between presentations.
     // self.clearsSelectionOnViewWillAppear = NO;
- 
+
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
 }
@@ -190,9 +190,9 @@
 {
     static NSString *CellIdentifier = @"Cell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
-    
+
     // Configure the cell...
-    
+
     return cell;
 }
 */
@@ -212,10 +212,10 @@
     if (editingStyle == UITableViewCellEditingStyleDelete) {
         // Delete the row from the data source
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
-    }   
+    }
     else if (editingStyle == UITableViewCellEditingStyleInsert) {
         // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-    }   
+    }
 }
 */
 
@@ -250,31 +250,31 @@
 
 - (IBAction)didTouchStartButton:(id)sender
 {
-    
+
     // empty the text view that contains the status message log
     //
     dispatch_async(dispatch_get_main_queue(), ^{
         self.eventsTextView.text = nil;
     });
-    
-    
+
+
     // determine the transport mask used based on the selection in the UI
     //
     AJNTransportMask transportMask;
-    
+
     if (self.transportTypeSegmentedControl.selectedSegmentIndex == 0) {
         transportMask = kAJNTransportMaskAny;
     }
-    
+
     // reset the performance statistics for the operations (signal or method)
     //
     [self resetPerformanceStatistics];
-    
-    
+
+
     // depending on the UI selection, start/stop either a client or service
     //
     if (self.operationTypeSegmentedControl.selectedSegmentIndex == 0) {
-        
+
         // start or stop the service controller
         //
         if (self.serviceController.bus.isStarted) {
@@ -297,11 +297,11 @@
             self.serviceController.delegate = self;
             [self.serviceController start];
             [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
-            [self setUIControlsEnabled:NO];            
+            [self setUIControlsEnabled:NO];
         }
     }
     else if (self.operationTypeSegmentedControl.selectedSegmentIndex == 1) {
-        
+
         // start or stop the client controller
         //
         if (self.clientController.bus.isStarted) {
@@ -324,9 +324,9 @@
             self.clientController.delegate = self;
 
             [self.performanceStatistics markDiscoveryStartTime];
-            
+
             [self.clientController start];
-            
+
             [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
             [self setUIControlsEnabled:NO];
         }
@@ -339,53 +339,53 @@
 {
     self.proxyObject = nil;
     [self setUIControlsEnabled:YES];
-    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];    
+    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];
 }
 
 - (AJNProxyBusObject *)proxyObjectOnBus:(AJNBusAttachment *)bus inSession:(AJNSessionId)sessionId
 {
     self.proxyObject = [[PerformanceObjectProxy alloc] initWithBusAttachment:bus serviceName:self.serviceName objectPath:kServicePath sessionId:sessionId];
-    
+
     return self.proxyObject;
 }
 
 - (void)didStartBus:(AJNBusAttachment *)bus
 {
     if (self.operationTypeSegmentedControl.selectedSegmentIndex == 1) {
-        
+
         // register our signal handler
         //
         AJNInterfaceDescription *interfaceDescription;
-        
+
         //
         // PerformanceObjectDelegate interface (org.alljoyn.bus.test.perf.both)
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
         interfaceDescription = [self.clientController.bus createInterfaceWithName:@"org.alljoyn.bus.test.perf.both" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
-        
-        
+
+
         // add the methods to the interface description
         //
-        
+
         QStatus status = [interfaceDescription addMethodWithName:@"CheckPacket" inputSignature:@"iayi" outputSignature:@"b" argumentNames:[NSArray arrayWithObjects:@"packetIndex",@"byteArray",@"packetSize",@"result", nil]];
-        
+
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: CheckPacket" userInfo:nil];
         }
-        
+
         // add the signals to the interface description
         //
-        
+
         status = [interfaceDescription addSignalWithName:@"SendPacket" inputSignature:@"iay" argumentNames:[NSArray arrayWithObjects:@"packetIndex",@"byteArray", nil]];
-        
+
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  SendPacket" userInfo:nil];
         }
-        
-        
+
+
         [interfaceDescription activate];
-        
+
         [self.clientController.bus registerPerformanceObjectDelegateSignalHandler:self];
     }
 }
@@ -393,40 +393,40 @@
 - (void)didJoinInSession:(AJNSessionId)sessionId withService:(NSString *)serviceName
 {
     [self.performanceStatistics markDiscoveryEndTime];
-    
+
     // if this is a receiver and the message type selected is method
     // then begin calling methods on the remote service's bus object
     // using the proxy
     //
     if (self.operationTypeSegmentedControl.selectedSegmentIndex == 1 &&
         self.messageTypeSegmentedControl.selectedSegmentIndex == 1) {
-        
+
         // begin making method calls using the proxy object on a background
         // thread
         //
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            
+
             [self.performanceStatistics markTransferStartTime];
-            
+
             for (int i = 0; i < self.performanceStatistics.totalPacketTransfersExpected; i++) {
                 AJNMessageArgument *byteArrayArg = [[AJNMessageArgument alloc] init];
                 UInt8 *byteArray = malloc(self.performanceStatistics.packetSize);
                 memset(byteArray, 0, self.performanceStatistics.packetSize);
-                
+
                 byteArray[0] = 'g';
                 byteArray[1] = 'p';
                 byteArray[2] = 'a';
-                
+
                 [byteArrayArg setValue:@"ay", self.performanceStatistics.packetSize, byteArray];
-                
+
                 if(![self.proxyObject checkPacketAtIndex:[NSNumber numberWithInt:i] payLoad:byteArrayArg packetSize:[NSNumber numberWithInt:self.performanceStatistics.packetSize]]){
                     break;
                 }
-                
+
                 free(byteArray);
-                
+
                 [self.performanceStatistics incrementSuccessfulMethodCallsCount];
-                
+
                 if([self.performanceStatistics shouldRefreshUserInterfaceForPacketAtIndex:i]) {
                     dispatch_async(dispatch_get_main_queue(), ^{
                         float progress = (i + 1.0) / (float)self.performanceStatistics.totalPacketTransfersExpected;
@@ -464,9 +464,9 @@
 - (void)didReceivePacketAtIndex:(NSNumber *)packetIndex payLoad:(AJNMessageArgument *)byteArray inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        
+
         [self.performanceStatistics incrementSuccessfulSignalTransmissionsCount];
-        
+
         uint8_t *buffer;
         size_t bufferLength;
         [byteArray value:@"ay", &bufferLength, &buffer];
@@ -476,7 +476,7 @@
             [self.performanceStatistics markTransferStartTime];
         }
         else if(self.performanceStatistics.totalPacketTransfersExpected == [packetIndex intValue] + 1) {
-            [self.performanceStatistics markTransferEndTime];                            
+            [self.performanceStatistics markTransferEndTime];
             dispatch_async(dispatch_get_main_queue(), ^{
                 float progress = self.performanceStatistics.packetTransfersCompleted / (float)self.performanceStatistics.totalPacketTransfersExpected;
                 [self.progressView setProgress:progress];
@@ -486,7 +486,7 @@
             //[self didTouchStartButton:self];
         }
         else if([self.performanceStatistics shouldRefreshUserInterfaceForPacketAtIndex:[packetIndex intValue]]) {
-            [self.performanceStatistics markTransferEndTime];            
+            [self.performanceStatistics markTransferEndTime];
             dispatch_async(dispatch_get_main_queue(), ^{
                 float progress = self.performanceStatistics.packetTransfersCompleted / (float)self.performanceStatistics.totalPacketTransfersExpected;
                 [self.progressView setProgress:progress];
@@ -510,7 +510,7 @@
 {
     self.performanceObject = [[PerformanceObject alloc] initWithBusAttachment:self.serviceController.bus onPath:kServicePath];
     self.performanceObject.viewController = self;
-    
+
     return self.performanceObject;
 }
 
@@ -523,7 +523,7 @@
     //
     if (self.operationTypeSegmentedControl.selectedSegmentIndex == 0 &&
         self.messageTypeSegmentedControl.selectedSegmentIndex == 0) {
-        
+
         // start sending packets to the client that joined
         //
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -532,19 +532,19 @@
                 AJNMessageArgument *byteArrayArg = [[AJNMessageArgument alloc] init];
                 UInt8 *byteArray = malloc(self.performanceStatistics.packetSize);
                 memset(byteArray, 0, self.performanceStatistics.packetSize);
-                
+
                 byteArray[0] = 'g';
                 byteArray[1] = 'p';
                 byteArray[2] = 'a';
-                
+
                 [byteArrayArg setValue:@"ay", self.performanceStatistics.packetSize, byteArray];
-                
+
                 [self.performanceObject sendPacketAtIndex:[NSNumber numberWithInt:i] payLoad:byteArrayArg inSession:self.serviceController.sessionId toDestination:nil flags:0];
-                
+
                 free(byteArray);
-                
+
                 [self.performanceStatistics incrementSuccessfulSignalTransmissionsCount];
-                
+
                 if([self.performanceStatistics shouldRefreshUserInterfaceForPacketAtIndex:i]) {
                     dispatch_async(dispatch_get_main_queue(), ^{
                         float progress = (i + 1.0) / (float)self.performanceStatistics.totalPacketTransfersExpected;
