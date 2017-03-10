@@ -68,7 +68,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// BasicClient implementation
+// Basic Client implementation
 //
 
 @implementation BasicClient
@@ -88,7 +88,8 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     });
 }
 
-- (void)run {
+- (void)run
+{
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library version: %@\n", AJNVersion.versionInformation]];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library build info: %@\n", AJNVersion.buildInformation]];
 
@@ -131,6 +132,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     // register a bus listener in order to receive discovery notifications
     //
     [self.bus registerBusListener:self];
+    [self.delegate didReceiveStatusUpdateMessage:@"BusListener is registered.\n"];
 
     // begin discovery of the well known name of the service to be called
     //
@@ -176,7 +178,6 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     NSLog(@"+ Destroying bus attachment                                                               +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-
     // Unregister and destroy listener
     //
     [self.bus unregisterBusListener:self];
@@ -209,6 +210,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 }
 
 - (void)didFindAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix {
+
     NSLog(@"AJNBusListener::didFindAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport, namePrefix);
 
     if ([namePrefix compare:kBasicClientServiceName] == NSOrderedSame) {
@@ -244,10 +246,11 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 }
 
 - (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix {
-    NSLog(@"AJNBusListener::didLoseAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport,namePrefix);
+    NSLog(@"AJNBusListener::didLoseAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport, namePrefix);
 }
 
-- (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner {
+- (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner
+{
     NSLog(@"AJNBusListener::nameOwnerChanged:%@ to:%@ from:%@", name, newOwner, previousOwner);
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"NameOwnerChanged: name=%@, oldOwner=%@, newOwner=%@\n", name, previousOwner, newOwner]];
 }
@@ -263,7 +266,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 #pragma mark - AJNSessionListener methods
 
 - (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason {
-    NSLog(@"AJNBusListener::sessionWasLost %u forReason:%u", sessionId, reason);
+    NSLog(@"AJNBusListener::sessionWasLost %u forReason %u", sessionId, reason);
 }
 
 - (void)didAddMemberNamed:(NSString*)memberName toSession:(AJNSessionId)sessionId {
@@ -273,6 +276,5 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 - (void)didRemoveMemberNamed:(NSString*)memberName fromSession:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::didRemoveMemberNamed:%@ fromSession:%u", memberName, sessionId);
 }
-
 
 @end

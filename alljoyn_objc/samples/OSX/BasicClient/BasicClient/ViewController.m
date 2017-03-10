@@ -44,14 +44,14 @@
     self.basicClient.delegate = self;
 }
 
-- (IBAction)didTouchCallServiceButton:(id)sender {
+- (IBAction)didTapCallServiceButton:(id)sender {
     [self.basicClient sendHelloMessage];
 }
 
 - (void)didReceiveStatusUpdateMessage:(NSString *)message {
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSMutableString *string = self.eventsTextView.text.length ? [self.eventsTextView.text mutableCopy] : [[NSMutableString alloc] init];
+        NSMutableString *string = self.eventsTextView.string.length ? [self.eventsTextView.string mutableCopy] : [[NSMutableString alloc] init];
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
         [formatter setTimeStyle:NSDateFormatterMediumStyle];
         [formatter setDateStyle:NSDateFormatterShortStyle];
@@ -59,7 +59,7 @@
         [string appendFormat:@"[%@] ",[formatter stringFromDate:[NSDate date]]];
         [string appendString:message];
 
-        [self.eventsTextView setText:string];
+        [self.eventsTextView setString:string];
         NSLog(@"%@", string);
     });
 }
