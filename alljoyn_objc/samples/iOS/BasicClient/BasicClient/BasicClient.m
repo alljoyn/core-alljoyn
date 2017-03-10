@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -57,8 +57,8 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 @property (nonatomic, strong) NSCondition *joinedSessionCondition;
 @property (nonatomic) AJNSessionId sessionId;
 @property (nonatomic, strong) NSString *foundServiceName;
-@property (nonatomic, strong) BasicObjectProxy *basicObjectProxy;
-@property BOOL wasNameAlreadyFound;
+@property (nonatomic, strong) dispatch_queue_t clientQueue;
+@property (nonatomic) BOOL wasNameAlreadyFound;
 
 - (void)run;
 
@@ -68,33 +68,29 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Basic Client implementation
+// BasicClient implementation
 //
 
 @implementation BasicClient
 
-@synthesize bus = _bus;
-@synthesize joinedSessionCondition = _joinedSessionCondition;
-@synthesize sessionId = _sessionId;
-@synthesize foundServiceName = _foundServiceName;
-@synthesize basicObjectProxy = _basicObjectProxy;
-@synthesize wasNameAlreadyFound = _wasNameAlreadyFound;
-@synthesize delegate = _delegate;
+- (id)init {
+    if (self = [super init]) {
+        self.clientQueue = dispatch_queue_create("org.alljoyn.BasicClient.ClientQueue", nil);
+        return self;
+    }
+    return nil;
+}
 
-- (void)sendHelloMessage
-{
-    dispatch_queue_t clientQueue = dispatch_queue_create("org.alljoyn.basic-service.clientQueue",NULL);
-    dispatch_async( clientQueue, ^{
+- (void)sendHelloMessage {
+    dispatch_async(self.clientQueue, ^{
+        self.wasNameAlreadyFound = NO;
         [self run];
     });
 }
 
-- (void)run
-{
-    NSLog(@"AllJoyn Library version: %@", AJNVersion.versionInformation);
-    NSLog(@"AllJoyn Library build info: %@\n", AJNVersion.buildInformation);
-    [self.delegate didReceiveStatusUpdateMessage:AJNVersion.versionInformation];
-    [self.delegate didReceiveStatusUpdateMessage:AJNVersion.buildInformation];
+- (void)run {
+    [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library version: %@\n", AJNVersion.versionInformation]];
+    [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library build info: %@\n", AJNVersion.buildInformation]];
 
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Creating bus attachment                                                                 +");
@@ -106,45 +102,28 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicClient" allowRemoteMessages:YES];
 
-    // create an interface description
-    //
-    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"org.alljoyn.bus.sample" enableSecurity:NO];
-
-    // add the methods to the interface description
-    //
-    status = [interfaceDescription addMethodWithName:@"cat" inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr", nil]];
-
-    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
-        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: cat" userInfo:nil];
-    }
-
-    [interfaceDescription activate];
-
     // start the message bus
     //
     status =  [self.bus start];
 
-    if (ER_OK != status) {
-        NSLog(@"Bus start failed.");
+    if (status != ER_OK) {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Start failed\n"];
-    }
-    else {
+        return;
+    } else {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment started.\n"];
     }
-
 
     // connect to the message bus
     //
     status = [self.bus connectWithArguments:@"null:"];
 
-    if (ER_OK != status) {
-        NSLog(@"Bus connect failed.");
+    if (status != ER_OK) {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Connect(\"null:\") failed\n"];
+        return;
     }
     else {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachement connected to null:\n"];
     }
-
 
     self.joinedSessionCondition = [[NSCondition alloc] init];
     [self.joinedSessionCondition lock];
@@ -160,35 +139,35 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     [self.delegate didReceiveStatusUpdateMessage:@"Waiting to discover service...\n"];
 
     // wait for the join session to complete
+    // AJNBusListener::didFindAdvertisedName(_:withTransportMask:namePrefix) listener is finished
     //
     if ([self.joinedSessionCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:60]]) {
 
         // once joined to a session, use a proxy object to make the function call
         //
-        self.basicObjectProxy = [[BasicObjectProxy alloc] initWithBusAttachment:self.bus serviceName:self.foundServiceName objectPath:kBasicClientServicePath sessionId:self.sessionId];
+        BasicObjectProxy *basicObjectProxy = [[BasicObjectProxy alloc] initWithBusAttachment:self.bus serviceName:self.foundServiceName objectPath:kBasicClientServicePath sessionId:self.sessionId];
 
         // get a description of the interfaces implemented by the remote object before making the call
         //
-        [self.basicObjectProxy introspectRemoteObject];
+        [basicObjectProxy introspectRemoteObject];
 
         // now make the function call
         //
-        NSString *result = [self.basicObjectProxy concatenateString:@"Code " withString:@"Monkies!!!!!!!"];
+        NSString *result = [basicObjectProxy concatenateString:@"Code " withString:@"monkeys!"];
 
         if (result) {
-            NSLog(@"[%@] %@ concatenated string.", result, [result compare:@"Code Monkies!!!!!!!"] == NSOrderedSame ? @"Successfully":@"Unsuccessfully");
-            [self.delegate didReceiveStatusUpdateMessage:@"Successfully called method on remote object!!!\n"];
+            // compare  result string with the expected one
+            //
+            NSLog(@"[%@] %@ concatenated string.", result, [result compare:@"Code monkeys!"] == NSOrderedSame ? @"Successfully" : @"Unsuccessfully");
+
+            [self.delegate didReceiveStatusUpdateMessage:@"Successfully called method on remote object!\n"];
         }
 
         // We call ping to make sure the service can be pinged. This is to demonstrate usage of ping API
         [self ping];
-
-        self.basicObjectProxy = nil;
-
     }
     else {
-        NSLog(@"Timed out while attempting to join a session with BasicService...");
-        [self.delegate didReceiveStatusUpdateMessage:@"Timed out while attempting to join a session with BasicService..."];
+        [self.delegate didReceiveStatusUpdateMessage:@"Timed out while attempting to join a session with BasicService...\n"];
     }
 
     [self.joinedSessionCondition unlock];
@@ -197,41 +176,36 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     NSLog(@"+ Destroying bus attachment                                                               +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-    // deallocate the bus
-    //
-    self.bus = nil;
 
-    [self.delegate didReceiveStatusUpdateMessage:@"Bus deallocated\n"];
+    // Unregister and destroy listener
+    //
+    [self.bus unregisterBusListener:self];
+    [self.bus destroyBusListener:self];
+
+    NSLog(@"destroyed bus");
+
+    [self.delegate didReceiveStatusUpdateMessage:@"Bus listener is unregistered and destroyed.\n"];
 }
 
+- (void)ping {
 
-- (void)ping
-{
-    if (self.bus == NULL) {
-        return;
-    }
-    QStatus status = [self.bus pingPeer:kBasicClientServiceName withTimeout:5];
-    if (status == ER_OK) {
-        [self.delegate didReceiveStatusUpdateMessage:@"Ping returned Successfully"];
-    } else {
-        [self.delegate didReceiveStatusUpdateMessage:@"Ping Failed"];
+    if (self.bus != nil) {
+        QStatus status = [self.bus pingPeer:kBasicClientServiceName withTimeout:5];
+        [self.delegate didReceiveStatusUpdateMessage: status == ER_OK ? @"Ping returned successfully\n" : @"Ping failed\n"];
     }
 }
 
 #pragma mark - AJNBusListener delegate methods
 
-- (void)listenerDidRegisterWithBus:(AJNBusAttachment*)busAttachment
-{
+- (void)listenerDidRegisterWithBus:(AJNBusAttachment*)busAttachment {
     NSLog(@"AJNBusListener::listenerDidRegisterWithBus:%@",busAttachment);
 }
 
-- (void)listenerDidUnregisterWithBus:(AJNBusAttachment*)busAttachment
-{
+- (void)listenerDidUnregisterWithBus:(AJNBusAttachment*)busAttachment {
     NSLog(@"AJNBusListener::listenerDidUnregisterWithBus:%@",busAttachment);
 }
 
-- (void)didFindAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
-{
+- (void)didFindAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix {
     NSLog(@"AJNBusListener::didFindAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport, namePrefix);
 
     if ([namePrefix compare:kBasicClientServiceName] == NSOrderedSame) {
@@ -239,11 +213,12 @@ static const AJNSessionPort kBasicClientServicePort = 25;
         BOOL shouldReturn;
         @synchronized(self) {
             shouldReturn = self.wasNameAlreadyFound;
-            self.wasNameAlreadyFound = true;
+            self.wasNameAlreadyFound = YES;
         }
 
         if (shouldReturn) {
             NSLog(@"Already found an advertised name, ignoring this name %@...", name);
+            [self.joinedSessionCondition signal];
             return;
         }
 
@@ -255,8 +230,6 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 
         if (self.sessionId) {
             self.foundServiceName = name;
-
-            NSLog(@"Client joined session %d", self.sessionId);
             [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"JoinSession SUCCESS (Session id=%d)\n", self.sessionId]];
         }
         else {
@@ -267,41 +240,34 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     }
 }
 
-- (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
-{
-    NSLog(@"AJNBusListener::listenerDidUnregisterWithBus:%@ withTransportMask:%u namePrefix:%@",name,transport,namePrefix);
+- (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix {
+    NSLog(@"AJNBusListener::didLoseAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport,namePrefix);
 }
 
-- (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner
-{
+- (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner {
     NSLog(@"AJNBusListener::nameOwnerChanged:%@ to:%@ from:%@", name, newOwner, previousOwner);
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"NameOwnerChanged: name=%@, oldOwner=%@, newOwner=%@\n", name, previousOwner, newOwner]];
 }
 
-- (void)busWillStop
-{
+- (void)busWillStop {
     NSLog(@"AJNBusListener::busWillStop");
 }
 
-- (void)busDidDisconnect
-{
+- (void)busDidDisconnect {
     NSLog(@"AJNBusListener::busDidDisconnect");
 }
 
 #pragma mark - AJNSessionListener methods
 
-- (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason
-{
+- (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason {
     NSLog(@"AJNBusListener::sessionWasLost %u forReason:%u", sessionId, reason);
 }
 
-- (void)didAddMemberNamed:(NSString*)memberName toSession:(AJNSessionId)sessionId
-{
+- (void)didAddMemberNamed:(NSString*)memberName toSession:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::didAddMemberNamed:%@ toSession:%u", memberName, sessionId);
 }
 
-- (void)didRemoveMemberNamed:(NSString*)memberName fromSession:(AJNSessionId)sessionId
-{
+- (void)didRemoveMemberNamed:(NSString*)memberName fromSession:(AJNSessionId)sessionId {
     NSLog(@"AJNBusListener::didRemoveMemberNamed:%@ fromSession:%u", memberName, sessionId);
 }
 
