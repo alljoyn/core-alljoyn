@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -34,17 +34,17 @@ import java.util.Map;
 import org.alljoyn.bus.Variant;
 
 /**
- * A listener to configuration changes that were triggered by remote clients. 
+ * A listener to configuration changes that were triggered by remote clients.
  */
 public interface ConfigChangeListener
 {
-	/**	
+	/**
 	 * A callback that informs the listener that the configuration has changed for a specific language
 	 * @param newConfiguration
 	 * @param languageTag the language for which fields were updated
 	 */
 	public void onConfigChanged(Map<String, Variant> newConfiguration, String languageTag);
-	
+
 	/**
 	 * A callback that informs the listener that some configuration fields were removed for a specific language
 	 * @param language the language for which fields were removed

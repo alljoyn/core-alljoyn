@@ -18,13 +18,13 @@
 		android:layout_height="wrap_content"
 		android:prompt="@string/text_size_prompt"
 	/>
-	<TextView  
+	<TextView
 		android:id="@+id/lorem_ipsum"
-	    android:layout_width="fill_parent" 
-	    android:layout_height="wrap_content" 
+	    android:layout_width="fill_parent"
+	    android:layout_height="wrap_content"
 	    android:text="@string/lorem_ipsum"
 	    android:textColor="#000000"
 	    android:textSize="28sp"
-	/>	
-	
+	/>
+
 </LinearLayout>

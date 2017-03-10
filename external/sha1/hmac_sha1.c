@@ -18,7 +18,7 @@
  * 3. Neither the name of the copyright holder nor the names of contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -185,7 +185,7 @@ void HMAC_SHA1_Done(HMAC_SHA1_CTX *ctx) {
 	SHA1_force_memset(&(ctx->key[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
 	SHA1_force_memset(&ctx->keylen, ZERO_BYTE, sizeof(ctx->keylen));
 	SHA1_force_memset(&ctx->hashkey, ZERO_BYTE, sizeof(ctx->hashkey));
-} 
+}
 
 #ifdef  __cplusplus
 }

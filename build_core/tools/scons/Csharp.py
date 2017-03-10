@@ -1,21 +1,21 @@
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -24,7 +24,7 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 # A simple C# builder with no extra bells or whistles
 
@@ -39,23 +39,23 @@ cs_lib_action = '$CSC "/target:library" $_CSC_LIB_FLAGS $_CSC_LIB_PATHS $_CSC_RE
 cs_suffix = '.exe'
 cs_lib_suffix = '.dll'
 
-# This SCons Builder does not properly calculate the dependencies for the .NET 
-# Framework Assemblies specified when using the CSC_REFERENCES do make sure a  
+# This SCons Builder does not properly calculate the dependencies for the .NET
+# Framework Assemblies specified when using the CSC_REFERENCES do make sure a
 # Framework Assembly exist a person should use env.Depends for each Assembly listed
-# in the CSC_REFERENCES 
+# in the CSC_REFERENCES
 
 def generate(env):
     cs_builder = SCons.Builder.Builder(action = '$CSC_ACTION', src_suffix = '.cs', suffix = cs_suffix)
     cs_lib_builder = SCons.Builder.Builder(action = '$CSC_LIB_ACTION', src_suffix = '.cs', suffix = cs_lib_suffix)
-    
+
     env['BUILDERS']['CSharp'] = cs_builder
     env['BUILDERS']['CSharpLib'] = cs_lib_builder
-    
+
     #define the C# compiler
     env['CSC'] = 'csc.exe'
-    # A list of compiler flags like debug, warn, noconfig, or nologo 
+    # A list of compiler flags like debug, warn, noconfig, or nologo
     env['CSC_FLAGS'] = ''
-    env['_CSC_FLAGS'] = "${_stripixes('\"/', CSC_FLAGS, '\"', '\"/', '\"', __env__)}" 
+    env['_CSC_FLAGS'] = "${_stripixes('\"/', CSC_FLAGS, '\"', '\"/', '\"', __env__)}"
     # A list of compiler flags when building a library file
     env['CSC_LIB_FLAGS'] = ''
     env['_CSC_LIB_FLAGS'] = "${_stripixes('\"/', CSC_LIB_FLAGS, '\"', '\"/', '\"', __env__)}"
@@ -69,6 +69,6 @@ def generate(env):
     env['CSC_ACTION'] = cs_action
     # Action to build a library
     env['CSC_LIB_ACTION'] = cs_lib_action
-    
+
 def exists(env):
     return env['CSC']

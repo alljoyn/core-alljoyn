@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -94,7 +94,7 @@ public interface ConfigService extends ServiceCommon
 	 * @throws Exception
 	 */
 	public void startConfigClient(BusAttachment bus) throws Exception;
-	
+
 	/**
 	 * Create an Config client for a peer.
 	 * @param deviceName the remote device
@@ -104,13 +104,13 @@ public interface ConfigService extends ServiceCommon
 	 * @throws Exception
 	 */
 	public ConfigClient createFeatureConfigClient(String deviceName, ServiceAvailabilityListener serviceAvailabilityListener, short port) throws Exception;
-	
+
 	/**
 	 * Stop client mode. Disconnect all sessions.
 	 * @throws Exception
 	 */
 	public void stopConfigClient() throws Exception;
-	
+
 	/**
 	 * Handler of password change requests coming from remote peer clients.
 	 * @param setPasswordHandler the application

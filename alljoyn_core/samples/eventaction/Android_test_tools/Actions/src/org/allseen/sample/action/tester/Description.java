@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -40,7 +40,7 @@ public class Description {
 	 * Contains the description to de displayed
 	 */
 	private String description;
-	
+
 	/**
 	 * Placeholder for the list of argument descriptions if there are any
 	 * Currently this application does not take into account AllJoyn Methods
@@ -53,17 +53,17 @@ public class Description {
 	 * Name of the member which is the Signal or Method function name
 	 */
 	private String memberName;
-	
+
 	/**
 	 * Name of the interface that this description was found
 	 */
 	private String iface;
-	
+
 	/**
 	 * Path where the interface has been implemented
 	 */
 	private String path;
-	
+
 	/**
 	 * The argument signature of the member
 	 */
@@ -82,7 +82,7 @@ public class Description {
 	public String getDescription() {
 	    return description;
     }
-	
+
 	/**
 	 * Sets the description string
 	 */

@@ -2,22 +2,22 @@
 
 REM    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 REM    Project (AJOSP) Contributors and others.
-REM    
+REM
 REM    SPDX-License-Identifier: Apache-2.0
-REM    
+REM
 REM    All rights reserved. This program and the accompanying materials are
 REM    made available under the terms of the Apache License, Version 2.0
 REM    which accompanies this distribution, and is available at
 REM    http://www.apache.org/licenses/LICENSE-2.0
-REM    
+REM
 REM    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 REM    Alliance. All rights reserved.
-REM    
+REM
 REM    Permission to use, copy, modify, and/or distribute this software for
 REM    any purpose with or without fee is hereby granted, provided that the
 REM    above copyright notice and this permission notice appear in all
 REM    copies.
-REM    
+REM
 REM    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 REM    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 REM    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE

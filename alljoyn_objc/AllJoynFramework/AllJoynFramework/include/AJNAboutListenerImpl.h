@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -38,15 +38,15 @@ class AJNAboutListenerImpl : public ajn::AboutListener {
 protected:
     static const char* AJN_ABOUT_LISTENER_DISPATCH_QUEUE_NAME;
     __weak AJNBusAttachment* busAttachment;
-    
+
     /**
      * Objective C delegate called when one of the below virtual functions
      * is called.
      */
     __weak id<AJNAboutListener> m_delegate;
-    
+
 public:
-    
+
     /**
      * Constructor for the AJNAboutListener implementation.
      *
@@ -54,21 +54,21 @@ public:
      * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
      */
     AJNAboutListenerImpl(AJNBusAttachment* aBusAttachment, id<AJNAboutListener> aDelegate);
-    
+
     /**
      * Virtual destructor for derivable class.
      */
     virtual ~AJNAboutListenerImpl();
-    
+
     virtual void Announced(const char* busName, uint16_t version, ajn::SessionPort port, const ajn::MsgArg& objectDescriptionArg, const ajn::MsgArg& aboutDataArg);
-    
+
     /**
      * Accessor for Objective-C delegate.
      *
      * return delegate         The Objective-C delegate called to handle the above event methods.
      */
     id<AJNAboutListener> getDelegate();
-    
+
     /**
      * Mutator for Objective-C delegate.
      *

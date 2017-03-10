@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -60,12 +60,12 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 	self.alertBusName.alertViewStyle = UIAlertViewStylePlainTextInput;
 	self.alertBusName.tag = 1;
 	self.alertChooseLanguage = [self.alertBusName textFieldAtIndex:0]; //connect the UITextField with the alert
-    
+
 	//  announcementOptionsAlert.tag = 2
 	self.alertAnnouncementOptions = [[UIAlertView alloc] initWithTitle:@"Choose option:" message:@"" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Refresh", @"Set Language", nil];
 	self.alertAnnouncementOptions.alertViewStyle = UIAlertViewStyleDefault;
 	self.alertAnnouncementOptions.tag = 2;
-    
+
 	//  alertNoSession.tag = 3
 	self.alertNoSession = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Session is not connected, check the connection and reconnect." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil];
 	self.alertNoSession.alertViewStyle = UIAlertViewStyleDefault;
@@ -110,9 +110,9 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 					[[[UIAlertView alloc] initWithTitle:@"Error" message:@"Requested language is not supported" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show];
 					return;
 				}
-                
+
 				self.clientInformation.currLang = self.alertChooseLanguage.text;
-                
+
 				[self UpdateCallViewInformation];
 			}
 			else {
@@ -120,12 +120,12 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 			}
 		}
             break;
-            
+
 		case 2: //announcementOptionsAlert
 		{
 			if (buttonIndex == 1) {
 				//refresh
-                
+
 				[self UpdateCallViewInformation];
 			}
 			else if (buttonIndex == 2) {
@@ -134,12 +134,12 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 			}
 		}
             break;
-            
+
 		case 3: //NoSessionAlert
 		{
 		}
             break;
-            
+
 		default:
              NSLog(@"[%@] [%@] alertView.tag is wrong", @"ERROR", [[self class] description]);
 
@@ -150,7 +150,7 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 - (void)UpdateCallViewInformation
 {
 	self.lblVersion.text = [NSString stringWithFormat:@"%u", [self.clientInformation.announcement version]];
-    
+
 	if (!self.sessionId) {
 		//create sessionOptions
 		AJNSessionOptions *opt = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:false proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
@@ -160,7 +160,7 @@ static NSString * const CLIENTDEFAULTLANG=@"";
                           onPort:[self.clientInformation.announcement port]
                           withDelegate:(nil) options:opt];
 	}
-    
+
 	if (self.sessionId == 0 || self.sessionId == -1) {
          NSLog(@"[%@] [%@] Failed to join session. sid=%u", @"DEBUG", [[self class] description],self.sessionId);
 
@@ -170,40 +170,40 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 
         dispatch_async(dispatch_queue_create("UpdateAbout",NULL), ^{
             // Perform long running process
-            
+
             		NSMutableDictionary *aboutData;
 		__block NSMutableDictionary *objDesc;
-        
-        
+
+
 		AJNAboutClient *ajnAboutClient = [[AJNAboutClient alloc] initWithBus:self.clientBusAttachment];
-        
+
         QStatus qStatus = [ajnAboutClient aboutDataWithBusName:[self.clientInformation.announcement busName] andLanguageTag:self.clientInformation.currLang andAboutData:&aboutData andSessionId:self.sessionId];
-        
+
              dispatch_async(dispatch_get_main_queue(), ^{
-            
+
         if (qStatus != ER_OK) {
             UIAlertView *errorAlert = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Calling the about method returned with an error" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-            
+
             [errorAlert show];
         }
         else {
             [ajnAboutClient objectDescriptionsWithBusName:[self.clientInformation.announcement busName] andObjectDescriptions:&objDesc andSessionId:self.sessionId];
-            
+
             NSLog(@"[%@] [%@] AboutData:  %@", @"DEBUG", [[self class] description], [AJNAboutDataConverter aboutDataDictionaryToString:aboutData]);
-            
+
             NSLog(@"[%@] [%@] objectDescriptions:  %@", @"DEBUG", [[self class] description], [AJNAboutDataConverter objectDescriptionsDictionaryToString:objDesc]);
 
             self.supportedLanguagesMsgArg = aboutData[@"SupportedLanguages"];
-            
-            
+
+
             self.lblAboutLanguage.text = self.clientInformation.currLang;
             self.txtViewAboutMap.text = [AJNAboutDataConverter aboutDataDictionaryToString:aboutData];
             self.txtViewBusObjectDesc.text = [AJNAboutDataConverter objectDescriptionsDictionaryToString:objDesc];
         }
-            
-           
-              
-                
+
+
+
+
             });
         });
 
@@ -214,9 +214,9 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
-    
+
 	[self prepareAlerts];
-    
+
 	[self UpdateCallViewInformation];
 }
 
@@ -224,7 +224,7 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 - (void)viewWillDisappear:(BOOL)animated
 {
 	[self.clientBusAttachment leaveSession:self.sessionId];
-    
+
 	[super viewWillDisappear:animated];
 }
 
