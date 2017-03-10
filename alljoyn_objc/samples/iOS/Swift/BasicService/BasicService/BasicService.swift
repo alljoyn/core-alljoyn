@@ -38,6 +38,8 @@ let kBasicServiceName = "org.alljoyn.Bus.sample"
 let kBasicServicePath = "/sample"
 let kBasicServicePort: AJNSessionPort = 25
 
+////////////////////////////////////////////////////////////////////////////////
+
 protocol BasicServiceDelegate: class {
 
     func didReceiveStatusUpdateMessage(message: String)
@@ -175,18 +177,15 @@ class BasicService: NSObject, AJNBusListener, AJNSessionPortListener, AJNSession
         //
         bus.unregisterBusListener(self)
 
-        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print("+ Destroying bus attachment                                                               +")
-        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-
-        // Destroy listener (temporary decision). When framework unregistering is fixed,
-        // direct destroy calling will be removed.
+        // destroy listener
         //
         self.bus!.destroy(self)
 
-        print("Bus is destroyed")
+        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered and destroyed.")
 
-        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered.")
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        print("+ Destroying bus attachment                                                               +")
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     }
 
 
@@ -257,5 +256,10 @@ class BasicService: NSObject, AJNBusListener, AJNSessionPortListener, AJNSession
 
     func didJoin(_ joiner: String, inSessionWithId sessionId: AJNSessionId, onSessionPort sessionPort: AJNSessionPort) {
         print("AJNSessionPortListener::didJoyn")
+
+        //set session listener to be able get callbacks of AJNSessionListener delegate
+        //
+        self.bus?.enableConcurrentCallbacks()
+        self.bus?.setSessionListener(self, toSession: sessionId)
     }
 }
