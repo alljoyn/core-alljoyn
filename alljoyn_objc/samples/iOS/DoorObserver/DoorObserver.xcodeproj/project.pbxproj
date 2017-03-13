@@ -7,61 +7,38 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4F9767401AB9A8FF00E2B4F8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F97673F1AB9A8FF00E2B4F8 /* main.m */; };
-		4F9767431AB9A8FF00E2B4F8 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F9767421AB9A8FF00E2B4F8 /* AppDelegate.m */; };
-		4F9767461AB9A8FF00E2B4F8 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F9767451AB9A8FF00E2B4F8 /* ViewController.m */; };
-		4F9767491AB9A8FF00E2B4F8 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4F9767471AB9A8FF00E2B4F8 /* Main.storyboard */; };
-		4F97674B1AB9A8FF00E2B4F8 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F97674A1AB9A8FF00E2B4F8 /* Images.xcassets */; };
-		4F97674E1AB9A8FF00E2B4F8 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4F97674C1AB9A8FF00E2B4F8 /* LaunchScreen.xib */; };
-		4F97675A1AB9A8FF00E2B4F8 /* DoorObserverTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F9767591AB9A8FF00E2B4F8 /* DoorObserverTests.m */; };
-		4F9768451AB9C98800E2B4F8 /* AJNDoorObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F9768411AB9C98800E2B4F8 /* AJNDoorObject.mm */; };
-		4F9768461AB9C98800E2B4F8 /* DoorObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F9768431AB9C98800E2B4F8 /* DoorObject.m */; };
-		4F9768471AB9C98800E2B4F8 /* DoorObject.xml in Resources */ = {isa = PBXBuildFile; fileRef = 4F9768441AB9C98800E2B4F8 /* DoorObject.xml */; };
-		4FECF98D1ABB3265009DE412 /* AddDoorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4FECF98C1ABB3265009DE412 /* AddDoorViewController.m */; };
+		9A54E5771E76CD92000BC095 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E5761E76CD92000BC095 /* main.m */; };
+		9A54E57A1E76CD92000BC095 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E5791E76CD92000BC095 /* AppDelegate.m */; };
+		9A54E57D1E76CD92000BC095 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E57C1E76CD92000BC095 /* ViewController.m */; };
+		9A54E5801E76CD92000BC095 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9A54E57E1E76CD92000BC095 /* Main.storyboard */; };
+		9A54E5821E76CD92000BC095 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A54E5811E76CD92000BC095 /* Assets.xcassets */; };
+		9A54E5851E76CD92000BC095 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9A54E5831E76CD92000BC095 /* LaunchScreen.storyboard */; };
+		9A54E5911E76CF43000BC095 /* AJNDoorObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E58E1E76CF43000BC095 /* AJNDoorObject.mm */; };
+		9A54E5921E76CF43000BC095 /* DoorObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E5901E76CF43000BC095 /* DoorObject.m */; };
+		9A54E5951E76D128000BC095 /* AddDoorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A54E5941E76D128000BC095 /* AddDoorViewController.m */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		4F9767541AB9A8FF00E2B4F8 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 4F9767321AB9A8FF00E2B4F8 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4F9767391AB9A8FF00E2B4F8;
-			remoteInfo = DoorObserver;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
-		4F97673A1AB9A8FF00E2B4F8 /* DoorObserver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DoorObserver.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		4F97673E1AB9A8FF00E2B4F8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		4F97673F1AB9A8FF00E2B4F8 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		4F9767411AB9A8FF00E2B4F8 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		4F9767421AB9A8FF00E2B4F8 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		4F9767441AB9A8FF00E2B4F8 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		4F9767451AB9A8FF00E2B4F8 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
-		4F9767481AB9A8FF00E2B4F8 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		4F97674A1AB9A8FF00E2B4F8 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
-		4F97674D1AB9A8FF00E2B4F8 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
-		4F9767531AB9A8FF00E2B4F8 /* DoorObserverTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DoorObserverTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		4F9767581AB9A8FF00E2B4F8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		4F9767591AB9A8FF00E2B4F8 /* DoorObserverTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DoorObserverTests.m; sourceTree = "<group>"; };
-		4F9768401AB9C98800E2B4F8 /* AJNDoorObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNDoorObject.h; path = DoorObject/AJNDoorObject.h; sourceTree = SOURCE_ROOT; };
-		4F9768411AB9C98800E2B4F8 /* AJNDoorObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNDoorObject.mm; path = DoorObject/AJNDoorObject.mm; sourceTree = SOURCE_ROOT; };
-		4F9768421AB9C98800E2B4F8 /* DoorObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DoorObject.h; path = DoorObject/DoorObject.h; sourceTree = SOURCE_ROOT; };
-		4F9768431AB9C98800E2B4F8 /* DoorObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DoorObject.m; path = DoorObject/DoorObject.m; sourceTree = SOURCE_ROOT; };
-		4F9768441AB9C98800E2B4F8 /* DoorObject.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = DoorObject.xml; path = DoorObject/DoorObject.xml; sourceTree = SOURCE_ROOT; };
-		4FECF98B1ABB3265009DE412 /* AddDoorViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AddDoorViewController.h; sourceTree = "<group>"; };
-		4FECF98C1ABB3265009DE412 /* AddDoorViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AddDoorViewController.m; sourceTree = "<group>"; };
+		9A54E5721E76CD92000BC095 /* DoorObserver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DoorObserver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A54E5761E76CD92000BC095 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		9A54E5781E76CD92000BC095 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		9A54E5791E76CD92000BC095 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		9A54E57B1E76CD92000BC095 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		9A54E57C1E76CD92000BC095 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		9A54E57F1E76CD92000BC095 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		9A54E5811E76CD92000BC095 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9A54E5841E76CD92000BC095 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		9A54E5861E76CD92000BC095 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9A54E58D1E76CF43000BC095 /* AJNDoorObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNDoorObject.h; path = DoorObject/AJNDoorObject.h; sourceTree = SOURCE_ROOT; };
+		9A54E58E1E76CF43000BC095 /* AJNDoorObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNDoorObject.mm; path = DoorObject/AJNDoorObject.mm; sourceTree = SOURCE_ROOT; };
+		9A54E58F1E76CF43000BC095 /* DoorObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DoorObject.h; path = DoorObject/DoorObject.h; sourceTree = SOURCE_ROOT; };
+		9A54E5901E76CF43000BC095 /* DoorObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DoorObject.m; path = DoorObject/DoorObject.m; sourceTree = SOURCE_ROOT; };
+		9A54E5931E76D128000BC095 /* AddDoorViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AddDoorViewController.h; sourceTree = "<group>"; };
+		9A54E5941E76D128000BC095 /* AddDoorViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AddDoorViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		4F9767371AB9A8FF00E2B4F8 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		4F9767501AB9A8FF00E2B4F8 /* Frameworks */ = {
+		9A54E56F1E76CD92000BC095 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -71,91 +48,70 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4F9767311AB9A8FF00E2B4F8 = {
+		9A54E5691E76CD92000BC095 = {
 			isa = PBXGroup;
 			children = (
-				4F97673C1AB9A8FF00E2B4F8 /* DoorObserver */,
-				4F9767561AB9A8FF00E2B4F8 /* DoorObserverTests */,
-				4F97673B1AB9A8FF00E2B4F8 /* Products */,
-				4F9767631AB9AE1000E2B4F8 /* DoorObject */,
+				9A54E5741E76CD92000BC095 /* DoorObserver */,
+				9A54E5731E76CD92000BC095 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4F97673B1AB9A8FF00E2B4F8 /* Products */ = {
+		9A54E5731E76CD92000BC095 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4F97673A1AB9A8FF00E2B4F8 /* DoorObserver.app */,
-				4F9767531AB9A8FF00E2B4F8 /* DoorObserverTests.xctest */,
+				9A54E5721E76CD92000BC095 /* DoorObserver.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		4F97673C1AB9A8FF00E2B4F8 /* DoorObserver */ = {
+		9A54E5741E76CD92000BC095 /* DoorObserver */ = {
 			isa = PBXGroup;
 			children = (
-				4FECF98B1ABB3265009DE412 /* AddDoorViewController.h */,
-				4FECF98C1ABB3265009DE412 /* AddDoorViewController.m */,
-				4F9767411AB9A8FF00E2B4F8 /* AppDelegate.h */,
-				4F9767421AB9A8FF00E2B4F8 /* AppDelegate.m */,
-				4F97674A1AB9A8FF00E2B4F8 /* Images.xcassets */,
-				4F97674C1AB9A8FF00E2B4F8 /* LaunchScreen.xib */,
-				4F9767471AB9A8FF00E2B4F8 /* Main.storyboard */,
-				4F97673D1AB9A8FF00E2B4F8 /* Supporting Files */,
-				4F9767441AB9A8FF00E2B4F8 /* ViewController.h */,
-				4F9767451AB9A8FF00E2B4F8 /* ViewController.m */,
+				9A54E58C1E76CE71000BC095 /* object */,
+				9A54E5781E76CD92000BC095 /* AppDelegate.h */,
+				9A54E5791E76CD92000BC095 /* AppDelegate.m */,
+				9A54E57B1E76CD92000BC095 /* ViewController.h */,
+				9A54E57C1E76CD92000BC095 /* ViewController.m */,
+				9A54E5941E76D128000BC095 /* AddDoorViewController.m */,
+				9A54E5931E76D128000BC095 /* AddDoorViewController.h */,
+				9A54E57E1E76CD92000BC095 /* Main.storyboard */,
+				9A54E5811E76CD92000BC095 /* Assets.xcassets */,
+				9A54E5831E76CD92000BC095 /* LaunchScreen.storyboard */,
+				9A54E5861E76CD92000BC095 /* Info.plist */,
+				9A54E5751E76CD92000BC095 /* Supporting Files */,
 			);
 			path = DoorObserver;
 			sourceTree = "<group>";
 		};
-		4F97673D1AB9A8FF00E2B4F8 /* Supporting Files */ = {
+		9A54E5751E76CD92000BC095 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				4F97673E1AB9A8FF00E2B4F8 /* Info.plist */,
-				4F97673F1AB9A8FF00E2B4F8 /* main.m */,
+				9A54E5761E76CD92000BC095 /* main.m */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		4F9767561AB9A8FF00E2B4F8 /* DoorObserverTests */ = {
+		9A54E58C1E76CE71000BC095 /* object */ = {
 			isa = PBXGroup;
 			children = (
-				4F9767591AB9A8FF00E2B4F8 /* DoorObserverTests.m */,
-				4F9767571AB9A8FF00E2B4F8 /* Supporting Files */,
+				9A54E58D1E76CF43000BC095 /* AJNDoorObject.h */,
+				9A54E58E1E76CF43000BC095 /* AJNDoorObject.mm */,
+				9A54E58F1E76CF43000BC095 /* DoorObject.h */,
+				9A54E5901E76CF43000BC095 /* DoorObject.m */,
 			);
-			path = DoorObserverTests;
-			sourceTree = "<group>";
-		};
-		4F9767571AB9A8FF00E2B4F8 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				4F9767581AB9A8FF00E2B4F8 /* Info.plist */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		4F9767631AB9AE1000E2B4F8 /* DoorObject */ = {
-			isa = PBXGroup;
-			children = (
-				4F9768401AB9C98800E2B4F8 /* AJNDoorObject.h */,
-				4F9768411AB9C98800E2B4F8 /* AJNDoorObject.mm */,
-				4F9768421AB9C98800E2B4F8 /* DoorObject.h */,
-				4F9768431AB9C98800E2B4F8 /* DoorObject.m */,
-				4F9768441AB9C98800E2B4F8 /* DoorObject.xml */,
-			);
-			name = DoorObject;
-			path = DoorObserver;
+			name = object;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4F9767391AB9A8FF00E2B4F8 /* DoorObserver */ = {
+		9A54E5711E76CD92000BC095 /* DoorObserver */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4F97675D1AB9A8FF00E2B4F8 /* Build configuration list for PBXNativeTarget "DoorObserver" */;
+			buildConfigurationList = 9A54E5891E76CD92000BC095 /* Build configuration list for PBXNativeTarget "DoorObserver" */;
 			buildPhases = (
-				4F9767361AB9A8FF00E2B4F8 /* Sources */,
-				4F9767371AB9A8FF00E2B4F8 /* Frameworks */,
-				4F9767381AB9A8FF00E2B4F8 /* Resources */,
+				9A54E56E1E76CD92000BC095 /* Sources */,
+				9A54E56F1E76CD92000BC095 /* Frameworks */,
+				9A54E5701E76CD92000BC095 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -163,46 +119,25 @@
 			);
 			name = DoorObserver;
 			productName = DoorObserver;
-			productReference = 4F97673A1AB9A8FF00E2B4F8 /* DoorObserver.app */;
+			productReference = 9A54E5721E76CD92000BC095 /* DoorObserver.app */;
 			productType = "com.apple.product-type.application";
-		};
-		4F9767521AB9A8FF00E2B4F8 /* DoorObserverTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 4F9767601AB9A8FF00E2B4F8 /* Build configuration list for PBXNativeTarget "DoorObserverTests" */;
-			buildPhases = (
-				4F97674F1AB9A8FF00E2B4F8 /* Sources */,
-				4F9767501AB9A8FF00E2B4F8 /* Frameworks */,
-				4F9767511AB9A8FF00E2B4F8 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				4F9767551AB9A8FF00E2B4F8 /* PBXTargetDependency */,
-			);
-			name = DoorObserverTests;
-			productName = DoorObserverTests;
-			productReference = 4F9767531AB9A8FF00E2B4F8 /* DoorObserverTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		4F9767321AB9A8FF00E2B4F8 /* Project object */ = {
+		9A54E56A1E76CD92000BC095 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0800;
-				ORGANIZATIONNAME = "AllSeen Alliance";
+				LastUpgradeCheck = 0810;
+				ORGANIZATIONNAME = AllJoyn;
 				TargetAttributes = {
-					4F9767391AB9A8FF00E2B4F8 = {
-						CreatedOnToolsVersion = 6.2;
-					};
-					4F9767521AB9A8FF00E2B4F8 = {
-						CreatedOnToolsVersion = 6.2;
-						TestTargetID = 4F9767391AB9A8FF00E2B4F8;
+					9A54E5711E76CD92000BC095 = {
+						CreatedOnToolsVersion = 8.1;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
-			buildConfigurationList = 4F9767351AB9A8FF00E2B4F8 /* Build configuration list for PBXProject "DoorObserver" */;
+			buildConfigurationList = 9A54E56D1E76CD92000BC095 /* Build configuration list for PBXProject "DoorObserver" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -210,94 +145,70 @@
 				en,
 				Base,
 			);
-			mainGroup = 4F9767311AB9A8FF00E2B4F8;
-			productRefGroup = 4F97673B1AB9A8FF00E2B4F8 /* Products */;
+			mainGroup = 9A54E5691E76CD92000BC095;
+			productRefGroup = 9A54E5731E76CD92000BC095 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4F9767391AB9A8FF00E2B4F8 /* DoorObserver */,
-				4F9767521AB9A8FF00E2B4F8 /* DoorObserverTests */,
+				9A54E5711E76CD92000BC095 /* DoorObserver */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		4F9767381AB9A8FF00E2B4F8 /* Resources */ = {
+		9A54E5701E76CD92000BC095 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4F9768471AB9C98800E2B4F8 /* DoorObject.xml in Resources */,
-				4F9767491AB9A8FF00E2B4F8 /* Main.storyboard in Resources */,
-				4F97674E1AB9A8FF00E2B4F8 /* LaunchScreen.xib in Resources */,
-				4F97674B1AB9A8FF00E2B4F8 /* Images.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		4F9767511AB9A8FF00E2B4F8 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+				9A54E5851E76CD92000BC095 /* LaunchScreen.storyboard in Resources */,
+				9A54E5821E76CD92000BC095 /* Assets.xcassets in Resources */,
+				9A54E5801E76CD92000BC095 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		4F9767361AB9A8FF00E2B4F8 /* Sources */ = {
+		9A54E56E1E76CD92000BC095 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4F9767461AB9A8FF00E2B4F8 /* ViewController.m in Sources */,
-				4F9767431AB9A8FF00E2B4F8 /* AppDelegate.m in Sources */,
-				4FECF98D1ABB3265009DE412 /* AddDoorViewController.m in Sources */,
-				4F9767401AB9A8FF00E2B4F8 /* main.m in Sources */,
-				4F9768461AB9C98800E2B4F8 /* DoorObject.m in Sources */,
-				4F9768451AB9C98800E2B4F8 /* AJNDoorObject.mm in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		4F97674F1AB9A8FF00E2B4F8 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				4F97675A1AB9A8FF00E2B4F8 /* DoorObserverTests.m in Sources */,
+				9A54E5921E76CF43000BC095 /* DoorObject.m in Sources */,
+				9A54E5911E76CF43000BC095 /* AJNDoorObject.mm in Sources */,
+				9A54E57D1E76CD92000BC095 /* ViewController.m in Sources */,
+				9A54E57A1E76CD92000BC095 /* AppDelegate.m in Sources */,
+				9A54E5951E76D128000BC095 /* AddDoorViewController.m in Sources */,
+				9A54E5771E76CD92000BC095 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		4F9767551AB9A8FF00E2B4F8 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4F9767391AB9A8FF00E2B4F8 /* DoorObserver */;
-			targetProxy = 4F9767541AB9A8FF00E2B4F8 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin PBXVariantGroup section */
-		4F9767471AB9A8FF00E2B4F8 /* Main.storyboard */ = {
+		9A54E57E1E76CD92000BC095 /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				4F9767481AB9A8FF00E2B4F8 /* Base */,
+				9A54E57F1E76CD92000BC095 /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		4F97674C1AB9A8FF00E2B4F8 /* LaunchScreen.xib */ = {
+		9A54E5831E76CD92000BC095 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				4F97674D1AB9A8FF00E2B4F8 /* Base */,
+				9A54E5841E76CD92000BC095 /* Base */,
 			);
-			name = LaunchScreen.xib;
+			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		4F97675B1AB9A8FF00E2B4F8 /* Debug */ = {
+		9A54E5871E76CD92000BC095 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -305,16 +216,18 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -325,14 +238,13 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.1;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -340,10 +252,11 @@
 			};
 			name = Debug;
 		};
-		4F97675C1AB9A8FF00E2B4F8 /* Release */ = {
+		9A54E5881E76CD92000BC095 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -351,16 +264,18 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -371,7 +286,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -379,20 +294,17 @@
 			};
 			name = Release;
 		};
-		4F97675E1AB9A8FF00E2B4F8 /* Debug */ = {
+		9A54E58A1E76CD92000BC095 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				ENABLE_BITCODE = NO;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/include/\"";
 				INFOPLIST_FILE = DoorObserver/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				LD_RUNPATH_SEARCH_PATHS = "";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/$(CONFIGURATION)/\"";
-				OTHER_CFLAGS = (
+				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=*]" = (
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
 				);
@@ -401,28 +313,22 @@
 					"-lajrouter",
 					"-lAllJoynFramework_iOS",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.sample.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.objc.DoorObserver;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = "";
-				VALID_ARCHS = "arm64 armv7 armv7s";
 			};
 			name = Debug;
 		};
-		4F97675F1AB9A8FF00E2B4F8 /* Release */ = {
+		9A54E58B1E76CD92000BC095 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				ENABLE_BITCODE = NO;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/include/\"";
 				INFOPLIST_FILE = DoorObserver/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				LD_RUNPATH_SEARCH_PATHS = "";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/$(CONFIGURATION)/\"";
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
+				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=*]" = (
 					"-DNS_BLOCK_ASSERTIONS=1",
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
@@ -432,80 +338,32 @@
 					"-lajrouter",
 					"-lAllJoynFramework_iOS",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.sample.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.objc.DoorObserver;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = "";
-				VALID_ARCHS = "arm64 armv7 armv7s";
-			};
-			name = Release;
-		};
-		4F9767611AB9A8FF00E2B4F8 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = DoorObserverTests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.sample.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DoorObserver.app/DoorObserver";
-			};
-			name = Debug;
-		};
-		4F9767621AB9A8FF00E2B4F8 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = DoorObserverTests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.sample.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DoorObserver.app/DoorObserver";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4F9767351AB9A8FF00E2B4F8 /* Build configuration list for PBXProject "DoorObserver" */ = {
+		9A54E56D1E76CD92000BC095 /* Build configuration list for PBXProject "DoorObserver" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4F97675B1AB9A8FF00E2B4F8 /* Debug */,
-				4F97675C1AB9A8FF00E2B4F8 /* Release */,
+				9A54E5871E76CD92000BC095 /* Debug */,
+				9A54E5881E76CD92000BC095 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4F97675D1AB9A8FF00E2B4F8 /* Build configuration list for PBXNativeTarget "DoorObserver" */ = {
+		9A54E5891E76CD92000BC095 /* Build configuration list for PBXNativeTarget "DoorObserver" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4F97675E1AB9A8FF00E2B4F8 /* Debug */,
-				4F97675F1AB9A8FF00E2B4F8 /* Release */,
+				9A54E58A1E76CD92000BC095 /* Debug */,
+				9A54E58B1E76CD92000BC095 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		4F9767601AB9A8FF00E2B4F8 /* Build configuration list for PBXNativeTarget "DoorObserverTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				4F9767611AB9A8FF00E2B4F8 /* Debug */,
-				4F9767621AB9A8FF00E2B4F8 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 4F9767321AB9A8FF00E2B4F8 /* Project object */;
+	rootObject = 9A54E56A1E76CD92000BC095 /* Project object */;
 }
