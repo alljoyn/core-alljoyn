@@ -27,12 +27,19 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
-@interface ViewController : UIViewController
+@protocol AboutClientDelegate <NSObject>
 
-@property (weak, nonatomic) IBOutlet UITextView *eventsTextView;
+- (void)didReceiveStatusUpdateMessage:(NSString *)message;
 
-- (IBAction)didTouchCallServiceButton:(id)sender;
+@end
+
+@interface AboutClient : NSObject
+
+@property (nonatomic, weak) NSObject<AboutClientDelegate> *delegate;
+
+- (void)sendHelloMessage;
+
 
 @end
