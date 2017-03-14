@@ -40,7 +40,6 @@
 @property (nonatomic, weak) NSObject<AboutClientDelegate> *delegate;
 
 - (void)sendHelloMessage;
-- (void)sendPing;
 
 
 @end
