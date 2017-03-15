@@ -28,14 +28,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <UIKit/UIKit.h>
-#import "AJNBusAttachment.h"
+#import "DoorObserverAllJoynService.h"
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
-@property (nonatomic,strong) AJNBusAttachment *bus;
-
-- (void)produceDoorAtLocation:(NSString *)location;
-
+@property (nonatomic, strong, readonly) DoorObserverAllJoynService *doorObserverAllJoynService;
 
 @end
