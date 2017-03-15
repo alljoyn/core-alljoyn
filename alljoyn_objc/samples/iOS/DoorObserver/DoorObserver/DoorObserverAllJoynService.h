@@ -27,35 +27,27 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
+#import <Foundation/Foundation.h>
+#import "alljoyn/Status.h"
+#import "DoorObject.h"
 #import <UIKit/UIKit.h>
-#import <XCTest/XCTest.h>
 
-@interface DoorObserverTests : XCTestCase
+typedef enum {
+    STARTED,
+    STOPED,
+    UNDEFINED
+} ServiceState;
 
-@end
+@interface DoorObserverAllJoynService <UITableViewDataSource> : NSObject
 
-@implementation DoorObserverTests
+@property (nonatomic, readonly) BOOL isServiceStarted;
 
-- (void)setUp {
-    [super setUp];
-    // Put setup code here. This method is called before the invocation of each test method in the class.
-}
-
-- (void)tearDown {
-    // Put teardown code here. This method is called after the invocation of each test method in the class.
-    [super tearDown];
-}
-
-- (void)testExample {
-    // This is an example of a functional test case.
-    XCTAssert(YES, @"Pass");
-}
-
-- (void)testPerformanceExample {
-    // This is an example of a performance test case.
-    [self measureBlock:^{
-        // Put the code you want to measure the time of here.
-    }];
-}
+- (id)init;
+- (BOOL)startService;
+- (void)stopService;
+- (void)setTableView:(UITableView *) uiTableView;
+- (void)clearTableView;
+- (QStatus)produceDoorAtLocation:(NSString *)location;
+- (BOOL)clickOnProxyDoorAtIndex:(NSInteger)index;
 
 @end
