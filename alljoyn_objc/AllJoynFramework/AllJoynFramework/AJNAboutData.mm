@@ -367,6 +367,21 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return self.aboutData->SetSupportedLanguage([language UTF8String]);
 }
 
+- (size_t)getSupportedLanguages:(NSString **)languageTags num:(size_t)num
+{
+    size_t actualNumLanguages = self.aboutData->GetSupportedLanguages();
+
+    std::vector<const char *> languages(num);
+
+    self.aboutData->GetSupportedLanguages(&(languages[0]), actualNumLanguages);
+
+    for (int i = 0; i < actualNumLanguages && i < num; ++i) {
+        languageTags[i] = [NSString stringWithCString:languages[i] encoding:NSUTF8StringEncoding];
+    }
+
+    return actualNumLanguages;
+}
+
 - (NSArray<NSString *> *)getSupportedLanguages
 {
     size_t numLanguages = self.aboutData->GetSupportedLanguages();

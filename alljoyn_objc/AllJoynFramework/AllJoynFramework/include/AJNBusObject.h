@@ -308,6 +308,9 @@ typedef enum AJNAnnounceFlag {
 
 - (void)objectWasRegistered;
 
+// This method doesn't implemented.
+//- (QStatus)registerInterfacesWithBus:(AJNBusAttachment *)busAttachment;
+
 - (void)setDescription:(NSString *)description inLanguage:(NSString *)language;
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
