@@ -351,8 +351,21 @@
  *
  * The language is specified in a Locale using IETF language tags specified by the RFC 5646.
  *
+ * @return A NSArray with supported languages
+ *
  */
 - (NSArray<NSString *> *)getSupportedLanguages;
+
+/**
+ * Deprecated API. Use getSupportedLanguages: instead of this.
+ *
+ * Get and length of supported languages
+ *
+ * @return length of locals containing languageTags.
+ */
+
+//TODO: 17.10 annotate as deprecated
+- (size_t)getSupportedLanguages:(NSString**)languageTags num:(size_t)num;
 
 /**
  * Set the Description to the AboutData
