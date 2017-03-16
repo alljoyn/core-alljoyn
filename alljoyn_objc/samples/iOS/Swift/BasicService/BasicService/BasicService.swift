@@ -27,6 +27,7 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
+
 import Foundation
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -159,7 +160,11 @@ class BasicService: NSObject, AJNBusListener, AJNSessionPortListener, AJNSession
             return
         }
 
-        //cancel name advertising
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        print("+ Destroying bus attachment                                                               +")
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+        // cancel name advertising
         //
         bus.cancelAdvertisedName(kBasicServiceName, withTransportMask: kAJNTransportMaskAny)
 
@@ -175,18 +180,16 @@ class BasicService: NSObject, AJNBusListener, AJNSessionPortListener, AJNSession
         //
         bus.unregisterBusListener(self)
 
-        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print("+ Destroying bus attachment                                                               +")
-        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-
-        // Destroy listener (temporary decision). When framework unregistering is fixed,
-        // direct destroy calling will be removed.
+        // destroy listener
         //
         self.bus!.destroy(self)
 
-        print("Bus is destroyed")
+        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener unregistered.")
 
-        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered.")
+        self.bus!.disconnect()
+        self.bus!.stop()
+
+        delegate?.didReceiveStatusUpdateMessage(message: "Bus stopped.")
     }
 
 
@@ -257,5 +260,10 @@ class BasicService: NSObject, AJNBusListener, AJNSessionPortListener, AJNSession
 
     func didJoin(_ joiner: String, inSessionWithId sessionId: AJNSessionId, onSessionPort sessionPort: AJNSessionPort) {
         print("AJNSessionPortListener::didJoyn")
+
+        //set session listener to be able get callbacks of AJNSessionListener delegate
+        //
+        self.bus?.enableConcurrentCallbacks()
+        self.bus?.setSessionListener(self, toSession: sessionId)
     }
 }

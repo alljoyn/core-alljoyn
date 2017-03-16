@@ -26,8 +26,10 @@
 //    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
-//
-//  Use this file to import your target's public headers that you would like to expose to Swift.
+
+////////////////////////////////////////////////////////////////////////////////
+//    Use this file to import your target's public headers that you would like
+//    to expose to Swift.
 //
 #import "AJNInit.h"
 #import "AJNBusAttachment.h"
