@@ -37,7 +37,21 @@
  */
 @protocol AJNApplicationStateListener <NSObject>
 
-@required
+@optional
+
+/**
+ * Deprecated API. Use appStateChangedForRemoteBusAttachment:appPublicKeyInfo:state: instead.
+ *
+ * Handler for the org.allseen.Bus.Application's State sessionless signal.
+ *
+ * @param[in] busName          unique name of the remote BusAttachment that
+ *                             sent the State signal
+ * @param[in] publicKeyInfo the application public key
+ * @param[in] state the application state
+ */
+
+// TODO: 17.10 annotate as deprecated
+- (void)state:(NSString*)busName appPublicKeyInfo:(AJNKeyInfoNISTP256*)publicKeyInfo state:(AJNApplicationState)state;
 
 /**
  * Handler for the org.allseen.Bus.Application's State sessionless signal.

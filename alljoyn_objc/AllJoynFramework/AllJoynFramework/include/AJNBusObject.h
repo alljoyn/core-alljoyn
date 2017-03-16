@@ -308,6 +308,14 @@ typedef enum AJNAnnounceFlag {
 
 - (void)objectWasRegistered;
 
+/**
+ * Deprecated API.
+ * This method doesn't implemented.
+ *
+ */
+// TODO: 17.10 annotate this method as deprecated
+- (QStatus)registerInterfacesWithBus:(AJNBusAttachment *)busAttachment;
+
 - (void)setDescription:(NSString *)description inLanguage:(NSString *)language;
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
