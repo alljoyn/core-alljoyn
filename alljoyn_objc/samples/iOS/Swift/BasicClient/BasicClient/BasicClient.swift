@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -26,6 +26,7 @@
 //    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+
 
 import Foundation
 
@@ -66,11 +67,11 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
     func run() {
 
         if let versionInformation = AJNVersion.versionInformation() {
-            delegate?.didReceiveStatusUpdateMessage(message: "\(versionInformation)\n")
+            delegate?.didReceiveStatusUpdateMessage(message: "\(versionInformation)")
         }
 
         if let buildInformation = AJNVersion.buildInformation() {
-            delegate?.didReceiveStatusUpdateMessage(message: "\(buildInformation)\n")
+            delegate?.didReceiveStatusUpdateMessage(message: "\(buildInformation)")
         }
 
         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -93,10 +94,10 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
         status = bus.start()
 
         if status != ER_OK {
-            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachment::Start failed\n")
+            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachment::Start failed")
             return
         } else {
-            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachment started.\n")
+            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachment started.")
         }
 
         // connect to the message bus
@@ -104,10 +105,10 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
         status = bus.connect(withArguments: "null:")
 
         if status != ER_OK {
-            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachment::Connect(\"null:\") failed\n")
+            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachment::Connect(\"null:\") failed")
             return
         } else {
-            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachement connected to null:\n")
+            delegate?.didReceiveStatusUpdateMessage(message: "BusAttachement connected to null:")
         }
 
         joinedSessionCondition.lock()
@@ -120,7 +121,7 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
         //
         bus.findAdvertisedName(kBasicClientServiceName)
 
-        delegate?.didReceiveStatusUpdateMessage(message: "Waiting to discover service...\n")
+        delegate?.didReceiveStatusUpdateMessage(message: "Waiting to discover service...")
 
         // wait for the join session to complete:
         // AJNBusListener::didFindAdvertisedName(_:withTransportMask:namePrefix) listener is finished
@@ -134,6 +135,8 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
 
             basicObjectProxy!.introspectRemoteObject()
 
+            printIntrospectedInterfaces(proxyBusObject: basicObjectProxy)
+
 
             let resultOptional = basicObjectProxy!.concatenateString("Code ", with: "monkeys!")
 
@@ -142,7 +145,7 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
                 // compare  result string with the expected one
                 //
                 let resultConclusion = result == "Code monkeys!" ? "Successfully" : "Unsuccessfully"
-                delegate?.didReceiveStatusUpdateMessage(message: "\(resultConclusion) called method on remote object.\n")
+                delegate?.didReceiveStatusUpdateMessage(message: "\(resultConclusion) called method on remote object.")
             } else {
                 delegate?.didReceiveStatusUpdateMessage(message: "ERROR: ProxyBusObject::MethodCall on org.alljoyn.Bus.sample failed.")
             }
@@ -161,18 +164,18 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
         print("+ Destroying bus attachment                                                               +")
         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-        // Unregister listener
+        // unregister listener
         //
         self.bus!.unregisterBusListener(self)
 
-        // Destroy listener (temporary decision). When framework unregistering is fixed,
-        // direct destroy calling will be removed.
+        // destroy listener
         //
         self.bus!.destroy(self)
 
-        print("destroyed bus")
+        self.bus!.disconnect()
+        self.bus!.stop()
 
-        delegate?.didReceiveStatusUpdateMessage(message: "Bus listener is unregistered.\n")
+        delegate?.didReceiveStatusUpdateMessage(message: "Bus stopped")
     }
 
     func ping() {
@@ -243,7 +246,7 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
                 foundServiceName = name
                 delegate?.didReceiveStatusUpdateMessage(message: "JoinSession SUCCESS (Session id=\(sessionId!))")
             } else {
-                delegate?.didReceiveStatusUpdateMessage(message: "JoinSession failed\n")
+                delegate?.didReceiveStatusUpdateMessage(message: "JoinSession failed")
             }
 
             joinedSessionCondition.signal()
@@ -255,7 +258,7 @@ class BasicClient: NSObject, AJNBusListener, AJNSessionListener {
     }
 
     func nameOwnerChanged(_ name: String, to newOwner: String, from previousOwner:String) {
-        delegate?.didReceiveStatusUpdateMessage(message: "NameOwnerChanged: name=\(name), previousOwner=\(previousOwner), newOwner=\(newOwner)\n")
+        delegate?.didReceiveStatusUpdateMessage(message: "NameOwnerChanged: name=\(name), previousOwner=\(previousOwner), newOwner=\(newOwner)")
     }
 
     func busWillStop() {
