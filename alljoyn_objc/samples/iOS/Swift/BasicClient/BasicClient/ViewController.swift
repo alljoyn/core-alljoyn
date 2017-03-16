@@ -27,6 +27,7 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
+
 import UIKit
 
 class ViewController: UIViewController, BasicClientDelegate {
@@ -58,6 +59,7 @@ class ViewController: UIViewController, BasicClientDelegate {
 
             currentText!.append("\(hour):\(minutes):\(seconds)\n")
             currentText!.append(message)
+            currentText!.append("\n")
 
             self.eventsTextView.text = currentText
             print("\(currentText)")
