@@ -38,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.io.IOException;
 
+import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.annotation.BusSignalHandler;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Introspectable;
@@ -74,6 +75,7 @@ public class SecurityProxyBusObjectTest extends TestCase {
     private int receivedGetProp2;
     private int receivedSetProp2;
 
+    private SignalEmitter localEmitter;
     @Override
     public void setUp() throws Exception {
         securityManagerBus = new BusAttachment("SecurityManager", BusAttachment.RemoteMessage.Receive);
@@ -90,6 +92,8 @@ public class SecurityProxyBusObjectTest extends TestCase {
         // Register bus object on peer2 bus
         EchoChirpService service = new EchoChirpService();
         assertEquals(Status.OK, peer2Bus.registerBusObject(service, SERVICE_PATH_PEER2, true));
+
+        localEmitter = new SignalEmitter(service, BusAttachment.SESSION_ID_ALL_HOSTED, SignalEmitter.GlobalBroadcast.On);
 
         // Request a well-known name for peer2
         DBusProxyObj control = peer2Bus.getDBusProxyObj();
@@ -344,6 +348,21 @@ public class SecurityProxyBusObjectTest extends TestCase {
         // Test proxy call with having joined session with peer2
         assertEquals("message2", proxy.echo("message2"));
         assertEquals(2, receivedEcho);
+
+        assertEquals(Status.OK, peer1Bus.registerSignalHandler("org.allseen.bus.EchoChirpInterface", "chirp",
+                                                          this, getClass().getMethod("signalHandler",
+                                                                                     String.class)));
+
+        // Test proxy call with having joined session with peer2
+        assertEquals(0, receivedChirp);
+        EchoChirpInterface chirper = localEmitter.getInterface(EchoChirpInterface.class);
+        chirper.chirp("message3");
+        while(receivedChirp == 0) {}
+        assertEquals(1, receivedChirp);
+    }
+
+    public void signalHandler(String string) throws BusException {
+        receivedChirp++;
     }
 
     public void testProxyMethodWithSecurityMgmt() throws Exception {
@@ -502,6 +521,17 @@ public class SecurityProxyBusObjectTest extends TestCase {
         assertEquals(1, receivedSetProp1);
         assertEquals(11, proxy.getProp1());
         assertEquals(2, receivedGetProp1);
+
+        assertEquals(Status.OK, peer1Bus.registerSignalHandler("org.allseen.bus.EchoChirpInterface", "chirp",
+                                                          this, getClass().getMethod("signalHandler",
+                                                                                     String.class)));
+
+        // Test proxy call with having joined session with peer2
+        assertEquals(0, receivedChirp);
+        EchoChirpInterface chirper = localEmitter.getInterface(EchoChirpInterface.class);
+        chirper.chirp("message3");
+        while(receivedChirp == 0) {}
+        assertEquals(1, receivedChirp);
 
         peer1PermissionConfigurator.resetPolicy();
         peer2PermissionConfigurator.resetPolicy();
