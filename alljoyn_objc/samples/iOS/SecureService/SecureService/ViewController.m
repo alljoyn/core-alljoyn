@@ -46,11 +46,6 @@
 
 @implementation ViewController
 
-@synthesize secureObject = _secureObject;
-@synthesize startButton = _startButton;
-@synthesize serviceController = _serviceController;
-@synthesize password = _password;
-
 - (NSString *)applicationName
 {
     return kAppName;
