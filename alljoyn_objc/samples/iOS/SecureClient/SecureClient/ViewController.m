@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -26,6 +26,7 @@
 //    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+
 
 #import "ViewController.h"
 #import "AJNClientController.h"
@@ -45,11 +46,6 @@
 @end
 
 @implementation ViewController
-
-@synthesize secureObjectProxy = _secureObjectProxy;
-@synthesize startButton = _startButton;
-@synthesize clientController = _clientController;
-@synthesize password = _password;
 
 - (NSString *)applicationName
 {
@@ -74,7 +70,6 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-	// Do any additional setup after loading the view, typically from a nib.
 
     // allocate the client bus controller and set bus properties
     //
@@ -98,12 +93,6 @@
         [self.clientController start];
         [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
     }
-}
-
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 - (void)shouldUnloadProxyObjectOnBus:(AJNBusAttachment *)bus
@@ -138,7 +127,7 @@
 {
     // enable security for the bus
     //
-    NSString *keystoreFilePath = @"Documents/alljoyn_keystore/s_central.ks";
+    NSString *keystoreFilePath = [NSString stringWithFormat:@"%@/alljoyn_keystore/s_central.ks", [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0]];
     // Enable the authentication you want to use (ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA)
     QStatus status = [bus enablePeerSecurity:@"ALLJOYN_ECDHE_PSK" authenticationListener:self keystoreFileName:keystoreFilePath sharing:YES];
     NSString *message;
@@ -205,7 +194,7 @@
                     "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n"
                     "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n"
                     "-----END CERTIFICATE-----"};
-                    credentials.certificateChain = [NSString stringWithUTF8String:certchain];
+                credentials.certificateChain = [NSString stringWithUTF8String:certchain];
             }
         }
     }

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="11762" systemVersion="15G1217" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" colorMatched="YES" initialViewController="NMS-us-Ebj">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11757"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--Secure Service-->
+        <scene sceneID="5">
+            <objects>
+                <viewController id="2" customClass="ViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="IOq-DZ-aEU"/>
+                        <viewControllerLayoutGuide type="bottom" id="goQ-cb-l4e"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="3">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="bAP-Bf-Di7">
+                                <rect key="frame" x="170" y="80" width="34" height="30"/>
+                                <state key="normal" title="Start"/>
+                                <connections>
+                                    <action selector="didTouchStartButton:" destination="2" eventType="touchUpInside" id="D8L-EH-Cqe"/>
+                                </connections>
+                            </button>
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="mEd-Gd-f4e">
+                                <rect key="frame" x="16" y="174" width="343" height="493"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
+                            </textView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Password:" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="m5b-sN-ged">
+                                <rect key="frame" x="40" y="129" width="78.5" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.66666666669999997" green="0.66666666669999997" blue="0.66666666669999997" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" verticalHuggingPriority="251" text="" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="uhg-Hx-VEZ">
+                                <rect key="frame" x="151" y="130" width="184" height="20"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="20" id="pGC-8Z-rUl"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="m5b-sN-ged" firstAttribute="bottom" secondItem="bAP-Bf-Di7" secondAttribute="bottom" constant="40" id="CcT-VL-boV"/>
+                            <constraint firstItem="m5b-sN-ged" firstAttribute="leading" secondItem="3" secondAttribute="leading" constant="40" id="EGW-aC-zft"/>
+                            <constraint firstItem="uhg-Hx-VEZ" firstAttribute="baseline" secondItem="m5b-sN-ged" secondAttribute="baseline" id="GJO-Kf-xkn"/>
+                            <constraint firstItem="bAP-Bf-Di7" firstAttribute="centerX" secondItem="3" secondAttribute="centerX" id="II3-tR-8gm"/>
+                            <constraint firstItem="goQ-cb-l4e" firstAttribute="top" secondItem="mEd-Gd-f4e" secondAttribute="bottom" id="Mh0-qX-QBS"/>
+                            <constraint firstItem="bAP-Bf-Di7" firstAttribute="top" secondItem="IOq-DZ-aEU" secondAttribute="bottom" constant="16" id="Pvy-AS-YF3"/>
+                            <constraint firstAttribute="trailing" secondItem="mEd-Gd-f4e" secondAttribute="trailing" constant="16" id="Y8r-Iu-3DL"/>
+                            <constraint firstItem="mEd-Gd-f4e" firstAttribute="leading" secondItem="3" secondAttribute="leading" constant="16" id="hrF-Ly-1Ce"/>
+                            <constraint firstAttribute="trailing" secondItem="uhg-Hx-VEZ" secondAttribute="trailing" constant="40" id="iqq-e7-r20"/>
+                            <constraint firstItem="uhg-Hx-VEZ" firstAttribute="leading" secondItem="m5b-sN-ged" secondAttribute="trailing" constant="32" id="paH-Jc-F8F"/>
+                            <constraint firstItem="mEd-Gd-f4e" firstAttribute="top" secondItem="uhg-Hx-VEZ" secondAttribute="bottom" constant="24" id="vJp-aK-6H2"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" title="Secure Service" id="zkb-g1-eBh"/>
+                    <connections>
+                        <outlet property="eventsTextView" destination="mEd-Gd-f4e" id="j4T-ae-zsz"/>
+                        <outlet property="passwordLabel" destination="uhg-Hx-VEZ" id="ffX-2W-9fi"/>
+                        <outlet property="startButton" destination="bAP-Bf-Di7" id="RGw-eO-poe"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="4" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1025.5" y="-76.5"/>
+        </scene>
+        <!--Auth Settings-->
+        <scene sceneID="7LA-i1-o5e">
+            <objects>
+                <tableViewController id="Sfc-ai-KmQ" customClass="AuthenticationTableViewController" sceneMemberID="viewController">
+                    <tableView key="view" opaque="NO" clipsSubviews="YES" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="static" style="grouped" separatorStyle="singleLineEtched" allowsSelection="NO" rowHeight="44" sectionHeaderHeight="10" sectionFooterHeight="10" id="E4x-uA-2my">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" cocoaTouchSystemColor="groupTableViewBackgroundColor"/>
+                        <sections>
+                            <tableViewSection headerTitle="Authentication settings" footerTitle="Use this password in SecureClient." id="n9b-ZA-YxL">
+                                <cells>
+                                    <tableViewCell contentMode="scaleToFill" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="133" id="KXk-je-bD9">
+                                        <rect key="frame" x="0.0" y="56" width="375" height="133"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="KXk-je-bD9" id="Yny-4d-GQT">
+                                            <rect key="frame" x="0.0" y="0.0" width="375" height="132"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" fixedFrame="YES" text="Password" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="aXn-D0-PGd">
+                                                    <rect key="frame" x="30" y="21" width="80" height="30"/>
+                                                    <autoresizingMask key="autoresizingMask" flexibleMinY="YES" flexibleMaxY="YES"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                    <color key="textColor" red="0.66666666666666663" green="0.66666666666666663" blue="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <color key="highlightedColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </label>
+                                                <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Type password here" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="eNk-En-Gd8">
+                                                    <rect key="frame" x="118" y="21" width="172" height="30"/>
+                                                    <autoresizingMask key="autoresizingMask" flexibleMinY="YES" flexibleMaxY="YES"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                                    <textInputTraits key="textInputTraits"/>
+                                                    <connections>
+                                                        <outlet property="delegate" destination="Sfc-ai-KmQ" id="gmb-Xu-FYM"/>
+                                                    </connections>
+                                                </textField>
+                                                <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="bS8-Vm-vAu">
+                                                    <rect key="frame" x="31" y="81" width="125" height="30"/>
+                                                    <autoresizingMask key="autoresizingMask" flexibleMinY="YES" flexibleMaxY="YES"/>
+                                                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                                                    <state key="normal" title="Set">
+                                                        <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </state>
+                                                    <connections>
+                                                        <action selector="didTouchSetPasswordButton:" destination="Sfc-ai-KmQ" eventType="touchUpInside" id="yGd-EL-UlM"/>
+                                                        <segue destination="2" kind="push" id="HIT-L7-LmF"/>
+                                                    </connections>
+                                                </button>
+                                                <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="TUw-zb-pvK">
+                                                    <rect key="frame" x="165" y="81" width="125" height="30"/>
+                                                    <autoresizingMask key="autoresizingMask" flexibleMinY="YES" flexibleMaxY="YES"/>
+                                                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                                                    <state key="normal" title="Delete Keystore">
+                                                        <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    </state>
+                                                    <connections>
+                                                        <action selector="didTouchDeleteKeystoreButton:" destination="Sfc-ai-KmQ" eventType="touchUpInside" id="WNE-Kt-N5H"/>
+                                                    </connections>
+                                                </button>
+                                            </subviews>
+                                        </tableViewCellContentView>
+                                    </tableViewCell>
+                                </cells>
+                            </tableViewSection>
+                        </sections>
+                        <connections>
+                            <outlet property="dataSource" destination="Sfc-ai-KmQ" id="XBV-0C-uX2"/>
+                            <outlet property="delegate" destination="Sfc-ai-KmQ" id="qlq-ce-cx3"/>
+                        </connections>
+                    </tableView>
+                    <navigationItem key="navigationItem" title="Auth Settings" id="6WR-qB-4Xj"/>
+                    <connections>
+                        <outlet property="passwordTextField" destination="eNk-En-Gd8" id="I9q-9b-t97"/>
+                    </connections>
+                </tableViewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="ey4-La-jZm" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="600" y="-76"/>
+        </scene>
+        <!--Secure Service Sample-->
+        <scene sceneID="xUB-ng-fpf">
+            <objects>
+                <navigationController title="Secure Service Sample" id="NMS-us-Ebj" sceneMemberID="viewController">
+                    <toolbarItems/>
+                    <navigationBar key="navigationBar" contentMode="scaleToFill" id="wvJ-x2-3SL">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </navigationBar>
+                    <nil name="viewControllers"/>
+                    <connections>
+                        <segue destination="Sfc-ai-KmQ" kind="relationship" relationship="rootViewController" id="PMZ-Dd-6nD"/>
+                    </connections>
+                </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Fdg-ck-2Wl" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="165" y="-76"/>
+        </scene>
+    </scenes>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination" type="retina4_7.fullscreen"/>
+    </simulatedMetricsContainer>
+</document>
