@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -73,7 +73,7 @@ public class DescriptionParser {
 			xmlReader = saxParser.getXMLReader();
 			xmlReader.setContentHandler(this);
 			xmlReader.setEntityResolver(new EntityResolver() {
-				public InputSource resolveEntity(String publicId, String systemId) 
+				public InputSource resolveEntity(String publicId, String systemId)
 						throws SAXException, java.io.IOException {
 					return new InputSource(new ByteArrayInputStream("".getBytes()));
 				}
@@ -93,7 +93,7 @@ public class DescriptionParser {
 			this.currentNode = null;
 		}
 
-		public void startElement(String namespaceURI, String localName, 
+		public void startElement(String namespaceURI, String localName,
 				String qName, Attributes attrs) throws SAXException {
 			if(qName.equals("node")) {
 				currInfo = null;
@@ -142,7 +142,7 @@ public class DescriptionParser {
 			}
 		}
 
-		public void endElement(String namespaceURI, String localName, 
+		public void endElement(String namespaceURI, String localName,
 				String qName) throws SAXException {
 			if(qName.equals("method") || qName.equals("signal") || qName.equals("property") || qName.equals("node")){
 				currInfo = null;
@@ -181,7 +181,7 @@ public class DescriptionParser {
 			if(-1 == i) throw new SAXException("inner node without a name");
 			return attrs.getValue(i);
 		}
-		
+
 		private String getSignatureAttr(Attributes attrs) throws SAXException {
 			int i = attrs.getIndex("type");
 			if(-1 == i) throw new SAXException("inner node without a name");
@@ -201,7 +201,7 @@ public class DescriptionParser {
 	private List<Description> events = new LinkedList<Description>();
 	private List<Description> actions = new LinkedList<Description>();
 
-	public DescriptionParser(String path) throws ParserConfigurationException, IOException, SAXException { 
+	public DescriptionParser(String path) throws ParserConfigurationException, IOException, SAXException {
 		this.path = path;
 		this.parser = new IntrospectionParser();
 	}
@@ -242,4 +242,4 @@ public class DescriptionParser {
 	public List<Description> getActions() {
 		return actions;
 	}
-}
+}

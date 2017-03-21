@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -55,20 +55,20 @@ void usage(void)
 int main(int argc, const char * argv[])
 {
     @autoreleasepool {
-        
+
         //  Validate the there are the correct number of command line arguments.
         //  Remember that argv/argc includes the executable's path plus the
         //  arguments passed to it.
         //
         if (argc <= kExpectedArgumentCount) {
-            
+
             // Print usage if not enough command line arguments.
             //
             usage();
-            
+
             return 1;
         }
-        
+
         //  Validate that the input file exists.
         //
         NSString *xmlFilePath = [NSString stringWithCString:argv[1] encoding:NSUTF8StringEncoding];
@@ -76,7 +76,7 @@ int main(int argc, const char * argv[])
             NSLog(@"The input file specified does not exist %@", xmlFilePath);
             return 1;
         }
-        
+
         // Validate that the base file name uses valid characters
         //
         NSString *baseFileName = [NSString stringWithCString:argv[2] encoding:NSUTF8StringEncoding];
@@ -85,7 +85,7 @@ int main(int argc, const char * argv[])
             NSLog(@"The base file name should contain only letters or numbers.");
             return 1;
         }
-        
+
         // Parse out the directory of the input file for use as the location of the output files
         //
         NSURL *fileUrl = [NSURL fileURLWithPath:xmlFilePath];
@@ -106,17 +106,17 @@ int main(int argc, const char * argv[])
             NSLog(@"Error loading XML. %@",error);
             return 1;
         }
-        
+
         NSData *generatedCodeData = [xmlDocument objectByApplyingXSLTAtURL:[NSURL fileURLWithPath:xslFileUrl] arguments:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSString stringWithFormat:@"\'%@\'", outputFileName]] forKeys:[NSArray arrayWithObject:@"fileName"]] error:&error];
         if (error) {
             NSLog(@"Error applying XSL. %@",error);
             return 1;
         }
-        
+
         // write the Objective-C scaffold header file to disk
         //
         [generatedCodeData writeToURL:[NSURL fileURLWithPath:outputFilePath] atomically:YES];
-        
+
         // STEP TWO
         //
         // prepare to generate the Objective-C++ scaffold implementation source file
@@ -124,23 +124,23 @@ int main(int argc, const char * argv[])
         xslFileUrl = [NSString stringWithFormat:@"%@/%@", executableDirectory, kImplementationSourceXSL];
         outputFilePath = [NSString stringWithFormat:@"%@/AJN%@.mm", outputDirectory, baseFileName];
         outputFileName = [[NSURL fileURLWithPath:outputFilePath] lastPathComponent];
-        
+
         xmlDocument = [[NSXMLDocument alloc] initWithContentsOfURL:fileUrl options:NSDataReadingMappedIfSafe error:&error];
         if (error) {
             NSLog(@"Error loading XML. %@",error);
             return 1;
         }
-        
+
         generatedCodeData = [xmlDocument objectByApplyingXSLTAtURL:[NSURL fileURLWithPath:xslFileUrl] arguments:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:[NSString stringWithFormat:@"\'%@\'",outputFileName], [NSString stringWithFormat:@"\'%@\'",baseFileName],nil] forKeys:[NSArray arrayWithObjects:@"fileName",@"baseFileName",nil]] error:&error];
         if (error) {
             NSLog(@"Error applying XSL. %@",error);
             return 1;
         }
-        
+
         // write the source file to disk
         //
         [generatedCodeData writeToURL:[NSURL fileURLWithPath:outputFilePath] atomically:YES];
-        
+
         // STEP THREE
         //
         // prepare to generate the Objective-C header file
@@ -154,17 +154,17 @@ int main(int argc, const char * argv[])
             NSLog(@"Error loading XML. %@",error);
             return 1;
         }
-        
+
         generatedCodeData = [xmlDocument objectByApplyingXSLTAtURL:[NSURL fileURLWithPath:xslFileUrl] arguments:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:[NSString stringWithFormat:@"\'%@\'",outputFileName], [NSString stringWithFormat:@"\'%@\'",baseFileName],nil] forKeys:[NSArray arrayWithObjects:@"fileName",@"baseFileName",nil]] error:&error];
         if (error) {
             NSLog(@"Error applying XSL. %@",error);
             return 1;
         }
-        
+
         // write the category header file to disk
         //
         [generatedCodeData writeToURL:[NSURL fileURLWithPath:outputFilePath] atomically:YES];
-        
+
         // STEP FOUR
         //
         // prepare to generate the Objective-C source file
@@ -172,19 +172,19 @@ int main(int argc, const char * argv[])
         xslFileUrl = [NSString stringWithFormat:@"%@/%@", executableDirectory, kObjectiveCSourceXSL];
         outputFilePath = [NSString stringWithFormat:@"%@/%@.m", outputDirectory, baseFileName];
         outputFileName = [[NSURL fileURLWithPath:outputFilePath] lastPathComponent];
-        
+
         xmlDocument = [[NSXMLDocument alloc] initWithContentsOfURL:fileUrl options:NSDataReadingMappedIfSafe error:&error];
         if (error) {
             NSLog(@"Error loading XML. %@",error);
             return 1;
         }
-        
+
         generatedCodeData = [xmlDocument objectByApplyingXSLTAtURL:[NSURL fileURLWithPath:xslFileUrl] arguments:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:[NSString stringWithFormat:@"\'%@\'",outputFileName], [NSString stringWithFormat:@"\'%@\'",baseFileName],nil] forKeys:[NSArray arrayWithObjects:@"fileName",@"baseFileName",nil]] error:&error];
         if (error) {
             NSLog(@"Error applying XSL. %@",error);
             return 1;
         }
-        
+
         // write the category source file to disk
         //
         [generatedCodeData writeToURL:[NSURL fileURLWithPath:outputFilePath] atomically:YES];

@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -40,7 +40,7 @@ import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 
 public class Service {
-    static { 
+    static {
         System.loadLibrary("alljoyn_java");
     }
 
@@ -62,7 +62,7 @@ public class Service {
         public void setTextSize(int size) throws BusException {
             textSize = size;
         }
-        private int textSize;        
+        private int textSize;
     }
 
     private static class MyBusListener extends BusListener {
@@ -95,7 +95,7 @@ public class Service {
         if (status != Status.OK) {
             return;
         }
-        System.out.println("BusAttachment.connect successful on " + System.getProperty("org.alljoyn.bus.address"));        
+        System.out.println("BusAttachment.connect successful on " + System.getProperty("org.alljoyn.bus.address"));
 
         Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
 
@@ -105,7 +105,7 @@ public class Service {
         sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
         sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
-        status = mBus.bindSessionPort(contactPort, sessionOpts, 
+        status = mBus.bindSessionPort(contactPort, sessionOpts,
                 new SessionPortListener() {
             public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
                 System.out.println("SessionPortListener.acceptSessionJoiner called");
@@ -160,4 +160,4 @@ public class Service {
             }
         }
     }
-}
+}

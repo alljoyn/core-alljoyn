@@ -1,21 +1,21 @@
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -24,7 +24,6 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
 
 import os
 import sys
@@ -73,7 +72,7 @@ c_headers = clibenv.Install('$C_DISTDIR/inc/alljoyn_c', clibenv.Glob('inc/alljoy
 c_headers += clibenv.Install('$C_DISTDIR/inc/qcc', clibenv.Glob('inc/qcc/*.h'))
 c_headers += clibenv.Install('$C_DISTDIR/inc/qcc/${OS_GROUP}', clibenv.Glob('inc/qcc/${OS_GROUP}/*.h'))
 
-# make sure the headers from alljoyn_core have been copied into the alljoyn_c headers 
+# make sure the headers from alljoyn_core have been copied into the alljoyn_c headers
 clibenv.Depends(c_headers, alljoyn_core_headers)
 
 # AllJoyn Libraries, and shared object files.
@@ -81,11 +80,11 @@ static_lib, shared_lib, env['AJ_C_OBJS'] = clibenv.SConscript('$OBJDIR_ALLJOYN_C
 libs = [static_lib, shared_lib]
 dlibs = clibenv.Install('$C_DISTDIR/lib', libs)
 
-# the variable dlibs contains the file nodes for the  static library and the 
-# shared library however it may contain more files such as .pdb files on windows.  
-# Search through the list and assign the static library to the ALLJOYN_C_LIB_STATIC 
+# the variable dlibs contains the file nodes for the  static library and the
+# shared library however it may contain more files such as .pdb files on windows.
+# Search through the list and assign the static library to the ALLJOYN_C_LIB_STATIC
 # clibenv variable and the shared library to ALLJOYN_C_LIB_SHARED clibenv variable.
-for x in dlibs: 
+for x in dlibs:
     if clibenv['OS_GROUP'] == 'windows':
         if 'alljoyn_c_static' + clibenv['LIBSUFFIX'] in str(x):
             clibenv['ALLJOYN_C_LIB_STATIC'] = x;

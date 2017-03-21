@@ -1,21 +1,21 @@
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -24,12 +24,11 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
 
 import os
 Import('env')
 
-# Set up TMP 
+# Set up TMP
 env['ENV']['TMP'] = os.environ['TMP']
 
 # MSVC version 8 and higher require a manifest
@@ -69,7 +68,7 @@ elif env['OS'] == 'win7':
 else:
     print 'Error: Unknown Windows OS type: ' + env['OS']
     Exit(1)
-                               
+
 #Suppress specific warnings
 # C4244 'conversion' conversion from one type to another type results in a possible
 #       loss of data.  In AllJoyn code this occures most often when we convert a
@@ -80,7 +79,7 @@ else:
 #       to cause issues we are going to suppress these warnings.
 # C4345 warning specifying that the later versions of MSVC initialize POD types
 #       (Plan Old Data) This warning is designed to inform users that the behavior
-#       changed from older compilers.  This warning is only encountered by 
+#       changed from older compilers.  This warning is only encountered by
 #       common/src/String.cc and does not effect AllJoyn.
 #       see http://msdn.microsoft.com/en-us/library/wewb47ee.aspx
 # C4355 "'this' used in base member initializer list"' Depending on the version of
@@ -135,17 +134,17 @@ env.Append(LINKFLAGS=['/NODEFAULTLIB:libcmt.lib'])
 # pdb files (one for each C++ file) into the dist. SCons documentation recommends
 # using the /Z7 option to solve this problem.  Since another more acceptable
 # solution has not yet been found we are going with the recommendation from the
-# SCons documentation. 
+# SCons documentation.
 env['CCPDBFLAGS'] = '/Z7'
 env['PDB'] = '${TARGET.base}.pdb'
 env.Append(LINKFLAGS=['/PDB:${TARGET.base}.pdb'])
 
 # Debug/Release variants
 if env['VARIANT'] == 'debug':
-   # MSVC 2010 an newer require _ITERATOR_DEBUG_LEVEL specified to specify 
-   # _ITERATOR_DEBUG_LEVEL _DEBUG must also be specified.  If _DEBUG is also 
+   # MSVC 2010 an newer require _ITERATOR_DEBUG_LEVEL specified to specify
+   # _ITERATOR_DEBUG_LEVEL _DEBUG must also be specified.  If _DEBUG is also
    # specified then the debug version of the multithread and run-time routines
-   # (/MDd') to prevent build errors. 
+   # (/MDd') to prevent build errors.
    env.Append(CPPDEFINES=['_DEBUG', ('_ITERATOR_DEBUG_LEVEL', 2)])
    env.Append(CFLAGS=['/MDd', '/Od'])
    env.Append(CXXFLAGS=['/MDd', '/Od', '/Ob1', '/W4', '/WX'])
@@ -158,7 +157,7 @@ if env['VARIANT'] == 'debug':
 else:
    # MSVC 2010 and newer require _ITERATOR_DEBUG_LEVEL specified
    env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
-   
+
    env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2'])
    env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W4', '/WX'])
    env.Append(LINKFLAGS=['/opt:ref'])
@@ -193,7 +192,7 @@ def archive_expand(target, source, env):
    for archive in source:
       Copy(outdir, str(archive))
    return None
-      
+
 def archive_expand_emitter(target, source, env):
    # target starts out as phony file in the desired output directory
    # target ends up being the list of copied libraries

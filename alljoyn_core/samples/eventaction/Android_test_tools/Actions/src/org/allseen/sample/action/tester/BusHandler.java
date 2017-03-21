@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -42,10 +42,10 @@ import android.util.Log;
 
 public class BusHandler extends Handler {
 	public static final String TAG = "BusHandler";
-		
+
 	private Context mContext;
 	private EventActionListener listener;
-	private SharedPreferences mPrefs; 
+	private SharedPreferences mPrefs;
 	private static final String PREFS_KEY = "engine_rules";
 
     /* These are the messages sent to the BusHandler from the UI/Application thread. */
@@ -53,9 +53,9 @@ public class BusHandler extends Handler {
     public static final int INTROSPECT = 2;
     public static final int CALL_ACTION = 3;
     public static final int SHUTDOWN = 100;
-    
+
     private HashMap<String,Device> remoteInfo = new HashMap<String, Device>();
-    
+
     /*
      * Native JNI methods
      */
@@ -66,10 +66,10 @@ public class BusHandler extends Handler {
 
 	 /** Initialize AllJoyn in JNI(C++) */
     private native void initialize(String packageName);
-    
+
     /** Perform introspection with description in JNI(C++) */
     private native String doIntrospection(String sessionName, String path, int sessionId);
-    
+
     private native void introspectionDone(int sessionId);
 
     /** Save and enable a rule */
@@ -77,10 +77,10 @@ public class BusHandler extends Handler {
 								//action
 								  String jAUniqueName, String jAPath,
 								  String jAIface, String jAMember, String jASig);
-    
+
     /** clear out the saved rules in local memory and persistent memory */
     private native void deleteAllRules();
-    
+
     /** Clean up and shutdown AllJoyn in JNI(C++) */
     private native void shutdown();
 
@@ -93,7 +93,7 @@ public class BusHandler extends Handler {
         this.listener = listener;
         this.mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
     }
-    
+
     /**
      * Callback from jni code invoked via an About Annouce callback
      * @param sessionName	name of the remote application
@@ -119,7 +119,7 @@ public class BusHandler extends Handler {
 		Log.d(TAG, "Lost applicatoin with session id: "+sessionId);
 		listener.onActionLost(sessionId);
 	}
-	
+
 	/**
 	 * Helper method to send an Add Rule request to the message Handler
 	 */
@@ -129,7 +129,7 @@ public class BusHandler extends Handler {
 		msg.arg1 = 1;
 		this.sendMessage(msg);
 	}
-    
+
 
 	/**
 	 * Helper method to start the introspection process on a remote AllJoyn Appliction
@@ -160,11 +160,11 @@ public class BusHandler extends Handler {
 	    		 */
 	    		introspect(sessionName, sessionId, in.getPath(), in);
 	    	}
-	    	
+
 	    	/*
 	    	 * If the root node then parsing complete, inform listener of events/actions found
 	    	 */
-	    	if(node.getPath().equals("/")) { //root node, recursive parsing complete 
+	    	if(node.getPath().equals("/")) { //root node, recursive parsing complete
 	    		if(info.getActions().size() > 0) { //We have actions so inform as such to the UI
 	    			listener.onActionsFound(info);
 	    			introspectionDone(sessionId);
@@ -174,7 +174,7 @@ public class BusHandler extends Handler {
     		e.printStackTrace();
     	}
     }
-    
+
 
 	/**
 	 * Helper method used by Handler to call into JNI to save the rule.
@@ -188,7 +188,7 @@ public class BusHandler extends Handler {
 				b.getString("aMember"),
 				b.getString("aSig"));
     }
-    
+
 	/**
 	 * Handles the messages so that the UI thread is not blocked
 	 */
@@ -197,7 +197,7 @@ public class BusHandler extends Handler {
         switch (msg.what) {
         /* Connect to the bus and start our service. */
         case INITIALIZE:
-        { 
+        {
         	initialize(mContext.getPackageName());
         	break;
         }
@@ -229,13 +229,13 @@ public class BusHandler extends Handler {
         /* Release all resources acquired in connect. */
         case SHUTDOWN: {
             shutdown();
-            break;   
+            break;
         }
 
         default:
             break;
         }
     }
-    
-    
+
+
 }

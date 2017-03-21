@@ -12,8 +12,8 @@
         android:layout_marginRight="20dip"
         android:scrollHorizontally="true"
         android:gravity="fill_horizontal"
-        android:textAppearance="?android:attr/textAppearanceMedium" 
-        android:hint="@string/enter_username_hint" 
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:hint="@string/enter_username_hint"
         />
     <EditText
         android:id="@+id/PasswordEditText"
@@ -23,7 +23,7 @@
         android:layout_marginRight="20dip"
         android:scrollHorizontally="true"
         android:gravity="fill_horizontal"
-        android:textAppearance="?android:attr/textAppearanceMedium" 
-        android:hint="@string/enter_password_hint" 
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:hint="@string/enter_password_hint"
         />
 </LinearLayout>

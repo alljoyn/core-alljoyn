@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -66,7 +66,7 @@
         self.foundMutex = [[NSLock alloc] init];
         self.lostMutex = [[NSLock alloc] init];
     }
-    
+
     return self;
 }
 
@@ -89,9 +89,9 @@
 - (BOOL)waitUntilFound:(NSString*)uniqueName forTime:(NSTimeInterval)timeoutSeconds
 {
     NSDate *timeoutDate = [NSDate dateWithTimeIntervalSinceNow:timeoutSeconds];
-    
+
     BOOL didFind = NO;
-    
+
     do {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:timeoutDate];
         if ([timeoutDate timeIntervalSinceNow] < 0.0) {
@@ -102,16 +102,16 @@
             break;
         }
     } while (true);
-    
+
     return didFind;
 }
 
 - (BOOL)waitUntilLost:(NSString*)uniqueName forTime:(NSTimeInterval)timeoutSeconds
 {
     NSDate *timeoutDate = [NSDate dateWithTimeIntervalSinceNow:timeoutSeconds];
-    
+
     BOOL didLose = NO;
-    
+
     do {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:timeoutDate];
         if ([timeoutDate timeIntervalSinceNow] < 0.0) {
@@ -122,7 +122,7 @@
             break;
         }
     } while (true);
-    
+
     return didLose;
 }
 
@@ -177,32 +177,32 @@
     XCTAssertEqual(ER_OK, [clientBus connectWithArguments:@"null"]);
 
     TestPingListener *listener = [[TestPingListener alloc] init];
-    
+
     [self.autoPinger addPingGroup:@"testgroup" withDelegate:listener withInterval:5];
     NSString *uniqueName = [clientBus uniqueName];
     XCTAssertEqual(ER_BUS_PING_GROUP_NOT_FOUND, [self.autoPinger addDestination:@"badgroup" forDestination:uniqueName]);
     XCTAssertEqual(ER_OK, [self.autoPinger addDestination:@"testgroup" forDestination:uniqueName]);
     XCTAssertEqual(ER_OK, [self.autoPinger addDestination:@"testgroup" forDestination:uniqueName]);
-    
+
     XCTAssertTrue([listener waitUntilFound:uniqueName forTime:10]);
     [clientBus disconnect];
     XCTAssertTrue([listener waitUntilLost:uniqueName forTime:10]);
-    
+
     [self.autoPinger pause];
     [self.autoPinger pause];
     [self.autoPinger resume];
     [self.autoPinger resume];
-    
+
     [clientBus connectWithArguments:@"null:"];
-    
+
     uniqueName = [clientBus uniqueName];
     XCTAssertEqual(ER_OK, [self.autoPinger addDestination:@"testgroup" forDestination:uniqueName]);
 
     [listener waitUntilFound:uniqueName forTime:10];
-    
+
     [self.autoPinger removePingGroup:@"badgroup"];
     [self.autoPinger removePingGroup:@"testgroup"];
-    
+
     [clientBus disconnect];
     [clientBus stop];
     [clientBus waitUntilStopCompleted];

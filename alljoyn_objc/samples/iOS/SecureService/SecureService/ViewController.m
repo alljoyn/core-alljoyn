@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -80,10 +80,10 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
-    
+
     // allocate the client bus controller and set bus properties
     //
-    
+
     self.serviceController = [[AJNServiceController alloc] init];
     self.serviceController.trafficType = kAJNTrafficMessages;
     self.serviceController.proximityOptions = kAJNProximityAny;
@@ -91,13 +91,13 @@
     self.serviceController.allowRemoteMessages = YES;
     self.serviceController.multiPointSessionsEnabled = YES;
     self.serviceController.delegate = self;
-    
+
 }
 
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-    
+
     self.passwordLabel.text = self.password;
 }
 
@@ -109,7 +109,7 @@
     }
     else {
         [self.serviceController start];
-        [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];        
+        [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
     }
 }
 
@@ -122,13 +122,13 @@
 - (void)shouldUnloadObjectOnBus:(AJNBusAttachment *)bus
 {
     self.secureObject = nil;
-    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];        
+    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];
 }
 
 - (AJNBusObject *)objectOnBus:(AJNBusAttachment *)bus
 {
     self.secureObject = [[SecureObject alloc] initWithBusAttachment:self.serviceController.bus onPath:kServicePath];
-    
+
     return self.secureObject;
 }
 

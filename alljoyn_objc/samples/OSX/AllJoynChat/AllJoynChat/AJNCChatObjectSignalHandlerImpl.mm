@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -38,8 +38,8 @@ using namespace ajn;
 /**
  * Constructor for the AJN signal handler implementation.
  *
- * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
- */    
+ * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
+ */
 AJNCChatObjectSignalHandlerImpl::AJNCChatObjectSignalHandlerImpl(id<AJNSignalHandler> aDelegate) : AJNSignalHandlerImpl(aDelegate), chatSignalMember(NULL)
 {
 }
@@ -53,7 +53,7 @@ void AJNCChatObjectSignalHandlerImpl::RegisterSignalHandler(ajn::BusAttachment &
 {
     if (chatSignalMember == NULL) {
         const ajn::InterfaceDescription* chatIntf = bus.GetInterface([kInterfaceName UTF8String]);
-        
+
         /* Store the Chat signal member away so it can be quickly looked up */
         if (chatIntf) {
             chatSignalMember = chatIntf->GetMember("Chat");
@@ -74,7 +74,7 @@ void AJNCChatObjectSignalHandlerImpl::UnregisterSignalHandler(ajn::BusAttachment
 {
     if (chatSignalMember == NULL) {
         const ajn::InterfaceDescription* chatIntf = bus.GetInterface([kInterfaceName UTF8String]);
-        
+
         /* Store the Chat signal member away so it can be quickly looked up */
         chatSignalMember = chatIntf->GetMember("Chat");
         assert(chatSignalMember);
@@ -95,12 +95,12 @@ void AJNCChatObjectSignalHandlerImpl::ChatSignalHandler(const ajn::InterfaceDesc
         NSString *from = [NSString stringWithCString:msg->GetSender() encoding:NSUTF8StringEncoding];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         ajn:SessionId sessionId = msg->GetSessionId();
-        
+
         NSLog(@"Received signal [%@] from %@ on path %@ for session id %u [%s > %s]", message, from, objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
-        
+
         dispatch_async(dispatch_get_main_queue(), ^{
             [(id<AJNChatReceiver>)m_delegate chatMessageReceived:message from:from onObjectPath:objectPath forSession:sessionId];
         });
-        
+
     }
-}    
+}

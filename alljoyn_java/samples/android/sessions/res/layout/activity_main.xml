@@ -9,21 +9,21 @@
 	android:layout_width="fill_parent"
 	android:layout_height="wrap_content"
 	android:background="@drawable/background">
-    
+
         <TextView android:id="@+id/WiFiRadio"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			android:textSize="7pt"
 			android:text="WI-FI RADIO"
-			android:textColor="#FF0000"/>	
-        
+			android:textColor="#FF0000"/>
+
         <View
 		    android:layout_width="fill_parent"
 		    android:layout_height="1dp"
 		    android:layout_marginTop="5dp"
 		    android:layout_marginBottom="15dp"
 		    android:background="@android:color/white"/>
-			
+
 		<ToggleButton android:id="@+id/WiFi"
 			android:layout_marginTop="8dp"
 			android:layout_marginBottom="8dp"
@@ -36,7 +36,7 @@
 			android:layout_weight="1"
 			android:textColor="#FFFFFF"
 			android:textStyle="italic"/>
-    
+
 		<TextView android:id="@+id/TCPIPActivity"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
@@ -44,19 +44,19 @@
 			android:layout_marginTop="15dp"
 			android:text="TCP/IP ACTIVITY"
 			android:textColor="#FF0000"/>
-		
+
 		<View
 		    android:layout_width="fill_parent"
 		    android:layout_height="1dp"
 		    android:layout_marginTop="5dp"
 		    android:layout_marginBottom="10dp"
 		    android:background="@android:color/white"/>
-	
+
 		<LinearLayout
 			android:orientation="horizontal"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content">
-			
+
 			<ToggleButton android:id="@+id/ConnectToAP"
 				android:layout_marginTop="8dp"
 				android:layout_marginBottom="8dp"
@@ -68,7 +68,7 @@
 				android:layout_weight="1"
 				android:textColor="#FFFFFF"
 				android:textStyle="italic"/>
-	
+
 			<ToggleButton android:id="@+id/ICMPPing"
 				android:layout_marginTop="8dp"
 				android:layout_marginBottom="8dp"
@@ -80,9 +80,9 @@
 				android:layout_weight="1"
 				android:textColor="#FFFFFF"
 				android:textStyle="italic"/>
-	
+
 		</LinearLayout>
-		
+
 		<TextView android:id="@+id/ServiceAdvertisements"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
@@ -90,19 +90,19 @@
 			android:layout_marginTop="15dp"
 			android:text="SERVICE ADVERTISEMENTS"
 			android:textColor="#FF0000"/>
-	
+
 		<View
 		    android:layout_width="fill_parent"
 		    android:layout_height="1dp"
 		    android:layout_marginTop="5dp"
 		    android:layout_marginBottom="15dp"
 		    android:background="@android:color/white"/>
-		
+
 		<LinearLayout
 			android:orientation="horizontal"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content">
-			
+
 			<Button android:id="@+id/AdvertiseName"
 				android:layout_marginTop="8dp"
 				android:layout_marginBottom="8dp"
@@ -113,7 +113,7 @@
 				android:layout_weight="1"
 				android:textColor="#FFFFFF"
 				android:textStyle="italic"/>
-	
+
 			<Button android:id="@+id/CancelAdvertiseName"
 				android:layout_marginTop="8dp"
 				android:layout_marginBottom="8dp"
@@ -124,9 +124,9 @@
 				android:layout_weight="1"
 				android:textColor="#FFFFFF"
 				android:textStyle="italic"/>
-	
-		</LinearLayout>				
-	
+
+		</LinearLayout>
+
 		<Button android:id="@+id/AdvertisedList"
 			android:layout_marginTop="8dp"
 			android:layout_marginBottom="8dp"
@@ -137,7 +137,7 @@
 			android:text="Services being advertised"
 			android:textColor="#FFFFFF"
 			android:textStyle="italic"/>
-		
+
 		<TextView android:id="@+id/ServiceDiscovery"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
@@ -145,19 +145,19 @@
 			android:layout_marginTop="15dp"
 			android:text="SERVICE DISCOVERY"
 			android:textColor="#FF0000"/>
-		
+
 		<View
 		    android:layout_width="fill_parent"
 		    android:layout_height="1dp"
 		    android:layout_marginTop="5dp"
 		    android:layout_marginBottom="15dp"
 		    android:background="@android:color/white"/>
-	
+
 		<LinearLayout
 			android:orientation="horizontal"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content">
-			
+
 			<Button android:id="@+id/FindAdvertisedName"
 				android:layout_marginTop="8dp"
 				android:layout_marginBottom="8dp"
@@ -169,7 +169,7 @@
 				android:layout_weight="1"
 				android:textColor="#FFFFFF"
 				android:textStyle="italic"/>
-	
+
 			<Button android:id="@+id/CancelFindAdvertisedName"
 				android:layout_marginTop="8dp"
 				android:layout_marginBottom="8dp"
@@ -180,9 +180,9 @@
 				android:layout_weight="1"
 				android:textColor="#FFFFFF"
 				android:textStyle="italic"/>
-	
-		</LinearLayout>				
-	
+
+		</LinearLayout>
+
 		<LinearLayout
 		    android:orientation="horizontal"
 			android:layout_width="fill_parent"
@@ -198,7 +198,7 @@
 			android:layout_weight="1"
 			android:textColor="#FFFFFF"
 			android:textStyle="italic"/>
-		
+
 		<Button android:id="@+id/DiscoveredList"
 			android:layout_marginTop="8dp"
 			android:layout_marginBottom="8dp"
@@ -209,9 +209,9 @@
 			android:layout_weight="1"
 			android:textColor="#FFFFFF"
 			android:textStyle="italic"/>
-		
+
 		</LinearLayout>
-		
+
 		<TextView android:id="@+id/ConnectionText"
 			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
@@ -219,14 +219,14 @@
 			android:layout_marginTop="15dp"
 			android:text="CONNECTIVITY AND DATA TRANSFER"
 			android:textColor="#FF0000"/>
-		
+
 		<View
 		    android:layout_width="fill_parent"
 		    android:layout_height="1dp"
 		    android:layout_marginTop="5dp"
 		    android:layout_marginBottom="15dp"
 		    android:background="@android:color/white"/>
-	
+
 		<ToggleButton android:id="@+id/RemoteConnect"
 			android:layout_marginTop="8dp"
 			android:layout_marginBottom="8dp"
@@ -238,7 +238,7 @@
 			android:textOff="Joyn with Peer"
 			android:textColor="#FFFFFF"
 			android:textStyle="italic"/>
-		
+
 		<Button android:id="@+id/TransferData"
 			android:layout_marginTop="8dp"
 			android:layout_marginBottom="8dp"
@@ -249,7 +249,7 @@
 			android:text="Perform AJ Method Calls (100 iterations)"
 			android:textColor="#FFFFFF"
 			android:textStyle="italic"/>
-		
+
 </LinearLayout>
 
 </ScrollView>

@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -102,7 +102,7 @@ public:
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-DoorObjectImpl::DoorObjectImpl(BusAttachment &bus, const char *path, id<DoorObjectDelegate> aDelegate) : 
+DoorObjectImpl::DoorObjectImpl(BusAttachment &bus, const char *path, id<DoorObjectDelegate> aDelegate) :
     AJNBusObjectImpl(bus,path,aDelegate)
 {
     const InterfaceDescription* interfaceDescription = NULL;
@@ -115,7 +115,7 @@ DoorObjectImpl::DoorObjectImpl(BusAttachment &bus, const char *path, id<DoorObje
     assert(interfaceDescription);
     AddInterface(*interfaceDescription, ANNOUNCED);
 
-    
+
     // Register the method handlers for interface DoorObjectDelegate with the object
     //
     const MethodEntry methodEntriesForDoorObjectDelegate[] = {
@@ -524,7 +524,7 @@ public:
 /**
  * Constructor for the AJN signal handler implementation.
  *
- * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
+ * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
  */
 DoorObjectDelegateSignalHandlerImpl::DoorObjectDelegateSignalHandlerImpl(id<AJNSignalHandler> aDelegate) : AJNSignalHandlerImpl(aDelegate)
 {
@@ -609,7 +609,7 @@ void DoorObjectDelegateSignalHandlerImpl::PersonPassedThroughSignalHandler(const
         NSLog(@"Received PersonPassedThrough signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            
+
             [(id<DoorObjectDelegateSignalHandler>)m_delegate didReceivePersonPassedThroughName:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] inSession:sessionId message:signalMessage];
         });
     }

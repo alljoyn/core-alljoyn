@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -68,11 +68,11 @@
 {
 	QStatus status;
 	ajn::MsgArg *msgArg = new ajn::MsgArg;
-    
+
 	status = self.handle->ReadAll(languageTag, (ajn::services::AboutPropertyStoreImpl::Filter)filter, *msgArg);
-    
+
 	*all = [[AJNMessageArgument alloc] initWithHandle:msgArg];
-    
+
 	return status;
 }
 
@@ -92,9 +92,9 @@
 - (AJNPropertyStoreProperty *)property:(AJNPropertyStoreKey)propertyKey
 {
 	ajn::services::PropertyStoreProperty *psp = self.handle->getProperty((ajn::services::PropertyStoreKey)propertyKey);
-    
+
 	AJNPropertyStoreProperty *ajnPsp = [[AJNPropertyStoreProperty alloc] initWithHandle:psp];
-    
+
 	return ajnPsp;
 }
 
@@ -102,9 +102,9 @@
                           withLanguage:(NSString *)language
 {
 	ajn::services::PropertyStoreProperty *psp = self.handle->getProperty((ajn::services::PropertyStoreKey)propertyKey, [language UTF8String]);
-    
+
 	AJNPropertyStoreProperty *ajnPsp = [[AJNPropertyStoreProperty alloc] initWithHandle:psp];
-    
+
 	return ajnPsp;
 }
 
@@ -141,12 +141,12 @@
 - (QStatus)setSupportedLangs:(NSArray *)supportedLangs
 {
 	std::vector <qcc::String> strings;
-    
+
 	for (NSString *str in supportedLangs) {
 		qcc::String qcc_string = [str UTF8String];
 		strings.push_back(qcc_string);
 	}
-    
+
 	return self.handle->setSupportedLangs(strings);
 }
 
@@ -195,7 +195,7 @@
 - (NSString *)propertyStoreName:(AJNPropertyStoreKey)propertyStoreKey
 {
 	qcc::String str = self.handle->getPropertyStoreName((ajn::services::PropertyStoreKey)propertyStoreKey);
-    
+
 	return [AJNConvertUtil convertQCCStringtoNSString:str];
 }
 

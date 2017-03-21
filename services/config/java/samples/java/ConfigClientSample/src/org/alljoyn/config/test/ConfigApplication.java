@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -73,7 +73,7 @@ import android.util.Log;
 /**
  * Handles all the AllJoyn devices that it received announcements from, and
  * enables the user to perform all the config service methods
- * 
+ *
  */
 public class ConfigApplication extends Application implements AuthPasswordHandler, AboutListener {
 
@@ -151,7 +151,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
         /**
          * Create a device according to the following parameters.
-         * 
+         *
          * @param appId
          *            The device application id
          * @param busName
@@ -238,7 +238,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see android.app.Application#onCreate()
      */
     @Override
@@ -286,7 +286,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /**
      * Sets the daemon realm name.
-     * 
+     *
      * @param realmName
      *            The daemon realm name.
      */
@@ -467,7 +467,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /**
      * Create config client and create a session
-     * 
+     *
      * @param peer
      *            The {@link Device} to connect
      * @throws Exception
@@ -537,7 +537,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /**
      * Returns the config service version.
-     * 
+     *
      * @return the config service version.
      */
     public Short getConfigVersion(UUID deviceId) {
@@ -567,7 +567,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /**
      * Return the config service fields.
-     * 
+     *
      * @return the config service fields.
      */
     public void getConfig(String lang, UUID deviceId) {
@@ -649,7 +649,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /**
      * Sets the AllJoyn device password.
-     * 
+     *
      * @param newpassword
      *            the password to set.
      */
@@ -687,7 +687,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /**
      * Sets the config fields appear in the given configMap.
-     * 
+     *
      * @param configMap
      *            the map containing all the fields to be set.
      */
@@ -717,7 +717,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
     /**
      * Reset the config fields that appear in the given configMap to the default
      * value.
-     * 
+     *
      * @param fieldsToRemove
      *            the map containing all the fields to be reset.
      */
@@ -748,7 +748,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.alljoyn.services.android.security.AuthPasswordHandler#getPassword
      * (java.lang.String)
@@ -778,7 +778,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * org.alljoyn.services.android.security.AuthPasswordHandler#completed(java
      * .lang.String, java.lang.String, boolean)
