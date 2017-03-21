@@ -47,7 +47,7 @@ typedef ManagedObj<_TestMessage> TestMessage;
 /* ASACORE-1111 */
 TEST(MessageTest, GetNullHeaderFieldsReturnsEmptyString)
 {
-    BusAttachment bus("TestBus");
+    BusAttachment bus(NULL);
     HeaderFields hdrFields;
     hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].Set("g", NULL);
     hdrFields.field[ALLJOYN_HDR_FIELD_PATH].Set("o", NULL);

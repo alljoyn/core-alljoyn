@@ -59,8 +59,9 @@ class TransportList : public TransportListener {
      * @param bus               The bus associated with this transport list.
      * @param factory           TransportFactoryContainer telling the list how to create its Transports.
      * @param m_ioDispatch      The IODispatch for this bus.
+     * @param concurrency       The maximum number of concurrent method and signal handlers locally executing.
      */
-    TransportList(BusAttachment& bus, TransportFactoryContainer& factories, qcc::IODispatch* m_ioDispatch);
+    TransportList(BusAttachment& bus, TransportFactoryContainer& factories, qcc::IODispatch* m_ioDispatch, uint32_t concurrency);
 
     /** Destructor  */
     virtual ~TransportList();
