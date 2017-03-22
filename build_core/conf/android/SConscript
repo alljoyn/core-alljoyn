@@ -1,21 +1,21 @@
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -24,7 +24,6 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-#
 
 import os
 import string
@@ -82,9 +81,9 @@ if env.get('ANDROID_SDK', '') != '':
    # It should be pretty safe always to compile with the latest one.
    # This should not be done for minSdkVersion or targetSdkVersion!
    api_levels = [ level
-                  for level in set([ 
-                      int(d.split('-')[-1]) 
-                      for d in os.listdir(env['ANDROID_SDK'] + '/platforms') 
+                  for level in set([
+                      int(d.split('-')[-1])
+                      for d in os.listdir(env['ANDROID_SDK'] + '/platforms')
                       if (d.split('-')[-1]).isdigit() ])
                   if level >= min_api_level ]
 
@@ -263,7 +262,7 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
    if FindFile(java6BootClassJar, java6BootPath):
     java6Boot = java6BootClassOption + java6BootPath + java6BootClassJar
     java6Flags = java6Flags + java6Boot
-   
+
    # Debug/Release variants
    if env['VARIANT'] == 'debug':
       env.Append(CFLAGS = ['-O0', '-g'])

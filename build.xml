@@ -9,26 +9,26 @@
   <property name="dist" value="${top}/${build}/dist/java" />
   <property name="classes" value="${top}/${build}/obj/alljoyn_java/test/classes" />
   <property name="test" value="${top}/${build}/test/java" />
-  
+
   <!-- Unknown do we need android,android_donut,maemo, or darwin -->
   <condition property="org.alljoyn.bus.address" value="unix:abstract=alljoyn">
-    <equals arg1="${OS}" arg2="linux" /> 
+    <equals arg1="${OS}" arg2="linux" />
   </condition>
   <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
-    <equals arg1="${OS}" arg2="win7" /> 
+    <equals arg1="${OS}" arg2="win7" />
   </condition>
   <condition property="org.alljoyn.bus.address" value="npipe:">
-    <equals arg1="${OS}" arg2="win10" /> 
+    <equals arg1="${OS}" arg2="win10" />
   </condition>
   <!-- Default property value if none of the above conditions are met -->
   <property name="org.alljoyn.bus.address" value="unix:abstract=alljoyn" />
-  
-  <!-- if we are running a x64 build then specify the StackShadowPages size. 
+
+  <!-- if we are running a x64 build then specify the StackShadowPages size.
        ALLJOYN-1510 when using JRE 1.6.0_34 onwards SIGSEGV are seen when running
-       unit tests.  Thie is directly related to a bug that was fixed in the 1.6.0_64  
-       release of the JRE.  The StackShadowPages were increased from 6 to 20 by 
-       default on Linux computers. 
-       see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7059899  
+       unit tests.  Thie is directly related to a bug that was fixed in the 1.6.0_64
+       release of the JRE.  The StackShadowPages were increased from 6 to 20 by
+       default on Linux computers.
+       see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7059899
        this "fix" cause us to see the errors that this fix was supposed to address
        this is a run time issue not a compilation issue. -->
   <condition property="setStackShadowPages" value="-XX:StackShadowPages=6" >
@@ -36,7 +36,7 @@
   </condition>
   <!-- Default property value for setStackShadowPages -->
   <property name="setStackShadowPages" value="-XX:StackShadowPages=3" />
-  
+
   <path id="test.classpath">
     <pathelement location="${classes}" />
     <fileset dir="${dist}">

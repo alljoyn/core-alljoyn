@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -48,14 +48,14 @@ import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 
-public class RulesActivity extends Activity implements EventActionListener {    
+public class RulesActivity extends Activity implements EventActionListener {
 	private ActionsFragment actionsFragment;
 	private EventsFragment eventsFragment;
 	private RulesFragment rulesFragment;
-	
+
 	private MulticastLock m_multicastLock;
 	private WifiManager m_wifi;
-	
+
 	//private Spinner mRuleSelector;
     private ArrayAdapter<String> ruleEngineAdapter;
     private HashMap<String, String> mfriendlyToBusMap = new HashMap<String, String>();
@@ -64,21 +64,21 @@ public class RulesActivity extends Activity implements EventActionListener {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.rulesassigner_main);
-		
+
 		m_wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
 		FragmentManager fm = this.getFragmentManager();
 		actionsFragment = (ActionsFragment) fm.findFragmentById(R.id.rules_actions_fragment);
 		eventsFragment = (EventsFragment) fm.findFragmentById(R.id.rules_events_fragment);
 		rulesFragment = (RulesFragment) fm.findFragmentById(R.id.rules_fragment);
-		
+
 		/*
 		 * Deprecated support for remote rule engine.  Leaving as a placeholder
 		 */
 //		mRuleSelector = (Spinner)this.findViewById(R.id.rule_selector);
 //	    ArrayList<String> ruleEngineList = new ArrayList<String>();
 //		ruleEngineList.add("Local");
-//		ruleEngineAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, ruleEngineList);  //array you are populating  
+//		ruleEngineAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, ruleEngineList);  //array you are populating
 //		ruleEngineAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
 //		mRuleSelector.setAdapter(ruleEngineAdapter);
 //		mRuleSelector.setOnItemSelectedListener(new OnItemSelectedListener() {
@@ -92,7 +92,7 @@ public class RulesActivity extends Activity implements EventActionListener {
 //            }
 //			@Override
 //            public void onNothingSelected(AdapterView<?> parentView) {
-//	            
+//
 //            }
 //		});
 
@@ -120,7 +120,7 @@ public class RulesActivity extends Activity implements EventActionListener {
 				}
 			}
 		});
-		
+
 		b = (Button)this.findViewById(R.id.rule_clear_saved);
 		b.setOnClickListener(new OnClickListener() {
             @Override
@@ -144,7 +144,7 @@ public class RulesActivity extends Activity implements EventActionListener {
                 dialog.show();
             }
 		});
-		
+
 		b = (Button)this.findViewById(R.id.rule_clear_selected_rules);
 		b.setOnClickListener(new OnClickListener() {
 		    @Override
@@ -152,21 +152,21 @@ public class RulesActivity extends Activity implements EventActionListener {
 		    	rulesFragment.removeSelected();
 		    }
 		});
-		
+
 		lockMulticast();
-		
+
 		((MyApplication)getApplication()).setChainedListener(this);
 		 Intent i= new Intent(this, BackgroundService.class);
 		 startService(i);
 	}
-	
+
 	@Override
     public void onDestroy() {
         super.onDestroy();
         unlockMulticast();
 		((MyApplication)getApplication()).setChainedListener(null);
 	}
-	
+
 	public void lockMulticast() {
 		if(m_multicastLock == null) {
 			m_multicastLock = m_wifi.createMulticastLock("multicastLock");
@@ -174,7 +174,7 @@ public class RulesActivity extends Activity implements EventActionListener {
 			m_multicastLock.acquire();
 		}
 	}
-	
+
 	public void unlockMulticast() {
 		if(m_multicastLock != null) {
 			m_multicastLock.release();
@@ -200,7 +200,7 @@ public class RulesActivity extends Activity implements EventActionListener {
 		RulesFragment.updateRules(info.getSessionName(), info.getFriendlyName());
 		BackgroundService.mEventHandler.enablePendingRules(info.getSessionName(), info.getFriendlyName());
 	}
-	
+
 	@Override
 	public void onRuleEngineFound(final String sessionName, final String friendlyName) {
 		runOnUiThread(new Runnable() {
@@ -218,7 +218,7 @@ public class RulesActivity extends Activity implements EventActionListener {
 		eventsFragment.removeDevice(busName);
 		actionsFragment.removeDevice(busName);
 	}
-	
+
 	@Override
 	public void onAppReturned(String busName) {
 		eventsFragment.reAddDevice(busName);

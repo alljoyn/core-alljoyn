@@ -2,22 +2,22 @@
 
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -50,7 +50,7 @@ fi
 PLATFORM_ROOT="${AJN_SM_PATH}/build/linux/${PLATFORM}/${VARIANT}"
 TEST_ROOT="${PLATFORM_ROOT}/test/"
 
-if [ "${VARIANT}" = "debug" ]; then  
+if [ "${VARIANT}" = "debug" ]; then
     if ! nm "${TEST_ROOT}/agent/unit_test/secmgrctest" | grep BundledRouter &> /dev/null; then
         if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
             echo "alljoyn-daemon is active...running tests..."
@@ -106,7 +106,7 @@ if [ ! -z "$(which lcov)" ]; then
             "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_src.info || true
             lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/inc --directory \
             "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_inc.info || true
-            genhtml --quiet --output-directory "${COVDIR}"/"$target"src "${COVDIR}"/secmgr_"$target"_src.info || true 
+            genhtml --quiet --output-directory "${COVDIR}"/"$target"src "${COVDIR}"/secmgr_"$target"_src.info || true
             genhtml --quiet --output-directory "${COVDIR}"/"$target"inc "${COVDIR}"/secmgr_"$target"_inc.info || true
             done
 fi

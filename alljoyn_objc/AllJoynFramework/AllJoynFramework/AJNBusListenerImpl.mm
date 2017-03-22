@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -33,8 +33,8 @@
  * Constructor for the AJN bus listener implementation.
  *
  * @param aBusAttachment    Objective C bus attachment wrapper object.
- * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
- */    
+ * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
+ */
 AJNBusListenerImpl::AJNBusListenerImpl(AJNBusAttachment *aBusAttachment, id<AJNBusListener> aDelegate) : busAttachment(aBusAttachment), m_delegate(aDelegate)
 {
 
@@ -64,7 +64,7 @@ void AJNBusListenerImpl::ListenerRegistered(ajn::BusAttachment* bus)
         dispatch_async(queue, ^{
                 [theDelegate listenerDidRegisterWithBus:theBusAttachment];
         });
-    }        
+    }
 }
 
 /**
@@ -74,12 +74,12 @@ void AJNBusListenerImpl::ListenerUnregistered()
 {
     if ([m_delegate respondsToSelector:@selector(listenerDidUnregisterWithBus:)]) {
         __block id<AJNBusListener> theDelegate = m_delegate;
-        __block AJNBusAttachment *theBusAttachment = busAttachment;        
+        __block AJNBusAttachment *theBusAttachment = busAttachment;
         dispatch_queue_t queue = dispatch_get_main_queue();
         dispatch_async(queue, ^{
                 [theDelegate listenerDidUnregisterWithBus:theBusAttachment];
-        });   
-    }            
+        });
+    }
 }
 
 /**
@@ -96,12 +96,12 @@ void AJNBusListenerImpl::FoundAdvertisedName(const char* name, ajn::TransportMas
         if ([m_delegate respondsToSelector:@selector(didFindAdvertisedName:withTransportMask:namePrefix:)]) {
             NSString *advertisedName = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
             NSString *advertisedNamePrefix = [NSString stringWithCString:namePrefix encoding:NSUTF8StringEncoding];
-            __block id<AJNBusListener> theDelegate = m_delegate;            
+            __block id<AJNBusListener> theDelegate = m_delegate;
             dispatch_queue_t queue = dispatch_get_main_queue();
             dispatch_async(queue, ^{
                 [theDelegate didFindAdvertisedName:advertisedName withTransportMask:(AJNTransportMask)transport namePrefix:advertisedNamePrefix];
-            });        
-        }            
+            });
+        }
     }
 }
 
@@ -116,7 +116,7 @@ void AJNBusListenerImpl::LostAdvertisedName(const char* name, ajn::TransportMask
 {
     @autoreleasepool {
         if ([m_delegate respondsToSelector:@selector(didLoseAdvertisedName:withTransportMask:namePrefix:)]) {
-            __block id<AJNBusListener> theDelegate = m_delegate;            
+            __block id<AJNBusListener> theDelegate = m_delegate;
             dispatch_queue_t queue = dispatch_get_main_queue();
             NSString *advertisedName = [NSString stringWithCString:name encoding:NSUTF8StringEncoding];
             NSString *advertisedNamePrefix = [NSString stringWithCString:namePrefix encoding:NSUTF8StringEncoding];
@@ -136,29 +136,29 @@ void AJNBusListenerImpl::LostAdvertisedName(const char* name, ajn::TransportMask
  */
 void AJNBusListenerImpl::NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
 {
-    @autoreleasepool {    
+    @autoreleasepool {
         if ([m_delegate respondsToSelector:@selector(nameOwnerChanged:to:from:)]) {
 
             NSString *aBusName;
             NSString *aPreviousOwner;
-            NSString *aNewOwner;    
-            
+            NSString *aNewOwner;
+
             if (busName) {
                 aBusName = [NSString stringWithCString:busName encoding:NSUTF8StringEncoding];
             }
-            
+
             if (previousOwner) {
                 aPreviousOwner = [NSString stringWithCString:previousOwner encoding:NSUTF8StringEncoding];
             }
-            
+
             if (newOwner) {
                 aNewOwner = [NSString stringWithCString:newOwner encoding:NSUTF8StringEncoding];
             }
-            __block id<AJNBusListener> theDelegate = m_delegate;            
-            dispatch_queue_t queue = dispatch_get_main_queue();       
+            __block id<AJNBusListener> theDelegate = m_delegate;
+            dispatch_queue_t queue = dispatch_get_main_queue();
             dispatch_async(queue, ^{
                     [theDelegate nameOwnerChanged:aBusName to:aNewOwner from:aPreviousOwner];
-            });        
+            });
         }
     }
 }
@@ -168,8 +168,8 @@ void AJNBusListenerImpl::NameOwnerChanged(const char* busName, const char* previ
  */
 void AJNBusListenerImpl::BusStopping()
 {
-    if ([m_delegate respondsToSelector:@selector(busWillStop)]) {    
-        __block id<AJNBusListener> theDelegate = m_delegate;        
+    if ([m_delegate respondsToSelector:@selector(busWillStop)]) {
+        __block id<AJNBusListener> theDelegate = m_delegate;
         dispatch_queue_t queue = dispatch_get_main_queue();
         dispatch_async(queue, ^{
                 [theDelegate busWillStop];
@@ -184,7 +184,7 @@ void AJNBusListenerImpl::BusStopping()
 void AJNBusListenerImpl::BusDisconnected()
 {
     if ([m_delegate respondsToSelector:@selector(busDidDisconnect)]) {
-        __block id<AJNBusListener> theDelegate = m_delegate;        
+        __block id<AJNBusListener> theDelegate = m_delegate;
         dispatch_queue_t queue = dispatch_get_main_queue();
         dispatch_async(queue, ^{
             [theDelegate busDidDisconnect];

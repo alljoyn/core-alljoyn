@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -56,9 +56,9 @@ public class Service extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final String TAG = "BasicService";
-    
+
     private static final int MESSAGE_CAT = 1;
     private static final int MESSAGE_CAT_REPLY = 2;
     private static final int MESSAGE_POST_TOAST = 3;
@@ -66,7 +66,7 @@ public class Service extends Activity {
     private ArrayAdapter<String> mListViewArrayAdapter;
     private ListView mListView;
     private Menu menu;
-    
+
     private Handler mHandler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -87,7 +87,7 @@ public class Service extends Activity {
                 }
             }
         };
-    
+
     /* The AllJoyn object that is our service. */
     private BasicService mBasicService;
 
@@ -102,7 +102,7 @@ public class Service extends Activity {
         mListViewArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
         mListView = (ListView) findViewById(R.id.ListView);
         mListView.setAdapter(mListViewArrayAdapter);
-        
+
         mListViewArrayAdapter.add("Service is running...");
 
         /* Make all AllJoyn calls through a separate handler thread to prevent blocking the UI. */
@@ -127,7 +127,7 @@ public class Service extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    // Handle item selection
@@ -139,7 +139,7 @@ public class Service extends Activity {
 	        return super.onOptionsItemSelected(item);
 	    }
 	}
-    
+
     @Override
     protected void onStop() {
         super.onStop();
@@ -150,9 +150,9 @@ public class Service extends Activity {
         super.onDestroy();
 
         /* Disconnect to prevent any resource leaks. */
-        mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);        
+        mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
-    
+
     /* The class that is our AllJoyn service.  It implements the BasicInterface. */
     class BasicService implements BasicInterface, BusObject {
 
@@ -170,7 +170,7 @@ public class Service extends Activity {
             /* Simply echo the cat message. */
             sendUiMessage(MESSAGE_CAT_REPLY, inStr1+inStr2);
             return inStr1+inStr2;
-        }        
+        }
 
         /* Helper function to send a message to the UI thread. */
         private void sendUiMessage(int what, Object obj) {
@@ -186,7 +186,7 @@ public class Service extends Activity {
          */
         private static final String SERVICE_NAME = "org.alljoyn.Bus.sample";
         private static final short CONTACT_PORT=25;
-        
+
         private BusAttachment mBus;
 
         /* These are the messages sent to the BusHandler from the UI. */
@@ -201,7 +201,7 @@ public class Service extends Activity {
         public void handleMessage(Message msg) {
             switch (msg.what) {
             /* Connect to the bus and start our service. */
-            case CONNECT: { 
+            case CONNECT: {
             	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 /*
                  * All communication through AllJoyn begins with a BusAttachment.
@@ -212,15 +212,15 @@ public class Service extends Activity {
                  * By default AllJoyn does not allow communication between devices (i.e. bus to bus
                  * communication).  The second argument must be set to Receive to allow
                  * communication between devices.
-                 */ 
+                 */
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 /*
-                 * Create a bus listener class  
+                 * Create a bus listener class
                  */
                 mBus.registerBusListener(new BusListener());
-                
-                /* 
+
+                /*
                  * To make a service available to other AllJoyn peers, first register a BusObject with
                  * the BusAttachment at a specific path.
                  *
@@ -232,12 +232,12 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
-                
-                
+
+
+
                 /*
                  * The next step in making a service available to other AllJoyn peers is to connect the
-                 * BusAttachment to the bus with a well-known name.  
+                 * BusAttachment to the bus with a well-known name.
                  */
                 /*
                  * connect the BusAttachement to the bus
@@ -248,12 +248,12 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * Create a new session listening on the contact port of the chat service.
                  */
                 Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
-                
+
                 SessionOpts sessionOpts = new SessionOpts();
                 sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
                 sessionOpts.isMultipoint = false;
@@ -276,17 +276,17 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * request a well-known name from the bus
                  */
                 int flag = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING | BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
-                
+
                 status = mBus.requestName(SERVICE_NAME, flag);
                 logStatus(String.format("BusAttachment.requestName(%s, 0x%08x)", SERVICE_NAME, flag), status);
                 if (status == Status.OK) {
                 	/*
-                	 * If we successfully obtain a well-known name from the bus 
+                	 * If we successfully obtain a well-known name from the bus
                 	 * advertise the same well-known name
                 	 */
                 	status = mBus.advertiseName(SERVICE_NAME, sessionOpts.transports);
@@ -302,20 +302,20 @@ public class Service extends Activity {
                     	return;
                     }
                 }
-                
+
                 break;
             }
-            
+
             /* Release all resources acquired in connect. */
             case DISCONNECT: {
-                /* 
+                /*
                  * It is important to unregister the BusObject before disconnecting from the bus.
                  * Failing to do so could result in a resource leak.
                  */
                 mBus.unregisterBusObject(mBasicService);
                 mBus.disconnect();
                 mBusHandler.getLooper().quit();
-                break;   
+                break;
             }
 
             default:
