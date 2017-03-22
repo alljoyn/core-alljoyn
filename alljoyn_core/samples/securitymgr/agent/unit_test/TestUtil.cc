@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,10 +25,11 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include "TestUtil.h"
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
@@ -134,15 +135,19 @@ void BasicTest::SetUp()
 
     if (storage_path.empty()) {
         GetDefaultStorageFilePath(storage_path);
-        assert(!storage_path.empty());
+        QCC_ASSERT(!storage_path.empty());
         Environ::GetAppEnviron()->Add(STORAGE_FILEPATH_KEY, storage_path.c_str());
     }
 
-    remove(storage_path.c_str());
+    int status = remove(storage_path.c_str());
+    if ((status != 0) && (errno != ENOENT)) {
+        printf("Removing storage %s failed: %s\n", storage_path.c_str(), strerror(errno));
+    }
 
     StorageFactory& storageFac = StorageFactory::GetInstance();
 
     ba = new BusAttachment("testsecmgr", true);
+    ba->DeleteDefaultKeyStore("testsecmgr");
     ASSERT_TRUE(ba != nullptr);
     ASSERT_EQ(ER_OK, ba->Start());
     ASSERT_EQ(ER_OK, ba->Connect());
@@ -211,6 +216,7 @@ QStatus BasicTest::CreateProxyObjectManager()
 {
     if (nullptr == proxyObjectManager) {
         ownBus = new BusAttachment("ownsecmgrtest");
+        ownBus->DeleteDefaultKeyStore("ownsecmgrtest");
         QStatus status = ownBus->Start();
         if (ER_OK != status) {
             cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
@@ -351,7 +357,7 @@ bool BasicTest::WaitForState(const OnlineApplication& appInfoNeeded, PermissionC
                 printf("timeout- failing test - %i\n", status);
                 break;
             }
-            assert(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
+            QCC_ASSERT(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
         }
     } while (true);
     printf("WaitForState failed.\n");
@@ -380,7 +386,7 @@ bool BasicTest::WaitForEvents(size_t numOfEvents)
                 printf("timeout- failing test - %i\n", status);
                 break;
             }
-            assert(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
+            QCC_ASSERT(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
         }
     } while (true);
     lock.Unlock();

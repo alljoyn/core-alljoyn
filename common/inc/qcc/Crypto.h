@@ -9,22 +9,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -33,7 +33,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <qcc/platform.h>
 
@@ -60,6 +60,7 @@ class Crypto_AES {
      */
     static const size_t AES128_SIZE = (128 / 8);
 
+    static const size_t BLOCK_LEN = 16;
     /**
      * AES modes
      */
@@ -83,7 +84,7 @@ class Crypto_AES {
      */
     class Block {
       public:
-        uint8_t data[16];
+        uint8_t data[Crypto_AES::BLOCK_LEN];
         /**
          * Constructor that initializes the block.
          *
@@ -95,11 +96,17 @@ class Crypto_AES {
          */
         Block() { };
         /**
+         * constructor takes a buffer and its length, deep copy
+         * @param buff data to be copied.
+         * @param len  length of data to be copied, 16 bytes max.
+         */
+        Block(const void* buff, size_t len) { memcpy(data, buff, std::min(len, Crypto_AES::BLOCK_LEN)); }
+        /**
          * Null pad end of block
          */
         void Pad(size_t padLen) {
-            QCC_ASSERT(padLen <= 16);
-            if (padLen > 0) { memset(&data[16 - padLen], 0, padLen); }
+            QCC_ASSERT(padLen <= Crypto_AES::BLOCK_LEN);
+            if (padLen > 0) { memset(&data[Crypto_AES::BLOCK_LEN - padLen], 0, padLen); }
         }
     };
 
@@ -264,8 +271,9 @@ class Crypto_Hash {
 
     /// Typedef for abstracting the hash algorithm specifier.
     typedef enum {
-        SHA1,          ///< SHA1 algorithm specifier
-        SHA256         ///< SHA256 algorithm specifier
+        SHA1 = 0,          ///< SHA1 algorithm specifier
+        SHA256 = 1,        ///< SHA256 algorithm specifier
+        TOTAL_ALGORITHMS_COUNT = 2 ///< Total number of supported algorithms, increment this number when adding new hash algorithm
     } Algorithm;
 
     /**
@@ -823,7 +831,7 @@ class Crypto_Rand {
 class Crypto_DRBG : public Crypto_Rand {
   public:
     static const size_t KEYLEN = Crypto_AES::AES128_SIZE;
-    static const size_t OUTLEN = sizeof (Crypto_AES::Block);
+    static const size_t OUTLEN = Crypto_AES::BLOCK_LEN;
     static const size_t SEEDLEN = KEYLEN + OUTLEN;
     static const uint32_t RESEED_COUNT = 0x80000000;
     Crypto_DRBG();

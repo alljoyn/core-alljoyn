@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -39,6 +39,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.alljoyn.bus.annotation.BusInterface;
+import org.alljoyn.bus.defs.InterfaceDef;
 
 /**
  * A convenient object discovery and access mechanism.
@@ -140,6 +141,58 @@ public class Observer implements Closeable {
     }
 
     /**
+     * Create an Observer that discovers all objects implementing a minimum set
+     * of Interfaces. Uses dynamic interface definitions.
+     *
+     * @param bus the bus attachment to be used by this Observer
+     * @param mandatoryInterfaces the minimal set of Interfaces that have to be
+     *            implemented by a bus object for the Observer to discover that
+     *            object. This must be a non-null, non empty list.
+     * @param optionalInterfaces additional Interfaces that will be added to the
+     *            {@link ProxyBusObject}s managed created by this Observer, if
+     *            they are supported by the discovered bus objects or null if no
+     *            optional interfaces are required
+     */
+    public Observer(BusAttachment bus, List<InterfaceDef> mandatoryInterfaces,
+            List<InterfaceDef> optionalInterfaces) {
+        if (mandatoryInterfaces.isEmpty()) {
+            throw new IllegalArgumentException("mandatoryInterfaces is empty");
+        }
+
+        this.bus = bus;
+        proxies = new TreeMap<ObjectId, ProxyBusObject>();
+        listeners = new ArrayList<WrappedListener>();
+        interfaceDefMap = new HashMap<String, InterfaceDef>();
+
+        /* build the list of mandatory AllJoyn interface names */
+        String[] mandatoryNames = new String[mandatoryInterfaces.size()];
+        for (int i = 0; i < mandatoryInterfaces.size(); ++i) {
+            InterfaceDef mandatoryInterface = mandatoryInterfaces.get(i);
+            mandatoryNames[i] = mandatoryInterface.getName();
+            interfaceDefMap.put(mandatoryInterface.getName(), mandatoryInterface);
+        }
+        if (optionalInterfaces != null) {
+            for (InterfaceDef intf : optionalInterfaces) {
+                interfaceDefMap.put(intf.getName(), intf);
+            }
+        }
+        create(bus, mandatoryNames);
+    }
+
+    /**
+     * Create an Observer that discovers all objects implementing a minimum set
+     * of Interfaces. Uses dynamic interface definitions.
+     *
+     * @param bus the bus attachment to be used by this Observer
+     * @param mandatoryInterfaces the minimal set of Interfaces that have to be
+     *            implemented by a bus object for the Observer to discover that
+     *            object. This must be a non-null, non empty list.
+     */
+    public Observer(BusAttachment bus, List<InterfaceDef> mandatoryInterfaces) {
+        this(bus, mandatoryInterfaces, null);
+    }
+
+    /**
      * Closes this observer and frees up any resource attached to it.
      *
      * @see java.io.Closeable#close()
@@ -151,7 +204,8 @@ public class Observer implements Closeable {
         destroy();
         listeners.clear();
         proxies.clear();
-        interfaceMap.clear();
+        if (interfaceMap != null) interfaceMap.clear();
+        if (interfaceDefMap != null) interfaceDefMap.clear();
         bus = null;
     }
 
@@ -422,15 +476,9 @@ public class Observer implements Closeable {
      * @param sessionId id of the session we can use to construct a ProxyBusObject
      */
     private void objectDiscovered(String busname, String path, String[] interfaces, int sessionId) {
-        ArrayList<Class<?>> intfList = new ArrayList<Class<?>>();
-        for (String intfName : interfaces) {
-            Class<?> intf = interfaceMap.get(intfName);
-            if (intf != null) {
-                intfList.add(intf);
-            }
-        }
-        //TODO figure out what to do with secure bus objects
-        ProxyBusObject proxy = bus.getProxyBusObject(busname, path, sessionId, intfList.toArray(new Class<?>[]{}));
+        ProxyBusObject proxy = (interfaceMap != null)
+            ? getProxyWithInterfaceClasses(busname, path, sessionId, interfaces)
+            : getProxyWithInterfaceDefs(busname, path, sessionId, interfaces);
 
         WrappedListener[] copiedListeners;
         synchronized(this) {
@@ -451,6 +499,44 @@ public class Observer implements Closeable {
                 }
             }
         }
+    }
+
+    /**
+     * Get a proxy for the given bus name, object path, sessionId, and interface names.
+     * The proxy is obtained using the interface classes (provided at construction time)
+     * that match the given interface names.
+     * Note that each interface class is marked-up with source-code bus annotations that
+     * define the bus interface and its members.
+     */
+    private ProxyBusObject getProxyWithInterfaceClasses(
+                String busname, String path, int sessionId, String[] interfaces) {
+        ArrayList<Class<?>> intfList = new ArrayList<Class<?>>();
+        for (String intfName : interfaces) {
+            Class<?> intf = interfaceMap.get(intfName);
+            if (intf != null) {
+                intfList.add(intf);
+            }
+        }
+        //TODO figure out what to do with secure bus objects
+        return bus.getProxyBusObject(busname, path, sessionId, intfList.toArray(new Class<?>[]{}));
+    }
+
+    /**
+     * Get a proxy for the given bus name, object path, sessionId, and interface names.
+     * The proxy is obtained using the interface definitions (provided at construction time)
+     * that match the given interface names.
+     */
+    private ProxyBusObject getProxyWithInterfaceDefs(
+                String busname, String path, int sessionId, String[] interfaces) {
+        ArrayList<InterfaceDef> intfList = new ArrayList<InterfaceDef>();
+        for (String intfName : interfaces) {
+            InterfaceDef intf = interfaceDefMap.get(intfName);
+            if (intf != null) {
+                intfList.add(intf);
+            }
+        }
+        //TODO figure out what to do with secure bus objects
+        return bus.getProxyBusObject(busname, path, sessionId, intfList, false);
     }
 
     /**
@@ -510,4 +596,7 @@ public class Observer implements Closeable {
     private List<WrappedListener> listeners;
     /** Maps AllJoyn interface names to Java interfaces (needed for ProxyBusObject creation) */
     private HashMap<String, Class<?>> interfaceMap;
+    /** Maps AllJoyn interface names to interface definitions (needed for ProxyBusObject creation).
+        Note: interfaceMap and interfaceDefMap are mutually exclusive (Observer uses one or the other). */
+    private HashMap<String, InterfaceDef> interfaceDefMap;
 }

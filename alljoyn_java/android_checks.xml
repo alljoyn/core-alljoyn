@@ -6,7 +6,7 @@
 <module name="Checker">
 
   <module name="TreeWalker">
-    
+
     <!-- Sun -->
     <module name="PackageName"/>
     <module name="OuterTypeNumber"/>
@@ -134,7 +134,7 @@
   <!-- Sun -->
   <module name="FileLength"/>
   <module name="RegexpHeader">
-    <property name="headerFile" value="cs.header"/> 
+    <property name="headerFile" value="cs.header"/>
     <property name="multiLines" value="8"/>
   </module>
   <module name="FileTabCharacter"/>
@@ -151,4 +151,4 @@
   <module name="StrictDuplicateCode"/>
 
 </module>
-    
+

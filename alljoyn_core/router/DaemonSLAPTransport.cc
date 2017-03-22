@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <errno.h>
 
@@ -83,8 +83,8 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
         AUTH_DONE,           /**< The auth thread has been successfully shut down and joined */
     };
 
-    _DaemonSLAPEndpoint(DaemonSLAPTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, UARTFd fd, uint32_t packetSize, uint32_t baudrate) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, DaemonSLAPTransport::TransportName),
+    _DaemonSLAPEndpoint(DaemonSLAPTransport* transport, BusAttachment& bus, bool incoming, UARTFd fd, uint32_t packetSize, uint32_t baudrate) :
+        _RemoteEndpoint(bus, incoming, &m_stream, DaemonSLAPTransport::TransportName),
         m_transport(transport), m_authThread(this), m_fd(fd), m_authState(AUTH_INITIALIZED), m_epState(EP_INITIALIZED),
         m_timer("SLAPEp", true, 1, false, 10),
         m_rawStream(fd),
@@ -788,7 +788,7 @@ void* DaemonSLAPTransport::Run(void* arg)
                         uint32_t packetSize = SLAP_DEFAULT_PACKET_SIZE;
                         uint32_t baudrate = StringToU32(listenListIt->args["baud"]);
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  listenListIt->args["dev"].c_str()));
-                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", listenListIt->listenFd, packetSize, baudrate);
+                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, listenListIt->listenFd, packetSize, baudrate);
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  listenListIt->args["dev"].c_str()));
 
                         status = conn->Authenticate();

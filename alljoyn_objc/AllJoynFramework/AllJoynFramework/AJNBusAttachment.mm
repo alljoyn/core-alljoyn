@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -52,6 +52,7 @@
 #import "AJNSignalHandlerImpl.h"
 #import "AJNTranslatorImpl.h"
 #import "AJNAboutListenerImpl.h"
+#import "AJNApplicationStateListenerImpl.h"
 
 using namespace ajn;
 
@@ -467,6 +468,7 @@ public:
 @property (nonatomic, strong) NSMutableArray *permissionConfigurationListeners;
 @property (nonatomic, strong) NSMutableArray *translatorImpls;
 @property (nonatomic, strong) NSMutableArray *aboutListeners;
+@property (nonatomic, strong) NSMutableArray *applicationStateListeners;
 
 /** C++ AllJoyn API object
  */
@@ -485,6 +487,7 @@ public:
 @synthesize permissionConfigurationListeners = _permissionConfigurationListeners;
 @synthesize translatorImpls = _translatorImpls;
 @synthesize aboutListeners = _aboutListeners;
+@synthesize applicationStateListeners = _applicationStateListeners;
 
 /** Accessor for the internal C++ API object this objective-c class encapsulates
  */
@@ -555,6 +558,14 @@ public:
         _aboutListeners = [[NSMutableArray alloc] init];
     }
     return _aboutListeners;
+}
+
+- (NSMutableArray*)applicationStateListeners
+{
+    if (_applicationStateListeners == nil) {
+        _applicationStateListeners = [[NSMutableArray alloc] init];
+    }
+    return _applicationStateListeners;
 }
 
 - (NSMutableArray*)translatorImpls
@@ -655,7 +666,7 @@ public:
 {
     self = [super init];
     if (self) {
-        self.handle = new ajn::BusAttachment([applicationName UTF8String], allowRemoteMessages, maximumConcurrentOperations);
+        self.handle = new ajn::BusAttachment([applicationName UTF8String], allowRemoteMessages, (uint32_t)maximumConcurrentOperations);
     }
     return self;
 }
@@ -741,6 +752,15 @@ public:
 
     @synchronized(self.signalHandlers) {
         [self.signalHandlers removeAllObjects];
+    }
+
+    @synchronized(self.applicationStateListeners) {
+        for (NSValue *ptrValue in self.applicationStateListeners) {
+            AJNApplicationStateListenerImpl *applicationStateListenerImpl = (AJNApplicationStateListenerImpl*)[ptrValue pointerValue];
+            self.busAttachment->UnregisterApplicationStateListener(*applicationStateListenerImpl);
+            delete applicationStateListenerImpl;
+        }
+        [self.applicationStateListeners removeAllObjects];
     }
 
     ajn::BusAttachment* ptr = [self busAttachment];
@@ -1244,14 +1264,14 @@ public:
     return self.busAttachment->SecureConnectionAsync([name UTF8String], forceAuth ? true : false);
 }
 
-- (AJNHandle)socketFileDescriptorForSession:(AJNSessionId)sessionId
+- (AJNSocketFd)socketFileDescriptorForSession:(AJNSessionId)sessionId
 {
     qcc::SocketFd fd;
     QStatus status = self.busAttachment->GetSessionFd(sessionId, fd);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::socketFileDescriptorForSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return (AJNHandle)fd;
+    return (AJNSocketFd)fd;
 }
 
 - (QStatus)advertiseName:(NSString*)name withTransportMask:(AJNTransportMask)mask
@@ -1599,14 +1619,41 @@ public:
     return status;
 }
 
--(QStatus)cancelWhoImplementsInterface:(NSString *)interface
+- (QStatus)cancelWhoImplementsInterface:(NSString *)interface
 {
     return self.busAttachment->CancelWhoImplements([interface UTF8String]);
 }
 
--(QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface
+- (QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface
 {
     return self.busAttachment->CancelWhoImplementsNonBlocking([interface UTF8String]);
 }
+
+- (QStatus)registerApplicationStateListener:(id<AJNApplicationStateListener>)delegate
+{
+    AJNApplicationStateListenerImpl *applicationStateListenerImpl = new AJNApplicationStateListenerImpl(delegate);
+    @synchronized(self.applicationStateListeners) {
+        //putting pointer to C++ AJNApplicationStateListenerImpl object to applicationStateListeners NSArray
+        //TODO: rework to collect pointers in std::vector
+        [self.applicationStateListeners addObject:[NSValue valueWithPointer:applicationStateListenerImpl]];
+        return self.busAttachment->RegisterApplicationStateListener(*applicationStateListenerImpl);
+    }
+}
+
+- (QStatus)unregisterApplicationStateListener:(id<AJNApplicationStateListener>)delegate
+{
+    QStatus status = ER_FAIL;
+    @synchronized(self.applicationStateListeners) {
+        for (NSValue *ptrValue in self.applicationStateListeners) {
+            AJNApplicationStateListenerImpl *applicationStateListenerImpl = (AJNApplicationStateListenerImpl*)[ptrValue pointerValue];
+            if (applicationStateListenerImpl->getDelegate() == delegate) {
+                status = self.busAttachment->UnregisterApplicationStateListener(*applicationStateListenerImpl);
+                break;
+            }
+        }
+    }
+    return status;
+}
+
 
 @end

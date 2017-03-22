@@ -9,22 +9,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -33,7 +33,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #ifndef __cplusplus
 #error Only include PermissionPolicy.h in C++ code.
@@ -1011,7 +1011,7 @@ class _Manifest {
      * Sign method before applying to an application.
      *
      * @param[in] rules Array of PermissionPolicy::Rule objects
-     * @param[in] ruleCount Number of elements in rules array
+     * @param[in] rulesCount Number of elements in rules array
      *
      * @return
      * - #ER_OK if successful
@@ -1221,7 +1221,7 @@ class _Manifest {
      * - #ER_OK if serialization was successful
      * - other error code indicating failure
      */
-    QStatus Serialize(std::vector<uint8_t>& seralizedForm) const;
+    QStatus Serialize(std::vector<uint8_t>& serializedForm) const;
 
     /**
      * Deserialize a manifest from a vector of bytes.

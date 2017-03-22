@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <qcc/platform.h>
 
 #include <signal.h>
@@ -776,7 +776,6 @@ int CDECL_CALL main(int argc, char** argv)
     unsigned long reportInterval = 1000;
     const char* keyStore = NULL;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
-    unsigned long concurrencyLevel = 4;
     unsigned long run_time = 0;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -856,15 +855,6 @@ int CDECL_CALL main(int argc, char** argv)
             secPolicy = AJ_IFC_SECURITY_REQUIRED;
         } else if (0 == strcmp("-so", argv[i])) {
             objSecure = true;
-        } else if (0 == strcmp("-con", argv[i])) {
-            ++i;
-            if (i == argc) {
-                printf("option %s requires a parameter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                concurrencyLevel = strtoul(argv[i], NULL, 10);
-            }
         } else if (0 == strcmp("-dcon", argv[i])) {
             g_disableConcurrency = true;
         } else if (0 == strcmp("-dpws", argv[i])) {
@@ -948,7 +938,7 @@ int CDECL_CALL main(int argc, char** argv)
     qcc::String clientArgs = env->Find("BUS_ADDRESS");
 
     /* Create message bus */
-    g_msgBus = new BusAttachment("bbservice", true, concurrencyLevel);
+    g_msgBus = new BusAttachment("bbservice", true);
 
     /* Add org.alljoyn.alljoyn_test interface */
     InterfaceDescription* testIntf = NULL;

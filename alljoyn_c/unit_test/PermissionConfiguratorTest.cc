@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,13 +25,14 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <gtest/gtest.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/PermissionConfigurator.h>
 #include <alljoyn_c/SecurityApplicationProxy.h>
 #include <qcc/Util.h>
 #include <qcc/GUID.h>
+#include <qcc/CryptoECC.h>
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
 #include "SecurityApplicationProxyTestHelper.h"
@@ -713,6 +714,7 @@ TEST_P(PermissionConfiguratorClaimCapabilitiesTest, ShouldSetClaimCapabilitiesAd
 }
 
 #ifdef NDEBUG
+
 TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenSigningManifestWithNullCertificate)
 {
     EXPECT_EQ(ER_INVALID_DATA, alljoyn_securityapplicationproxy_signmanifest(s_validAllowAllManifestTemplate,
@@ -765,6 +767,35 @@ TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithNull
                                                                     ArraySize(m_signedManifestXmls)));
 }
 #endif
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldPassSignCertificate)
+{
+    CertificateX509 cert;
+
+    qcc::String unSignedCert =
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
+        "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+        "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+        "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
+        "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
+        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n"
+        "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
+        "IizUeK0oI5c=\n"
+        "-----END CERTIFICATE-----";
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_signcertificate(m_configuratorUnderTest, unSignedCert.c_str(), &m_altIdentityCertificate));
+    EXPECT_EQ(ER_OK, cert.LoadPEM(qcc::String(m_altIdentityCertificate)));
+    EXPECT_STRNE(m_altIdentityCertificate, unSignedCert.c_str());
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldPassSignManifest)
+{
+    AJ_PSTR signedManifestXmls[1];
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_signmanifest(m_configuratorUnderTest, m_identityCertificate, s_validAllowAllManifestTemplate, &signedManifestXmls[0]));
+}
 
 TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithInvalidPublicKey)
 {
@@ -1082,4 +1113,10 @@ TEST_F(PermissionConfiguratorPostClaimTest, shouldFailRemoveMembershipSecondCall
                                                                                         m_certificateIdArray.ids[0].issuerAki,
                                                                                         m_certificateIdArray.ids[0].issuerAkiLen));
 
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldFailGetConnectedPeerPublicKeyForNonconnectedPeer)
+{
+    AJ_PSTR pubKey = nullptr;
+    EXPECT_EQ(ER_BUS_KEY_UNAVAILABLE, alljoyn_permissionconfigurator_getconnectedpeerpublickey(m_configuratorUnderTest, m_adminGroupId, &pubKey));
 }

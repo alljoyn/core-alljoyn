@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -174,7 +174,7 @@ var AuthListener = Class.create(
      * The authentication mechanism requests verification of credentials from a
      * remote peer.
      *
-     * This operation is mandatory for the ALLJOYN_ECDHE_ECDSA auth mechanism, optional 
+     * This operation is mandatory for the ALLJOYN_ECDHE_ECDSA auth mechanism, optional
 	 * for others.
      *
      * @param {String} authMechanism the name of the authentication mechanism issuing the request
@@ -491,7 +491,7 @@ org.alljoyn.bus.BusAttachment = function() {
 
     /**
      * Disconnects from a remote bus address connection.
-     * 
+     *
      * @param {statusCallback} callback function will specify BUS_NOT_STARTED if the bus is not started.
      *         BUS_NOT_CONNECTED if the BusAttachment is not connected to the bus.
      *         Other error status codes indicating a failure.
@@ -955,7 +955,7 @@ var interfaceDescriptionCallback = function(status, interfaceDescription) {};
 
 /**
  * callback function containing the status code and a collection of InterfaceDescritptions
- * 
+ *
  * @callback interfaceDescriptionsCallback
  * @param {Status} status AllJoyn status code
  * @param {InterfaceDescription[]} interfaceDescriptions an array of interfaceDescriptions

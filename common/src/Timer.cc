@@ -7,22 +7,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -31,7 +31,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <qcc/platform.h>
 
@@ -105,13 +105,14 @@ class TimerImpl : public ThreadListener {
     /**
      * Constructor
      *
-     * @param name               Name for the thread.
-     * @param expireOnExit       If true call all pending alarms when this thread exits.
-     * @param concurrency        Dispatch up to this number of alarms concurrently (using multiple threads).
-     * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
-     * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
+     * @param name                  Name for the thread.
+     * @param expireOnExit          If true call all pending alarms when this thread exits.
+     * @param concurrency           Number of preallocated slots for threads which will process alarms.
+     * @param prevenReentrancy      Prevent re-entrant call of AlarmTriggered.
+     * @param maxAlarms             Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
+     * @param allowMoreConcurrency  If true, more than @concurrency threads can be created to process alarms.
      */
-    TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms);
+    TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms, bool AllowMoreConcurrency);
 
     /**
      * Destructor.
@@ -287,12 +288,12 @@ class TimerImpl : public ThreadListener {
     const uint32_t maxAlarms;
     uint32_t numLimitableAlarms;               /**< Number of alarms currently in the alarm queue that count towards the limit */
     std::deque<qcc::Thread*> addWaitQueue;     /**< Threads waiting for alarms set to become not-full */
-
+    bool allowMoreConcurrency;                 /**< If true, more than @concurrency threads can be created to process alarms. */
 };
 
 }
 
-TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
+TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms, bool allowMoreConcurrency) :
     lock(LOCK_LEVEL_TIMERIMPL_LOCK),
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
@@ -303,7 +304,8 @@ TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool 
     reentrancyLock(LOCK_LEVEL_TIMERIMPL_REENTRANCYLOCK),
     nameStr(name),
     maxAlarms(maxAlarms),
-    numLimitableAlarms(0)
+    numLimitableAlarms(0),
+    allowMoreConcurrency(allowMoreConcurrency)
 {
     /* TimerImpl thread objects will be created when required */
 }
@@ -912,15 +914,32 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
 
 
                     if (timer->isRunning) {
-                        if (!tt && nullIdx != -1) {
-                            /* If <tt> is NULL and we have located an index in the timerThreads vector
-                             * that is NULL, allocate memory so we can start this thread
-                             */
-                            String threadName = timer->nameStr + "_" + U32ToString(nullIdx);
-                            timer->timerThreads[nullIdx] = new TimerThread(threadName, nullIdx, timer);
-                            tt = timer->timerThreads[nullIdx];
-                            QCC_DbgPrintf(("TimerThread::Run(): Created timer thread %d", nullIdx));
+                        if (tt == nullptr) {
+                            if (nullIdx != -1) {
+                                /* If <tt> is NULL and we have located an index in the timerThreads vector
+                                 * that is NULL, allocate memory so we can start this thread
+                                 */
+                                String threadName = timer->nameStr + "_" + U32ToString(nullIdx);
+
+                                timer->timerThreads[nullIdx] = new TimerThread(threadName, nullIdx, timer);
+                                tt = timer->timerThreads[nullIdx];
+                                QCC_DbgPrintf(("TimerThread::Run(): Created timer thread %d", nullIdx));
+                            } else if (timer->allowMoreConcurrency) {
+                                /* If all the slots for threads are occupied and allowMoreConcurrency is true,
+                                 * we can add an extra slot (index) to the pool and create a new thread
+                                 * in that slot.
+                                 * This thread will be deleted after it finishes its job and stops,
+                                 * just like any other thread in the pool.
+                                 */
+                                size_t newIdx = timer->timerThreads.size();
+                                String threadName = timer->nameStr + "_" + U32ToString(newIdx);
+
+                                tt = new TimerThread(threadName, newIdx, timer);
+                                timer->timerThreads.push_back(tt);
+                                QCC_DbgPrintf(("TimerThread::Run(): Created additional timer thread %d", newIdx));
+                            }
                         }
+
                         if (tt) {
                             /*
                              * If <tt> is non-NULL, then we have located a thread that
@@ -1194,8 +1213,8 @@ bool TimerImpl::ThreadHoldsLock() const
     return false;
 }
 
-Timer::Timer(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
-    timerImpl(new TimerImpl(name, expireOnExit, concurrency, preventReentrancy, maxAlarms))
+Timer::Timer(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms, bool allowMoreConcurrency) :
+    timerImpl(new TimerImpl(name, expireOnExit, concurrency, preventReentrancy, maxAlarms, allowMoreConcurrency))
 {
     /* Timer thread objects will be created when required */
 }

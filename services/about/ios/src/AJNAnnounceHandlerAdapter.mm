@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -43,11 +43,11 @@ AJNAnnounceHandlerAdapter::~AJNAnnounceHandlerAdapter()
 void AJNAnnounceHandlerAdapter::Announce(uint16_t version, uint16_t port, const char *busName, const ObjectDescriptions& objectDescs, const AboutData& aboutData)
 {
 	NSMutableDictionary *ajnAboutData;
-    
+
     NSLog(@"[%@] [%@] Received an announcemet from %s ", @"DEBUG", @"AnnounceHandlerAdapter", busName);
-        
+
 	// Convert AboutData to QASAboutData
 	ajnAboutData = [AJNAboutDataConverter convertToAboutDataDictionary:aboutData];
-    
+
 	[AJNAnnouncementListener announceWithVersion:version port:port busName:[AJNConvertUtil convertConstCharToNSString:busName] objectDescriptions:[AJNAboutDataConverter convertToObjectDescriptionsDictionary:objectDescs] aboutData:&ajnAboutData];
 }

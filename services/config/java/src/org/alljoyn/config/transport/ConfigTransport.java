@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -28,7 +28,7 @@
 ******************************************************************************/
 
 /**
- * 
+ *
  */
 package org.alljoyn.config.transport;
 
@@ -55,7 +55,7 @@ public interface ConfigTransport extends BusObject {
 
     /**
      * Get the writable properties of the device.
-     * 
+     *
      * @param languageTag
      *            IETF language tags specified by RFC 5646
      * @return Return all the updatable configuration fields based on the
@@ -71,7 +71,7 @@ public interface ConfigTransport extends BusObject {
     /**
      * Update the configuration data with the given map. Only the fields listed
      * in the map will be updated.
-     * 
+     *
      * @param configuration
      * @throws BusException
      */
@@ -92,7 +92,7 @@ public interface ConfigTransport extends BusObject {
      * Change the pass phrase. If this feature is not allowed by the OEM, the
      * AllJoyn error code org.alljoyn.Error.FeatureNotAvailable will be
      * returned.
-     * 
+     *
      * @param daemonRealm
      * @param newPasscode
      * @throws BusException
@@ -106,7 +106,7 @@ public interface ConfigTransport extends BusObject {
      * not support this feature. In such a case, the AllJoyn error code
      * org.alljoyn.Error.FeatureNotAvailable will be returned in the AllJoyn
      * response.
-     * 
+     *
      * @throws BusException
      */
     @BusMethod
@@ -115,7 +115,7 @@ public interface ConfigTransport extends BusObject {
 
     /**
      * This method restarts or power cycles the device.
-     * 
+     *
      * @throws BusException
      */
     @BusMethod

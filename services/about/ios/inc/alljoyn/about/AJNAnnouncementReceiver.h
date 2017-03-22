@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -48,7 +48,7 @@ __deprecated
 
 /**
  Register the announcement listener to receive org.alljoyn.about Announce signals.
- 
+
  The handler is only called if all the interfaces are implemented.
  For example, if the handler should be called if both "com.example.Audio"
  *and* "com.example.Video" are implemented then call
@@ -56,7 +56,7 @@ __deprecated
      const char* interfaces[] = {"com.example.Audio", "com.example.Video"};
      RegisterAnnounceHandler(busAttachment, handler, interfaces,
                              sizeof(interfaces) / sizeof(interfaces[0]));
- 
+
  If the handler should be called if "com.example.Audio" *or*
  "com.example.Video" is implemented then call
  addAnnouncementHandler multiple times:
@@ -66,7 +66,7 @@ __deprecated
      const char* videoInterface[] = {"com.example.Video"};
      RegisterAnnounceHandler(busAttachment, handler, videoInterface,
                              sizeof(videoInterface) / sizeof(videoInterface[0]));
- 
+
  The interface name may be a prefix followed by a `*`.  Using
  this, the example above could be written as:
      const char* exampleInterface[] = {"com.example.*"};
@@ -74,7 +74,7 @@ __deprecated
                              sizeof(exampleInterface) / sizeof(exampleInterface[0]));
  The handler will receive any announcement that implements an interface
  beginning with the "com.example." name.
- 
+
  If RegisterAnnounceHandler is called with lists of interfaces that overlap
  then multiple Announcements will be occur.
  For example given the following:

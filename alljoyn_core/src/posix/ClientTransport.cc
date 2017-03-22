@@ -7,22 +7,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -31,7 +31,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <qcc/platform.h>
 
 #include <list>
@@ -71,8 +71,8 @@ const char* ClientTransport::TransportName = "unix";
 class _ClientEndpoint : public _RemoteEndpoint {
   public:
     /* Unix endpoint constructor */
-    _ClientEndpoint(BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &stream, ClientTransport::TransportName),
+    _ClientEndpoint(BusAttachment& bus, bool incoming, SocketFd sock) :
+        _RemoteEndpoint(bus, incoming, &stream, ClientTransport::TransportName),
         processId(-1),
         stream(sock)
     {
@@ -244,7 +244,7 @@ QStatus ClientTransport::Connect(const char* connectArgs, const SessionOpts& opt
 
     status = SendSocketCreds(sockFd, GetUid(), GetGid(), GetPid());
     static const bool falsiness = false;
-    ClientEndpoint ep = ClientEndpoint(m_bus, falsiness, normSpec, sockFd);
+    ClientEndpoint ep = ClientEndpoint(m_bus, falsiness, sockFd);
 
     /* Initialized the features for this endpoint */
     ep->GetFeatures().isBusToBus = false;

@@ -1,0 +1,317 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		FADE35B41E0BD76100461C92 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = FADE35B31E0BD76100461C92 /* main.m */; };
+		FADE35BF1E0BD7E400461C92 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = FADE35BC1E0BD7E400461C92 /* AJNBasicObject.mm */; };
+		FADE35C01E0BD7E400461C92 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = FADE35BE1E0BD7E400461C92 /* BasicObject.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FADE35AE1E0BD76100461C92 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		FADE35B01E0BD76100461C92 /* CodeGeneratorCompileTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CodeGeneratorCompileTest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FADE35B31E0BD76100461C92 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		FADE35BB1E0BD7E400461C92 /* AJNBasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNBasicObject.h; sourceTree = "<group>"; };
+		FADE35BC1E0BD7E400461C92 /* AJNBasicObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNBasicObject.mm; sourceTree = "<group>"; };
+		FADE35BD1E0BD7E400461C92 /* BasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BasicObject.h; sourceTree = "<group>"; };
+		FADE35BE1E0BD7E400461C92 /* BasicObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BasicObject.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FADE35AD1E0BD76100461C92 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		FADE35A71E0BD76100461C92 = {
+			isa = PBXGroup;
+			children = (
+				FADE35B21E0BD76100461C92 /* CodeGeneratorCompileTest */,
+				FADE35B11E0BD76100461C92 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FADE35B11E0BD76100461C92 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FADE35B01E0BD76100461C92 /* CodeGeneratorCompileTest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FADE35B21E0BD76100461C92 /* CodeGeneratorCompileTest */ = {
+			isa = PBXGroup;
+			children = (
+				FADE35BA1E0BD7E400461C92 /* BasicObject */,
+				FADE35B31E0BD76100461C92 /* main.m */,
+			);
+			path = CodeGeneratorCompileTest;
+			sourceTree = "<group>";
+		};
+		FADE35BA1E0BD7E400461C92 /* BasicObject */ = {
+			isa = PBXGroup;
+			children = (
+				FADE35BB1E0BD7E400461C92 /* AJNBasicObject.h */,
+				FADE35BC1E0BD7E400461C92 /* AJNBasicObject.mm */,
+				FADE35BD1E0BD7E400461C92 /* BasicObject.h */,
+				FADE35BE1E0BD7E400461C92 /* BasicObject.m */,
+			);
+			path = BasicObject;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FADE35AF1E0BD76100461C92 /* CodeGeneratorCompileTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FADE35B71E0BD76100461C92 /* Build configuration list for PBXNativeTarget "CodeGeneratorCompileTest" */;
+			buildPhases = (
+				FADE35C21E0BE2E200461C92 /* ShellScript */,
+				FADE35AC1E0BD76100461C92 /* Sources */,
+				FADE35AD1E0BD76100461C92 /* Frameworks */,
+				FADE35AE1E0BD76100461C92 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodeGeneratorCompileTest;
+			productName = CodeGeneratorCompileTest;
+			productReference = FADE35B01E0BD76100461C92 /* CodeGeneratorCompileTest */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FADE35A81E0BD76100461C92 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0820;
+				ORGANIZATIONNAME = "AllSeen Alliance";
+				TargetAttributes = {
+					FADE35AF1E0BD76100461C92 = {
+						CreatedOnToolsVersion = 8.2.1;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = FADE35AB1E0BD76100461C92 /* Build configuration list for PBXProject "CodeGeneratorCompileTest" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = FADE35A71E0BD76100461C92;
+			productRefGroup = FADE35B11E0BD76100461C92 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FADE35AF1E0BD76100461C92 /* CodeGeneratorCompileTest */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FADE35C21E0BE2E200461C92 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "echo \"Generate BusObject\"\n\nrm -Rf $SOURCE_ROOT/CodeGeneratorCompileTest/BasicObject\nmkdir $SOURCE_ROOT/CodeGeneratorCompileTest/BasicObject\n\ncp $SOURCE_ROOT/../BasicObjectCase/BasicObjectModel.xml $SOURCE_ROOT/CodeGeneratorCompileTest/BasicObject/\n\n$SOURCE_ROOT/../../../bin/AllJoynCodeGenerator $SOURCE_ROOT/CodeGeneratorCompileTest/BasicObject/BasicObjectModel.xml BasicObject";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FADE35AC1E0BD76100461C92 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADE35B41E0BD76100461C92 /* main.m in Sources */,
+				FADE35C01E0BD7E400461C92 /* BasicObject.m in Sources */,
+				FADE35BF1E0BD7E400461C92 /* AJNBasicObject.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		FADE35B51E0BD76100461C92 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		FADE35B61E0BD76100461C92 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		FADE35B81E0BD76100461C92 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/include\"";
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/$(CONFIGURATION)/\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				OTHER_CFLAGS = (
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+				);
+				OTHER_LDFLAGS = (
+					"-lalljoyn",
+					"-lajrouter",
+					"-ObjC",
+					"-lAllJoynFramework_macOS",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		FADE35B91E0BD76100461C92 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/include\"";
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/$(CONFIGURATION)/\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				OTHER_CFLAGS = (
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+				);
+				OTHER_LDFLAGS = (
+					"-lalljoyn",
+					"-lajrouter",
+					"-ObjC",
+					"-lAllJoynFramework_macOS",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FADE35AB1E0BD76100461C92 /* Build configuration list for PBXProject "CodeGeneratorCompileTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FADE35B51E0BD76100461C92 /* Debug */,
+				FADE35B61E0BD76100461C92 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FADE35B71E0BD76100461C92 /* Build configuration list for PBXNativeTarget "CodeGeneratorCompileTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FADE35B81E0BD76100461C92 /* Debug */,
+				FADE35B91E0BD76100461C92 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FADE35A81E0BD76100461C92 /* Project object */;
+}

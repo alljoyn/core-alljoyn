@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <algorithm>
 #include <qcc/platform.h>
@@ -722,7 +722,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     enum EndpointState {
         EP_ILLEGAL = 0,
         EP_INITIALIZED,      /**< The endpoint structure has been allocated but not used */
-        EP_ACTIVE_STARTED,   /**< The endpoint has begun the process of coming up, due to a passive connection request */
+        EP_ACTIVE_STARTED,   /**< The endpoint has begun the process of coming up, due to a active connection request */
         EP_PASSIVE_STARTED,  /**< The endpoint has begun the process of coming up, due to a passive connection request */
         EP_STARTED,          /**< The endpoint is ready for use, registered with daemon, maybe threads wandering thorugh */
         EP_STOPPING,         /**< The endpoint is stopping but join has not been called */
@@ -798,9 +798,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     _UDPEndpoint(UDPTransport* transport,
                  BusAttachment& bus,
-                 bool incoming,
-                 const qcc::String connectSpec) :
-        _RemoteEndpoint(bus, incoming, connectSpec, NULL, transport->GetTransportName(), false, true),
+                 bool incoming) :
+        _RemoteEndpoint(bus, incoming, NULL, transport->GetTransportName(), false, true),
         m_transport(transport),
         m_stream(NULL),
         m_handle(NULL),
@@ -823,8 +822,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_stateLock(LOCK_LEVEL_UDPTRANSPORT_UDPENDPOINT_STATELOCK),
         m_wait(true)
     {
-        QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
-                         transport, &bus, incoming, connectSpec.c_str()));
+        QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d.)", transport, &bus, incoming));
     }
 
     /**
@@ -7045,8 +7043,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
      */
     static const bool truthiness = true;
     UDPTransport* ptr = this;
-    String normSpec = "udp:guid=" + remoteGUID + ",addr=" + ipAddr.ToString() + ",port=" + U32ToString(ipPort);
-    UDPEndpoint udpEp(ptr, m_bus, truthiness, normSpec);
+    UDPEndpoint udpEp(ptr, m_bus, truthiness);
 
     /*
      * Some of this would "normally" be handled by EndpointAuth, but since we
@@ -7864,8 +7861,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
 
         static const bool truthiness = true;
         UDPTransport* ptr = this;
-        String normSpec = "udp:guid=" + remoteGUID + ",addr=" + endpoint.addr.ToString() + ",port=" + U32ToString(endpoint.port);
-        UDPEndpoint udpEp(ptr, m_bus, truthiness, normSpec);
+        UDPEndpoint udpEp(ptr, m_bus, truthiness);
 
         /*
          * Make a note of when we started this process in case something

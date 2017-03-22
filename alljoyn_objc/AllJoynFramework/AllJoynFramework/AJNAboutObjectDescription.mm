@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -100,14 +100,14 @@ using namespace ajn;
     const char** ajPaths = new const char*[pathCount];
     NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:pathCount];
     self.aboutObjectDescription->GetPaths(ajPaths, pathCount);
-    
+
     for (int i=0 ; i < pathCount ; i++) {
         NSString *objPath = [NSString stringWithCString:ajPaths[i] encoding:NSUTF8StringEncoding];
         [paths addObject:objPath];
     }
-    
+
     delete [] ajPaths;
-    
+
     return paths;
 }
 
@@ -117,14 +117,14 @@ using namespace ajn;
     const char** ifaces = new const char*[interfaceCount];
     NSMutableArray *interfaces = [[NSMutableArray alloc] initWithCapacity:interfaceCount];
     self.aboutObjectDescription->GetInterfaces([path UTF8String], ifaces, interfaceCount);
-    
+
     for (int i=0 ; i < interfaceCount ; i++) {
         NSString *ifacePath = [NSString stringWithCString:ifaces[i] encoding:NSUTF8StringEncoding];
         [interfaces addObject:ifacePath];
     }
-    
+
     delete [] ifaces;
-    
+
     return interfaces;
 }
 
@@ -134,14 +134,14 @@ using namespace ajn;
     const char** interfacePaths = new const char*[pathCount];
     NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:pathCount];
     self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], interfacePaths, pathCount);
-    
+
     for (int i=0 ; i < pathCount ; i++) {
         NSString *objPath = [NSString stringWithCString:interfacePaths[i] encoding:NSUTF8StringEncoding];
         [paths addObject:objPath];
     }
-    
+
     delete [] interfacePaths;
-    
+
     return paths;
 }
 
