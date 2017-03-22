@@ -102,7 +102,7 @@ public:
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-DoorObjectImpl::DoorObjectImpl(BusAttachment &bus, const char *path, id<DoorObjectDelegate> aDelegate) : 
+DoorObjectImpl::DoorObjectImpl(BusAttachment &bus, const char *path, id<DoorObjectDelegate> aDelegate) :
     AJNBusObjectImpl(bus,path,aDelegate)
 {
     const InterfaceDescription* interfaceDescription = NULL;
@@ -115,7 +115,7 @@ DoorObjectImpl::DoorObjectImpl(BusAttachment &bus, const char *path, id<DoorObje
     assert(interfaceDescription);
     AddInterface(*interfaceDescription, ANNOUNCED);
 
-    
+
     // Register the method handlers for interface DoorObjectDelegate with the object
     //
     const MethodEntry methodEntriesForDoorObjectDelegate[] = {
@@ -524,7 +524,7 @@ public:
 /**
  * Constructor for the AJN signal handler implementation.
  *
- * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
+ * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
  */
 DoorObjectDelegateSignalHandlerImpl::DoorObjectDelegateSignalHandlerImpl(id<AJNSignalHandler> aDelegate) : AJNSignalHandlerImpl(aDelegate)
 {
@@ -609,7 +609,7 @@ void DoorObjectDelegateSignalHandlerImpl::PersonPassedThroughSignalHandler(const
         NSLog(@"Received PersonPassedThrough signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            
+
             [(id<DoorObjectDelegateSignalHandler>)m_delegate didReceivePersonPassedThroughName:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] inSession:sessionId message:signalMessage];
         });
     }

@@ -69,6 +69,8 @@ static void Trace(const char* tag, void* data, size_t len)
 #endif
 
 const int MAX_SCHEDULE_LEN = 48;
+/* definition of CryptoAES_BLOCK_LEN */
+const size_t Crypto_AES::BLOCK_LEN;
 
 struct Crypto_AES::KeyState {
     uint32_t fkey[MAX_SCHEDULE_LEN];
@@ -344,17 +346,18 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     /*
      * Check for a partial final block
      */
-    size_t partial = len % sizeof(Block);
+    size_t partial = len % Crypto_AES::BLOCK_LEN;
+    Block inBlock(in, Crypto_AES::BLOCK_LEN);
     if (partial) {
         numBlocks--;
-        status = Encrypt((Block*)in, out, numBlocks);
+        status = Encrypt(&inBlock, out, numBlocks);
         if (status == ER_OK) {
             Block padBlock;
-            memcpy(&padBlock, ((const uint8_t*)in) + numBlocks * sizeof(Block), partial);
+            memcpy(padBlock.data, static_cast<const uint8_t*>(in) + (numBlocks * Crypto_AES::BLOCK_LEN), partial);
             status = Encrypt(&padBlock, out + numBlocks, 1);
         }
     } else {
-        status = Encrypt((const Block*)in, out, numBlocks);
+        status = Encrypt(&inBlock, out, numBlocks);
     }
     return status;
 }
@@ -412,11 +415,11 @@ static void Compute_CCM_AuthField(const uint32_t* fkey, Crypto_AES::Block& T, ui
          */
         AJ_AES_CBC_128_ENCRYPT(fkey, A.data, T.data, sizeof(T.data), ivec.data);
         Trace("After AES 1: ", T.data, sizeof(T.data));
-        while (addLen >= sizeof(Crypto_AES::Block)) {
+        while (addLen >= Crypto_AES::BLOCK_LEN) {
             AJ_AES_CBC_128_ENCRYPT(fkey, addData, T.data, sizeof(T.data), ivec.data);
             Trace("After AES 2: ", T.data, sizeof(T.data));
-            addData += sizeof(Crypto_AES::Block);
-            addLen -= sizeof(Crypto_AES::Block);
+            addData += Crypto_AES::BLOCK_LEN;
+            addLen -= Crypto_AES::BLOCK_LEN;
         }
         if (addLen) {
             memcpy(A.data, addData, addLen);
@@ -430,11 +433,11 @@ static void Compute_CCM_AuthField(const uint32_t* fkey, Crypto_AES::Block& T, ui
      * Continue computing CBC-MAC over the message data.
      */
     if (mLen) {
-        while (mLen >= sizeof(Crypto_AES::Block)) {
+        while (mLen >= Crypto_AES::BLOCK_LEN) {
             AJ_AES_CBC_128_ENCRYPT(fkey, mData, T.data, sizeof(T.data), ivec.data);
             Trace("After AES 4: ", T.data, sizeof(T.data));
-            mData += sizeof(Crypto_AES::Block);
-            mLen -= sizeof(Crypto_AES::Block);
+            mData += Crypto_AES::BLOCK_LEN;
+            mLen -= Crypto_AES::BLOCK_LEN;
         }
         if (mLen) {
             Crypto_AES::Block final;

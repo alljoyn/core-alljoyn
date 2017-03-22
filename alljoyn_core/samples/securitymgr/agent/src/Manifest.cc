@@ -191,9 +191,7 @@ QStatus Manifest::SetFromSignedManifest(const ajn::Manifest& signedManifest)
 
 string Manifest::ToString() const
 {
-    // The implementation for manifest->ToString() is currently in the feature/ASACORE-2710 branch.
-    // When it gets into master, this can be corrected.
-    return string(); // manifest->ToString();
+    return manifest->ToString();
 }
 
 Manifest& Manifest::operator=(const Manifest& rhs)

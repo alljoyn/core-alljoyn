@@ -425,6 +425,17 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetMembershipSummaries(MsgArg& arg);
 
     /**
+     * Get the membership certificates as MsgArgs.
+     *
+     * @param[out] arg A MsgArg containing a collection of certificate chains
+     *
+     * @return
+     *    - #ER_OK if the membership certificates are successfully retrieved
+     *    - other error code indicating failure
+     */
+    QStatus GetMembershipCertificates(MsgArg& arg);
+
+    /**
      * Retrieve certificates in a MsgArg used to transmit certificates in the standard format,
      * used by Claim and GetIdentity.
      *
@@ -870,6 +881,7 @@ class PermissionMgmtObj : public BusObject {
     bool HasDefaultPolicy();
     bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
     QStatus LookForManifestTemplate(bool& exist);
+    QStatus AddMembershipsToPeerState(PeerState& peerState, const qcc::CertificateX509* certs, size_t certChainCount) const;
 
     /* Bind to an exclusive port for PermissionMgmt object */
     QStatus BindPort();

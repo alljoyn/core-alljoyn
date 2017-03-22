@@ -201,6 +201,7 @@ class BusObject : public MessageReceiver {
      *                       being received twice.
      *
      * @param msg          [OUT] If non-null, the sent signal message is returned to the caller.
+     *                           This should be NULL when using SESSION_ID_ALL_HOSTED, otherwise the call will error.
      * @return
      *      - #ER_OK if successful
      *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
@@ -689,7 +690,7 @@ class BusObject : public MessageReceiver {
      * This utility method is called by the bus during object registration.
      * Do not call this object explicitly.
      *
-     * @param bus  BusAttachement to associate with BusObject.
+     * @param busAttachment  BusAttachement to associate with BusObject.
      * @return
      *      - #ER_OK if all the methods were added
      *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.

@@ -38,6 +38,7 @@
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Status.h>
 #include <qcc/Debug.h>
+#include <qcc/Mutex.h>
 #include <vector>
 
 #define QCC_MODULE "ALLJOYN_C"
@@ -60,7 +61,9 @@ class TranslatorC : public Translator {
     }
 
     virtual QStatus AddTargetLanguage(const char* language, bool* added = NULL) {
+        targetLanguagesLock.Lock(MUTEX_CONTEXT);
         bool addStatus = targetLanguages.insert(language).second;
+        targetLanguagesLock.Unlock(MUTEX_CONTEXT);
         if (added != NULL) {
             *added = addStatus;
         }
@@ -73,12 +76,14 @@ class TranslatorC : public Translator {
         }
 
         size_t count = 0u;
+        targetLanguagesLock.Lock(MUTEX_CONTEXT);
         for (std::set<qcc::String>::const_iterator itL = targetLanguages.begin();
              (itL != targetLanguages.end()) && (count < size);
              itL++) {
             array[count] = itL->c_str();
             count++;
         }
+        targetLanguagesLock.Unlock(MUTEX_CONTEXT);
         return count;
     }
 
@@ -90,6 +95,7 @@ class TranslatorC : public Translator {
 
     virtual void GetTargetLanguage(size_t index, qcc::String& ret)
     {
+        targetLanguagesLock.Lock(MUTEX_CONTEXT);
         if (index < targetLanguages.size()) {
             std::set<qcc::String>::const_iterator itL = targetLanguages.begin();
             std::advance(itL, index);
@@ -97,6 +103,7 @@ class TranslatorC : public Translator {
         } else {
             ret = "";
         }
+        targetLanguagesLock.Unlock(MUTEX_CONTEXT);
     }
 
     virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source)
@@ -110,6 +117,7 @@ class TranslatorC : public Translator {
   private:
     // Std::set used to provide uniqueness and sorting of language tags.
     std::set<qcc::String> targetLanguages;
+    qcc::Mutex targetLanguagesLock;
     alljoyn_interfacedescription_translation_callback_ptr translation_callback_ptr;
 };
 

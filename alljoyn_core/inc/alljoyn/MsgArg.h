@@ -254,15 +254,15 @@ class MsgArg {
      * The flag value that indicates that the MsgArg owns the data it references so is responsible
      * for freeing that data in the destructor. This applies to any MsgArg that has a pointer to a
      * string or other data.
-     * @return value that indicates the MsgArg owns the data.
+     * return value that indicates the MsgArg owns the data.
      */
     static const uint8_t OwnsData = 1;
 
     /**
      * The flag value that indicates that the MsgArg owns the nested MsgArgs it references so is responsible
      * for freeing those MsgArgs in the destructor. This applies to MsgArgs of type #ALLJOYN_ARRAY,
-     * #ALLJOYN_STRUCT, #ALLJOYN_DICT_ENTRY, and #ALLJOYN_VARIANT.
-     * @return value that indicates the MsgArg owns the nested MsgArgs it references.
+     * ALLJOYN_STRUCT, ALLJOYN_DICT_ENTRY, and ALLJOYN_VARIANT.
+     * return value that indicates the MsgArg owns the nested MsgArgs it references.
      */
     static const uint8_t OwnsArgs = 2;
 

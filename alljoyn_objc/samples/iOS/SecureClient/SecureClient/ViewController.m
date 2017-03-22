@@ -75,7 +75,7 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
-    
+
     // allocate the client bus controller and set bus properties
     //
     self.clientController = [[AJNClientController alloc] init];
@@ -85,7 +85,7 @@
     self.clientController.allowRemoteMessages = YES;
     self.clientController.multiPointSessionsEnabled = YES;
     self.clientController.delegate = self;
-    
+
 }
 
 - (IBAction)didTouchStartButton:(id)sender
@@ -96,7 +96,7 @@
     }
     else {
         [self.clientController start];
-        [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];        
+        [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
     }
 }
 
@@ -109,17 +109,17 @@
 - (void)shouldUnloadProxyObjectOnBus:(AJNBusAttachment *)bus
 {
     self.secureObjectProxy = nil;
-    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];        
+    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];
 }
 
 - (AJNProxyBusObject *)proxyObjectOnBus:(AJNBusAttachment *)bus inSession:(AJNSessionId)sessionId
 {
     self.secureObjectProxy = [[SecureObjectProxy alloc] initWithBusAttachment:bus serviceName:self.serviceName objectPath:kServicePath sessionId:sessionId];
-    
+
     // now we need to authenticate
     //
     [self.secureObjectProxy secureConnection:YES];
-    
+
     return self.secureObjectProxy;
 }
 
@@ -130,7 +130,7 @@
     [self didReceiveStatusMessage:[NSString stringWithFormat:@"Sending ping string [%@]", pingString]];
     returnPingString = [self.secureObjectProxy sendPingString:pingString];
     [self didReceiveStatusMessage:[NSString stringWithFormat:@"Ping string returned [%@] from service and %@", returnPingString, returnPingString ? @"was successful" : @"failed"]];
-    
+
     [self.clientController stop];
 }
 

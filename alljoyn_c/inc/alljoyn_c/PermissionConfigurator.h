@@ -111,6 +111,23 @@ typedef struct {
 } alljoyn_manifestarray;
 
 /**
+ * Struct used to return an array of certificates.
+ */
+typedef struct {
+    size_t count;                           /**< The number of elements in the certificate array. */
+    AJ_PSTR* certificates;                  /**< An array of strings, each containing a certificate */
+} alljoyn_certificatearray;
+
+/**
+ * Struct used to return an array of certificate chains.
+ */
+typedef struct {
+    size_t count;                           /**< The number of elements in the certificate chain array. */
+    alljoyn_certificatearray* chains;       /**< An array of alljoyn_certificatearray */
+} alljoyn_certificatechainarray;
+
+
+/**
  * Retrieves the current application state.
  *
  * @param[in]   configurator    The queried alljoyn_permissionconfigurator.
@@ -157,6 +174,21 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getpublickey(alljoyn_permi
 AJ_API void AJ_CALL alljoyn_permissionconfigurator_publickey_destroy(AJ_PSTR publicKey);
 
 /**
+ * Get the connected peer's public key.
+ *
+ * @param[in]   configurator        The queried alljoyn_permissionconfigurator.
+ * @param[in]   groupId             Byte array representing the peer's group GUID in HEX format
+ * @param[out]  publicKey           Pointer to receive the null-terminated C string with the PEM-encoded representation
+ *                                  of the application's public key. On success, this string must be freed with a call
+ *                                  to alljoyn_permissionconfigurator_publickey_destroy.
+ *
+ * @return
+ *         #ER_OK if successful.
+ *         Other error status codes indicating a failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getconnectedpeerpublickey(alljoyn_permissionconfigurator configurator, const uint8_t* groupId, AJ_PSTR* publicKey);
+
+/**
  * Get the application's manifest template as XML.
  *
  * @param[in]   configurator        The queried alljoyn_permissionconfigurator.
@@ -179,14 +211,22 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getmanifesttemplate(alljoy
 AJ_API void AJ_CALL alljoyn_permissionconfigurator_manifesttemplate_destroy(AJ_PSTR manifestTemplateXml);
 
 /**
+ * Destroy a string received from a call to alljoyn_permissionconfigurator_signmanifest
+ *
+ * @param[in]   manifestXml String received from the call.
+ *
+ */
+AJ_API void AJ_CALL alljoyn_permissionconfigurator_manifest_destroy(AJ_PSTR manifestXml);
+
+/**
  * Set the application's manifest template from an XML.
  *
  * @param[in]   configurator        The queried alljoyn_permissionconfigurator.
  * @param[in]   manifestTemplateXml String containing the XML version of the manifest template.
  *
  * @return
- *          #ER_OK if successful.
- *          #ER_XML_MALFORMED if the XML is not in a valid manifest template format.
+ *          #ER_OK                  If successful.
+ *          #ER_XML_MALFORMED       If the XML is not in a valid manifest template format.
  *          Other error status codes indicating a failure.
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifesttemplatefromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestTemplateXml);
@@ -384,6 +424,13 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getmanifests(alljoyn_permi
 AJ_API void AJ_CALL alljoyn_permissionconfigurator_manifestarray_cleanup(alljoyn_manifestarray* manifestArray);
 
 /**
+ * This method deallocates an array of strings containing certificates
+ *
+ * @param[in]    certChainArray     Pointer to alljoyn_certificatechainarray populated by a call to getmembershipcertficates API
+ */
+AJ_API void AJ_CALL alljoyn_permissionconfigurator_certificatechainarray_cleanup(alljoyn_certificatechainarray* certChainArray);
+
+/**
  * This method allows the application to install signed manifests to itself. This method only verifies that manifests
  * have a signature; it does not verify that the signature is valid.
  *
@@ -578,7 +625,7 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_p
  *
  * @return
  *          - #ER_OK                         If successful.
- *          - #ER_MANAGEMENT_ALREADY_STARTED if the app is already in this state
+ *          - #ER_MANAGEMENT_ALREADY_STARTED If the app is already in this state
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_startmanagement(alljoyn_permissionconfigurator configurator);
 
@@ -589,9 +636,44 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_startmanagement(alljoyn_pe
  *
  * @return
  *          - #ER_OK                         If successful.
- *          - #ER_MANAGEMENT_NOT_STARTED     if the app was not in the management state
+ *          - #ER_MANAGEMENT_NOT_STARTED     If the app was not in the management state
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_endmanagement(alljoyn_permissionconfigurator configurator);
+
+/**
+ * This method sign a certificate using the signing key for this bus attachment corresponding to the provided permission configurator.
+ *
+ * @param[in]   configurator                 The alljoyn_permissionconfigurator for the application's bus attachment.
+ * @param[in]   unsignedCertificate          Null-terminated C string representing an unsigned X509 certificate in PEM encoding.
+ * @param[out]  signedCertificate            Pointer to null-terminated C string representing the signed X509 certificate in PEM encoding.
+ *                                           This string must be freed by the caller with alljoyn_permissionconfigurator_certificatechain_destroy.
+ * @return
+ *          - #ER_OK                         If successful.
+ *          - #ER_MANAGEMENT_NOT_STARTED     If the app was not in the management state
+ */
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_signcertificate(alljoyn_permissionconfigurator configurator,
+                                                                      AJ_PCSTR unsignedCertificate,
+                                                                      AJ_PSTR* signedCertificate);
+
+
+
+/**
+ * This method adds an identity certificate thumbprint to and signs the manifest XML.
+ *
+ * @param[in]   configurator                 The alljoyn_permissionconfigurator for the application's bus attachment.
+ * @param[in]   subjectCertificate           Null-terminated C string representing a X509 certificate in PEM encoding to be used to sign the manifest.
+ * @param[in]   unsignedManifestXml          Null-terminated C string representing manifest XML to be signed.
+ * @param[in]   signedManifestXml            pointer to Null-terminated C string representing the signed manifest XML. On success, this string must be
+ *                                           freed by caller using alljoyn_permissionconfigurator_manifest_destroy.
+ *
+ * @return
+ *          - #ER_OK                         If successful.
+ *          - #ER_MANAGEMENT_NOT_STARTED     If the app was not in the management state.
+ */
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_signmanifest(alljoyn_permissionconfigurator configurator,
+                                                                   AJ_PCSTR subjectCertificate,
+                                                                   AJ_PCSTR unsignedManifestXml,
+                                                                   AJ_PSTR* signedManifestXml);
 
 #ifdef __cplusplus
 } /* extern "C" */

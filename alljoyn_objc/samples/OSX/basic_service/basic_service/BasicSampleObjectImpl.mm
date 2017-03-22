@@ -41,14 +41,14 @@ BasicSampleObjectImpl::BasicSampleObjectImpl(ajn::BusAttachment &bus, const char
     const InterfaceDescription* basicInterface = bus.GetInterface([kBasicObjectInterfaceName UTF8String]);
     assert(basicInterface);
     AddInterface(*basicInterface);
-    
+
     /** Register the method handlers with the object */
     const MethodEntry methodEntries[] = {
         { basicInterface->GetMember("cat"), static_cast<MessageReceiver::MethodHandler>(&BasicSampleObjectImpl::Concatenate) }
     };
     QStatus status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
     if (ER_OK != status) {
-    }    
+    }
 }
 
 void BasicSampleObjectImpl::Concatenate(const InterfaceDescription::Member *member, Message& msg)
@@ -57,7 +57,7 @@ void BasicSampleObjectImpl::Concatenate(const InterfaceDescription::Member *memb
     qcc::String inStr1 = msg->GetArg(0)->v_string.str;
     qcc::String inStr2 = msg->GetArg(1)->v_string.str;
 
-    NSString *returnValue = [(id<MyMethodSample>)delegate concatenateString:[NSString stringWithCString:inStr1.c_str() encoding:NSUTF8StringEncoding] withString:[NSString stringWithCString:inStr2.c_str() encoding:NSUTF8StringEncoding]];    
+    NSString *returnValue = [(id<MyMethodSample>)delegate concatenateString:[NSString stringWithCString:inStr1.c_str() encoding:NSUTF8StringEncoding] withString:[NSString stringWithCString:inStr2.c_str() encoding:NSUTF8StringEncoding]];
     MsgArg outArg("s", [returnValue UTF8String]);
     QStatus status = MethodReply(msg, &outArg, 1);
     if (ER_OK != status) {

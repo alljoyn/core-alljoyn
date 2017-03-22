@@ -522,8 +522,6 @@ class BusAttachment : public MessageReceiver {
      *
      * @return
      *      - #ER_OK if successful.
-     *      - #ER_BUS_BUS_ALREADY_STARTED if already started
-     *      - Other error status codes indicating a failure
      */
     QStatus Join();
 

@@ -103,8 +103,28 @@ if env['ASAN']:
 env.SConscript('${CPU}/SConscript')
 
 env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
+
 if env['CRYPTO'] == 'openssl':
     env.AppendUnique(LIBS =['crypto', 'ssl'])
     print 'Using OpenSSL crypto'
+    #check if OpenSSL libcrypto version is 1.1.x or above
+    if not 'QCC_LINUX_OPENSSL_GT_1_1_X' in env['CPPDEFINES']:
+        def check_openssl_11x(context, version):
+            context.Message('Checking if OpenSSL version is above 1.1.0 ...')
+
+            ret = context.TryCompile("""
+            #include <openssl/opensslv.h>
+            #if OPENSSL_VERSION_NUMBER < %d
+            #error less than 110
+            #endif
+            int main(void) { return 0; }
+            """ % version, '.cc')
+
+            context.Result(ret)
+            return ret
+
+        conf = Configure(env, custom_tests = {'CheckOpenSSL11X': check_openssl_11x})
+        if conf.CheckOpenSSL11X(0x10100000L):
+            env.Append(CPPDEFINES= ['QCC_LINUX_OPENSSL_GT_1_1_X'])
 else:
     print 'Using builtin crypto'

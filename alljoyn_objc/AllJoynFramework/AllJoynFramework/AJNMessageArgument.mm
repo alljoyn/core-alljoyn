@@ -156,10 +156,28 @@ public:
     return status;
 }
 
+- (QStatus)setValue:(NSString *)signature arguments:(va_list)arguments
+{
+    va_list args;
+    va_copy(args, arguments);
+    QStatus status = MsgArgEx::Set(self.msgArg, [signature UTF8String], &args);
+    va_end(args);
+    return status;
+}
+
 - (QStatus)value:(NSString *)signature, ...
 {
     va_list args;
     va_start(args, signature);
+    QStatus status = MsgArgEx::Get(self.msgArg, [signature UTF8String], &args);
+    va_end(args);
+    return status;
+}
+
+- (QStatus)value:(NSString *)signature arguments:(va_list)arguments
+{
+    va_list args;
+    va_copy(args, arguments);
     QStatus status = MsgArgEx::Get(self.msgArg, [signature UTF8String], &args);
     va_end(args);
     return status;
