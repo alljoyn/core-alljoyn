@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <qcc/platform.h>
 
@@ -390,11 +390,22 @@ void PeerStateTable::GetGroupKey(qcc::KeyBlob& key)
     groupPeer->SetAuthorization(MESSAGE_SIGNAL, _PeerState::ALLOW_SECURE_TX);
 }
 
-void PeerStateTable::Clear()
+void PeerStateTable::Clear(bool keepLocalPeer)
 {
     qcc::KeyBlob key(0);  /* use version 0 to exchange with older clients that send keyblob instead of key data */
     lock.Lock(MUTEX_CONTEXT);
-    peerMap.clear();
+    if (keepLocalPeer) {
+        for (auto itPeer = peerMap.cbegin(); itPeer != peerMap.cend();) {
+            if (itPeer->second->IsLocalPeer()) {
+                ++itPeer;
+            } else {
+                peerMap.erase(itPeer++);
+            }
+        }
+    } else {
+        peerMap.clear();
+    }
+
     PeerState nullPeer;
     QCC_DbgHLPrintf(("Allocating group key"));
     key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);

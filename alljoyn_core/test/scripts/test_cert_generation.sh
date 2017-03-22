@@ -2,22 +2,22 @@
 #
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -41,7 +41,7 @@
 #  './test_cert_generation.sh' and run these commands.  (Make sure the file has
 #  the right line endings, and run dos2unix if not, and is executable).  In
 #  Windows rename the file to end with ".ps1" then it may be executed as a
-#  PowerShell script.  
+#  PowerShell script.
 #
 #  Three files will be created (or overwritten if they exist):
 #    ecparam.pem : A file with the elliptic curve parameters.  These are
@@ -82,7 +82,7 @@
 #
 #  1. Create parameters with ecparam:
 
-openssl ecparam -outform PEM -name prime256v1 -out ecparams.pem 
+openssl ecparam -outform PEM -name prime256v1 -out ecparams.pem
 
 #  The file ecparams.pem should contain:
 #    -----BEGIN EC PARAMETERS-----
@@ -96,7 +96,7 @@ openssl ecparam -outform PEM -name prime256v1 -out ecparams.pem
 #
 #  2. Create the private key for the CA:
 
-openssl ecparam -genkey -outform PEM -in ecparams.pem -out caeckey.pem 
+openssl ecparam -genkey -outform PEM -in ecparams.pem -out caeckey.pem
 
 #  The file caeckey.pem should have something like this:
 #  -----BEGIN EC PARAMETERS-----
@@ -129,7 +129,7 @@ openssl x509 -in cacert.pem -noout -text ;
 
 #  6. Create the private key for the client:
 
-openssl ecparam -genkey -outform PEM -in ecparams.pem -out clieckey.pem 
+openssl ecparam -genkey -outform PEM -in ecparams.pem -out clieckey.pem
 
 #  7. Create a certificate signing request for the client with the private key:
 
@@ -149,7 +149,7 @@ openssl x509 -in clicert.pem -noout -text ;
 
 #  10. Create the private key for the service:
 
-openssl ecparam -genkey -outform PEM -in ecparams.pem -out srveckey.pem 
+openssl ecparam -genkey -outform PEM -in ecparams.pem -out srveckey.pem
 
 #  11. Create a certificate signing request for the service with the private key:
 
@@ -159,7 +159,7 @@ openssl req -new -key srveckey.pem -out srvcsr.pem \
 #  12. Sign the certificate with the service's key and add the 'identity' EKU
 
 openssl x509 -req -in srvcsr.pem -out srvcert.pem -signkey srveckey.pem \
--days 5000 -extfile openssl-ajekus-service.cnf -extensions identity 
+-days 5000 -extfile openssl-ajekus-service.cnf -extensions identity
 
 #  13. Compute the public key from the private key for the service and output it to srvpubkey.pem.
 

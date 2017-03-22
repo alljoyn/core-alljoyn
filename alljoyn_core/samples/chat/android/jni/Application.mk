@@ -5,5 +5,5 @@ ABI ?= armeabi
 VARIANT ?= debug
 
 APP_OPTIM := $(VARIANT)
-APP_ABI := $(ABI) 
+APP_ABI := $(ABI)
 APP_STL := gnustl_static

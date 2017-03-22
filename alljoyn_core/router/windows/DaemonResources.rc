@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -43,11 +43,11 @@
  * Version
 ******************************************************************************/
 
-#define VER_FILEVERSION             16,10,0,0
-#define VER_FILEVERSION_STR         "16.10.00\0"
+#define VER_FILEVERSION             0,0,1,0
+#define VER_FILEVERSION_STR         "00.00.01\0"
 
-#define VER_PRODUCTVERSION          16,10,0,0
-#define VER_PRODUCTVERSION_STR      "16.10.00\0"
+#define VER_PRODUCTVERSION          0,0,1,0
+#define VER_PRODUCTVERSION_STR      "00.00.01\0"
 
 #define VER_PRIVATEBUILD 0
 #define VER_PRERELEASE 0

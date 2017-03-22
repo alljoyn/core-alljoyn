@@ -28,8 +28,8 @@ PERFORMANCE OF THIS SOFTWARE.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.alljoyn.bus.samples.observer"
-      android:versionCode="16100000"
-      android:versionName="16.10.00">
+      android:versionCode="1"
+      android:versionName="00.00.01">
     <!-- Permission required to use the TCP transport -->
     <uses-sdk android:minSdkVersion="16"></uses-sdk>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>

@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include "secure_door_common.h"
 
@@ -37,29 +37,16 @@ using namespace sample::secure::door;
 using namespace ajn;
 using namespace std;
 
-QStatus UpdateDoorProviderManifest(DoorCommon& common)
-{
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(DOOR_INTERFACE);
-
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("*");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[2].SetMemberName("*");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-
-    rules[0].SetMembers(3, prms);
-
-    PermissionPolicy::Acl manifest;
-    manifest.SetRules(1, rules);
-
-    return common.UpdateManifest(manifest);
-}
+static AJ_PCSTR s_providerManifestTemplateWithSignal =
+    "<manifest>"
+    "<node>"
+    "<interface = \"" DOOR_INTERFACE "\">"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 
 int CDECL_CALL main(int argc, char** argv)
 {
@@ -144,10 +131,8 @@ int CDECL_CALL main(int argc, char** argv)
             switch (cmd) {
             case 'u':
                 printf("Enabling automatic signaling of door events ... ");
-                status = UpdateDoorProviderManifest(common);
+                status = common.UpdateManifestTemplate(s_providerManifestTemplateWithSignal);
                 if (ER_OK != status) {
-                    fprintf(stderr, "Failed to UpdateDoorProviderManifest - status (%s)\n",
-                            QCC_StatusText(status));
                     break;
                 }
                 door.autoSignal = true;

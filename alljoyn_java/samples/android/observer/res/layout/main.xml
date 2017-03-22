@@ -31,7 +31,7 @@ PERFORMANCE OF THIS SOFTWARE.
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-  <ListView 
+  <ListView
     android:id="@+id/DoorListView"
     android:layout_width="fill_parent"
     android:layout_height="0dp"

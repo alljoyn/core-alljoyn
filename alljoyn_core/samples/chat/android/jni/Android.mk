@@ -5,9 +5,9 @@
 #
 LOCAL_PATH := $(call my-dir)
 
-# An ALLJOYN_DIST environment variable may be provided in order to 
-# locate the cpp distribution files. The referenced directory must 
-# contain the /lib and /inc directories of the desired build variant; 
+# An ALLJOYN_DIST environment variable may be provided in order to
+# locate the cpp distribution files. The referenced directory must
+# contain the /lib and /inc directories of the desired build variant;
 # e.g. $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
 # If ALLJOYN_DIST is not defined, then relative paths are defaulted
 # here that reference the /lib and /inc directories in order to work
@@ -81,7 +81,7 @@ LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_
 LOCAL_SRC_FILES := \
 	Chat_jni.cpp
 
-# The LOCAL_STATIC_LIBRARIES variables must contain a list of static 
+# The LOCAL_STATIC_LIBRARIES variables must contain a list of static
 # libraries that will be linked into a module.
 #
 LOCAL_STATIC_LIBRARIES := \

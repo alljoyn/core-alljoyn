@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include "TestUtil.h"
 #include "AgentStorageWrapper.h"
@@ -173,10 +173,19 @@ TEST_F(ResetTests, RecoveryFromResetSuccess) {
     // reset the application
     ASSERT_EQ(ER_OK, storage->ResetApplication(app));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
-    ASSERT_NE(ER_END_OF_DATA, storage->GetManagedApplication(app));
+    ASSERT_EQ(ER_OK, storage->GetManagedApplication(app));
 
-    // stop the test app
+    // stop agent to make sure update is completed
+    RemoveSecAgent();
+
+    // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
+
+    // make sure storage will succeed on UpdatesCompleted
+    wrappedCA->failOnUpdatesCompleted = false;
+
+    // restart agent
+    InitSecAgent();
 
     // restore connectivity to storage
     wrappedCA->failOnUpdatesCompleted = false;

@@ -1,5 +1,5 @@
 ' SetUserEnvironmentVariable.vbs
-' intent: this script is used by the SDK installer during the 
+' intent: this script is used by the SDK installer during the
 '         custom action stage to set the installation path environment variable
 ' usage:
 ' SetUserEnvironmentVariable.vbs /InstallPoint=<sdk path>|/AllUsers=<flag>
@@ -29,11 +29,11 @@ Set WSHShell = CreateObject("WScript.Shell")
 
 If (bAllUsersInstall = "1") Then
     Set WshEnv = WSHShell.Environment("SYSTEM")
-Else 
+Else
     Set WshEnv = WSHShell.Environment("USER")
 End If
 
-' Use FileSystemObject to get a properly formatted path 
+' Use FileSystemObject to get a properly formatted path
 Set fso = CreateObject("Scripting.FileSystemObject")
 Dim strInstallPointAbsolutePath
 strInstallPointAbsolutePath = fso.GetAbsolutePathName(strInstallPointPath)

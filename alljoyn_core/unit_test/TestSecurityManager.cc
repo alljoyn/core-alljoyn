@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <string>
 
@@ -38,6 +38,7 @@
 
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+#include "SecurityTestHelper.h"
 
 using namespace std;
 using namespace ajn;
@@ -58,17 +59,6 @@ static AJ_PCSTR s_defaultManifestTemplateXml =
 
 #define QCC_MODULE "SECURITY_TEST"
 #define TEST_LEAVE_SESSION_WAIT_TIME (1000 * s_globalTimerMultiplier)
-
-static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
-{
-    KeyInfoNISTP256 keyInfo;
-    QStatus status = bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    if (ER_OK != status) {
-        return status;
-    }
-    publicKey = *keyInfo.GetPublicKey();
-    return status;
-}
 
 TestSecurityManager::TestSecurityManager(string appName) :
     bus(appName.c_str()),
@@ -268,7 +258,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
-    EXPECT_EQ(ER_OK, (status = GetAppPublicKey(peerBus, appPublicKey)));
+    EXPECT_EQ(ER_OK, (status = SecurityTestHelper::GetAppPublicKey(peerBus, appPublicKey)));
     if (ER_OK != status) {
         return status;
     }
@@ -383,7 +373,7 @@ QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
     SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
-    status = GetAppPublicKey(peerBus, appPublicKey);
+    status = SecurityTestHelper::GetAppPublicKey(peerBus, appPublicKey);
     if (ER_OK != status) {
         return status;
     }
@@ -439,7 +429,7 @@ QStatus TestSecurityManager::InstallMembership(BusAttachment& peerBus, const GUI
     SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
-    status = GetAppPublicKey(peerBus, appPublicKey);
+    status = SecurityTestHelper::GetAppPublicKey(peerBus, appPublicKey);
     if (ER_OK != status) {
         return status;
     }
