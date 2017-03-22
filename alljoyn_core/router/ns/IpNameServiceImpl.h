@@ -1582,8 +1582,6 @@ class IpNameServiceImpl : public qcc::Thread {
         qcc::Timespec<qcc::MonotonicTime> nextScheduleTime;
     } BurstResponseHeader;
 
-    qcc::SocketFd m_ipv6QuietSockFd;
-
     qcc::SocketFd m_ipv4UnicastSockFd;
     qcc::SocketFd m_ipv6UnicastSockFd;
     qcc::Event* m_unicastEvent;

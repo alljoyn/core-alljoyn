@@ -83,8 +83,8 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
         AUTH_DONE,           /**< The auth thread has been successfully shut down and joined */
     };
 
-    _DaemonSLAPEndpoint(DaemonSLAPTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, UARTFd fd, uint32_t packetSize, uint32_t baudrate) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, DaemonSLAPTransport::TransportName),
+    _DaemonSLAPEndpoint(DaemonSLAPTransport* transport, BusAttachment& bus, bool incoming, UARTFd fd, uint32_t packetSize, uint32_t baudrate) :
+        _RemoteEndpoint(bus, incoming, &m_stream, DaemonSLAPTransport::TransportName),
         m_transport(transport), m_authThread(this), m_fd(fd), m_authState(AUTH_INITIALIZED), m_epState(EP_INITIALIZED),
         m_timer("SLAPEp", true, 1, false, 10),
         m_rawStream(fd),
@@ -788,7 +788,7 @@ void* DaemonSLAPTransport::Run(void* arg)
                         uint32_t packetSize = SLAP_DEFAULT_PACKET_SIZE;
                         uint32_t baudrate = StringToU32(listenListIt->args["baud"]);
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  listenListIt->args["dev"].c_str()));
-                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", listenListIt->listenFd, packetSize, baudrate);
+                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, listenListIt->listenFd, packetSize, baudrate);
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  listenListIt->args["dev"].c_str()));
 
                         status = conn->Authenticate();

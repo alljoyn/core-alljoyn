@@ -76,8 +76,8 @@ typedef qcc::ManagedObj<_TestMessage> TestMessage;
 
 class _TestRemoteEndpoint : public _RemoteEndpoint {
   public:
-    _TestRemoteEndpoint(const char* uniqueName, BusAttachment& bus, bool incoming, const qcc::String& connectSpec, qcc::Stream* stream)
-        : _RemoteEndpoint(bus, incoming, connectSpec, stream) {
+    _TestRemoteEndpoint(const char* uniqueName, BusAttachment& bus, bool incoming, qcc::Stream* stream)
+        : _RemoteEndpoint(bus, incoming, stream) {
         SetUniqueName(uniqueName);
         GetFeatures().protocolVersion = 3;
     }
@@ -92,11 +92,10 @@ class RemoteEndpointTest : public testing::Test {
   public:
     BusAttachment bus;
     bool incoming;
-    const String connectSpec;
     TestStream ts;
     Stream* s;
     TestRemoteEndpoint rep;
-    RemoteEndpointTest() : bus("RemoteEndpointTest"), incoming(false), s(&ts), rep(":test.2", bus, incoming, connectSpec, s) { }
+    RemoteEndpointTest() : bus("RemoteEndpointTest"), incoming(false), s(&ts), rep(":test.2", bus, incoming, s) { }
     void SetUp() {
         EXPECT_EQ(ER_OK, bus.Start());
         EXPECT_EQ(ER_OK, rep->Start());
@@ -177,7 +176,7 @@ TEST_F(RemoteEndpointTest, TxTimeout)
 {
     TxTestStream tts;
     s = &tts;
-    TestRemoteEndpoint trep(":test.3", bus, incoming, connectSpec, s);
+    TestRemoteEndpoint trep(":test.3", bus, incoming, s);
     EXPECT_EQ(ER_OK, trep->Start(0U, 0U, 0U, 1U)); /* Tx timeout of 1 sec. */
     /*
      * Tx timeout will kick in once we have a partial message push.
@@ -199,7 +198,7 @@ TEST_F(RemoteEndpointTest, TxFail)
 {
     TxTestStream tts;
     s = &tts;
-    TestRemoteEndpoint trep(":test.3", bus, incoming, connectSpec, s);
+    TestRemoteEndpoint trep(":test.3", bus, incoming, s);
     EXPECT_EQ(ER_OK, trep->Start());
     TestMessage tm(bus);
     Message m = Message::cast(tm);
@@ -220,7 +219,7 @@ TEST_F(RemoteEndpointTest, TxFail)
 class TestBusAttachment : public BusAttachment {
   public:
     TransportFactoryContainer factories;
-    TestBusAttachment() : BusAttachment(new Internal("RemoteEndpointTest", *this, factories, new DaemonRouter, true, "", 4), 4) { }
+    TestBusAttachment() : BusAttachment(new Internal("RemoteEndpointTest", *this, factories, new DaemonRouter, true, "")) { }
 };
 
 TEST_F(RemoteEndpointTest, TxMaxControlMessages)
@@ -229,7 +228,7 @@ TEST_F(RemoteEndpointTest, TxMaxControlMessages)
     EXPECT_EQ(ER_OK, tb.Start());
     TxTestStream tts;
     s = &tts;
-    TestRemoteEndpoint trep(":test.3", tb, incoming, connectSpec, s);
+    TestRemoteEndpoint trep(":test.3", tb, incoming, s);
     EXPECT_EQ(ER_OK, trep->Start());
     QStatus status = ER_OK;
     while (status == ER_OK) {
@@ -272,6 +271,6 @@ TEST_F(RemoteEndpointTest, TxQueueIsFull)
 TEST_F(RemoteEndpointTest, CreateDestroy)
 {
     {
-        TestRemoteEndpoint trep(":test.3", bus, incoming, connectSpec, s);
+        TestRemoteEndpoint trep(":test.3", bus, incoming, s);
     }
 }

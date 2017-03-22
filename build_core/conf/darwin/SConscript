@@ -24,7 +24,6 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
 
 Import('env', 'CheckCXXFlag')
 import os
@@ -59,8 +58,8 @@ if env['VARIANT'] == 'debug':
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
    print 'Using debug settings for darwin build...'
 else:
-   env.Append(CFLAGS='-O3')
-   env.Append(CXXFLAGS='-O3')
+   env.Append(CFLAGS='-Os')
+   env.Append(CXXFLAGS='-Os')
    env.Append(LINKFLAGS='')
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
    print 'Using release settings for darwin build...'
@@ -69,9 +68,12 @@ env.SConscript('${CPU}/SConscript')
 
 env.Append(CPPDEFINES=['MECHANISM_PIPE'])
 env.AppendUnique(LIBS =['stdc++', 'pthread'])
-if env['CRYPTO'] == 'openssl':
+
+if env['CRYPTO'] == 'commoncrypto':
+    print 'Using CommonCrypto'
+elif env['CRYPTO'] == 'openssl':
     env.AppendUnique(LIBS =['crypto', 'ssl'])
-    if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64']:
+    if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64', 'iOS_universal']:
         vars = Variables()
         vars.Add(PathVariable('OPENSSL_ROOT', 'Base OpenSSL directory (darwin only)', os.environ.get('OPENSSL_ROOT')))
         vars.Update(env)

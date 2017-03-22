@@ -636,8 +636,6 @@ class ProxyBusObject : public MessageReceiver {
      * @param property              The name of the property to set
      * @param u                     The uint32 value to set
      * @param timeout               Timeout specified in milliseconds to wait for a reply
-     * @param[out] errorName        Error name
-     * @param[out] errorDescription Error description
      *
      * @return
      *                              - #ER_OK if the property was set
@@ -658,8 +656,6 @@ class ProxyBusObject : public MessageReceiver {
      * @param property              The name of the property to set
      * @param i                     The int32 value to set
      * @param timeout               Timeout specified in milliseconds to wait for a reply
-     * @param[out] errorName        Error name
-     * @param[out] errorDescription Error description
      *
      * @return
      *                              - #ER_OK if the property was set
@@ -680,8 +676,6 @@ class ProxyBusObject : public MessageReceiver {
      * @param property              The name of the property to set
      * @param s                     The string value to set
      * @param timeout               Timeout specified in milliseconds to wait for a reply
-     * @param[out] errorName        Error name
-     * @param[out] errorDescription Error description
      *
      * @return
      *                              - #ER_OK if the property was set
@@ -702,8 +696,6 @@ class ProxyBusObject : public MessageReceiver {
      * @param property              The name of the property to set
      * @param s                     The string value to set
      * @param timeout               Timeout specified in milliseconds to wait for a reply
-     * @param[out] errorName        Error name
-     * @param[out] errorDescription Error description
      *
      * @return
      *                              - #ER_OK if the property was set
@@ -1025,7 +1017,6 @@ class ProxyBusObject : public MessageReceiver {
      * @param replyFunc    The function that is called to deliver the reply
      * @param args         The arguments for the method call (can be NULL)
      * @param numArgs      The number of arguments
-     * @param receiver     The object to be called when the asych method call completes.
      * @param context      User-defined context that will be returned to the reply handler
      * @param timeout      Timeout specified in milliseconds to wait for a reply
      * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:

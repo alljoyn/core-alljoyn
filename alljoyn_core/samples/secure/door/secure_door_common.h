@@ -170,7 +170,7 @@ class DoorCommon {
 
     QStatus AnnounceAbout();
 
-    QStatus UpdateManifest(const PermissionPolicy::Acl& manifest);
+    QStatus UpdateManifestTemplate(AJ_PCSTR manifestTemplateXml);
 
     QStatus SetSecurityForClaimedMode();
 

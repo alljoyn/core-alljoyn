@@ -979,7 +979,7 @@ QStatus IPAddress::SetAddress(const qcc::String& addrString, bool allowHostNames
         addrSize = IPv4_SIZE;
         status = StringToIPv4(addrString, &addr[IPv6_SIZE - IPv4_SIZE], addrSize);
         if (ER_OK != status && allowHostNames) {
-            size_t addrLen;
+            size_t addrLen = 0;
             status = ResolveHostName(addrString, addr, IPv6_SIZE, addrLen, timeoutMs);
             if (ER_OK == status) {
                 if (addrLen == IPv6_SIZE) {

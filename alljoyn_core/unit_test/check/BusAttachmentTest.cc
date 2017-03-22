@@ -44,7 +44,7 @@ using namespace ajn;
  */
 TEST(BusAttachmentTest, RegisterTwoBusObjectsWithSamePathFails)
 {
-    BusAttachment bus(NULL);
+    BusAttachment bus("TestBus");
     BusObject busObj0("/parent/child");
     BusObject busObj1("/parent/child");
     EXPECT_EQ(ER_OK, bus.RegisterBusObject(busObj0));
@@ -53,7 +53,7 @@ TEST(BusAttachmentTest, RegisterTwoBusObjectsWithSamePathFails)
 
 TEST(BusAttachmentTest, RegisterChildThenParentBusObjectSucceeds)
 {
-    BusAttachment bus(NULL);
+    BusAttachment bus("TestBus");
     BusObject child("/parent/child");
     BusObject parent("/parent");
     EXPECT_EQ(ER_OK, bus.RegisterBusObject(child));
@@ -84,7 +84,7 @@ class TestBusAttachment : public BusAttachment {
     class TestInternal : public Internal {
       public:
         TestInternal(TestBusAttachment& bus, TransportFactoryContainer& factories) :
-            Internal(NULL, bus, factories, NULL, false, NULL, 4), bus(bus) { }
+            Internal(NULL, bus, factories, NULL, false, NULL), bus(bus) { }
         virtual QStatus TransportsStart() { return ER_OK; }
         virtual QStatus TransportsStop() { return ER_OK; }
         virtual QStatus TransportsJoin() { return ER_OK; }
@@ -126,7 +126,7 @@ class TestBusAttachment : public BusAttachment {
     TransportFactoryContainer factories;
     int nameOwnerChangedHandlerRegistered;
 
-    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories), 4), nameOwnerChangedHandlerRegistered(0) { }
+    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories)), nameOwnerChangedHandlerRegistered(0) { }
 };
 
 TEST(BusAttachmentTest, SingleSignalRegistrationWhenBusAttachmentIsLocallyDisconnectedThenConnected)

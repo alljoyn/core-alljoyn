@@ -68,10 +68,10 @@ class ClaimContextImpl :
     public ClaimContext, public DefaultECDHEAuthListener {
   public:
     ClaimContextImpl(const OnlineApplication& application,
-                     const Manifest& manifest,
+                     const Manifest& manifestTemplate,
                      const PermissionConfigurator::ClaimCapabilities _capabilities,
                      const PermissionConfigurator::ClaimCapabilityAdditionalInfo _capInfo) :
-        ClaimContext(application, manifest, _capabilities, _capInfo)
+        ClaimContext(application, manifestTemplate, _capabilities, _capInfo)
     {
     }
 
@@ -169,7 +169,7 @@ QStatus SecurityAgentImpl::ClaimSelf()
     }
     signedManifestXmlC = signedManifestXml.c_str();
 
-    // Go into claimable state by setting up a manifest.
+    // Go into claimable state by setting up a manifestTemplate.
     status = configurator.SetManifestTemplateFromXml(s_selfClaimManifestTemplateXml);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to set the Manifest"));
@@ -449,9 +449,9 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
     }
 
     /*===========================================================
-     * Step 1: Select Session type  & Accept manifest
+     * Step 1: Select Session type  & Accept manifest template
      */
-    Manifest manifest;
+    Manifest manifestTemplate;
     PermissionConfigurator::ClaimCapabilities claimCapabilities;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo claimCapInfo;
     {   // Open scope limit the lifetime of the proxy object
@@ -461,7 +461,7 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
             QCC_LogError(status, ("Could not connect to the remote application"));
             return status;
         }
-        status = mngdProxy.GetManifestTemplate(manifest);
+        status = mngdProxy.GetManifestTemplate(manifestTemplate);
         if (ER_OK != status) {
             QCC_LogError(status, ("Could not retrieve manifest template"));
             return status;
@@ -473,7 +473,7 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
             return status;
         }
     }
-    ClaimContextImpl ctx(_app, manifest, claimCapabilities, claimCapInfo);
+    ClaimContextImpl ctx(_app, manifestTemplate, claimCapabilities, claimCapInfo);
 
     status = claimListener->ApproveManifestAndSelectSessionType(ctx);
     if (ER_OK != status) {
@@ -505,7 +505,7 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
 
     GroupInfo adminGroup;
     ajn::Manifest signedManifest;
-    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest, adminGroup, idCertificate, signedManifest);
+    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifestTemplate, adminGroup, idCertificate, signedManifest);
     if (status != ER_OK) {
         return status;
     }

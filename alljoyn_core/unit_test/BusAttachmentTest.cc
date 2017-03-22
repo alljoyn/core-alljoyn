@@ -66,14 +66,23 @@ class TestApplicationStateListener : public ApplicationStateListener {
     }
 };
 
+class TestECDHEAuthListener : public DefaultECDHEAuthListener {
+  public:
+    volatile int authCount;
+    TestECDHEAuthListener() : authCount(0) { }
+    virtual void AuthenticationComplete(const char*, const char*, bool) { ++authCount; }
+};
+
 class BusAttachmentTest : public testing::Test {
   public:
     BusAttachment bus;
+    TestECDHEAuthListener* authListener;
     TestApplicationStateListener testListener;
     TestApplicationStateListener* nullListener;
 
     BusAttachmentTest() :
         bus("BusAttachmentTest", false),
+        authListener(nullptr),
         nullListener(nullptr)
     {
         EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("BusAttachmentTest"));
@@ -89,6 +98,10 @@ class BusAttachmentTest : public testing::Test {
     virtual void TearDown() {
         bus.Stop();
         bus.Join();
+        if (authListener != nullptr) {
+            delete authListener;
+            authListener = nullptr;
+        }
     }
 
 };
@@ -743,7 +756,6 @@ TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
 
 TEST_F(BusAttachmentTest, BasicSecureConnection)
 {
-    DefaultECDHEAuthListener al;
     BusAttachment otherBus("BusAttachmentOtherBus", false);
     EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("BusAttachmentOtherBus"));
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
@@ -753,10 +765,12 @@ TEST_F(BusAttachmentTest, BasicSecureConnection)
     otherBus.Connect();
     EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
 
-    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myOtherTestKeyStore", true));
-    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myTestKeyStore", true));
+    authListener = new TestECDHEAuthListener();
+    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", authListener, "myOtherTestKeyStore", true));
+    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", authListener, "myTestKeyStore", true));
 
     EXPECT_EQ(ER_OK, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+    EXPECT_EQ(authListener->authCount, 2);
 
     otherBus.Stop();
     otherBus.ClearKeyStore();
@@ -764,16 +778,8 @@ TEST_F(BusAttachmentTest, BasicSecureConnection)
     bus.ClearKeyStore();
 }
 
-class TestECDHEAuthListener : public DefaultECDHEAuthListener {
-  public:
-    volatile bool isComplete;
-    TestECDHEAuthListener() : isComplete(false) { }
-    virtual void AuthenticationComplete(const char*, const char*, bool) { isComplete = true; }
-};
-
 TEST_F(BusAttachmentTest, BasicSecureConnectionAsync)
 {
-    DefaultECDHEAuthListener al;
     BusAttachment otherBus("BusAttachmentOtherBus", false);
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
     otherBus.Start();
@@ -782,21 +788,21 @@ TEST_F(BusAttachmentTest, BasicSecureConnectionAsync)
     otherBus.Connect();
     EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
 
-    TestECDHEAuthListener otherBusAuthListener, busAuthListener;
-    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &otherBusAuthListener, "myOtherTestKeyStore", true));
-    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &busAuthListener, "myTestKeyStore", true));
+    authListener = new TestECDHEAuthListener();
 
-    EXPECT_EQ(ER_OK, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", authListener, "myOtherTestKeyStore", true));
+    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", authListener, "myTestKeyStore", true));
+
+    EXPECT_EQ(ER_OK, bus.SecureConnectionAsync(otherBus.GetUniqueName().c_str()));
 
     // Wait for the authentication to complete.
     for (int i = 0; i < 200; ++i) {
-        if (otherBusAuthListener.isComplete && busAuthListener.isComplete) {
+        if (authListener->authCount == 2) {
             break;
         }
         qcc::Sleep(WAIT_TIME_10);
     }
-    EXPECT_TRUE(otherBusAuthListener.isComplete);
-    EXPECT_TRUE(busAuthListener.isComplete);
+    EXPECT_EQ(authListener->authCount, 2);
 
     otherBus.Stop();
     otherBus.ClearKeyStore();

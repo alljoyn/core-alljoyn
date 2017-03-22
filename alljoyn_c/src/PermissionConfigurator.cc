@@ -108,6 +108,30 @@ void AJ_CALL alljoyn_permissionconfigurator_publickey_destroy(AJ_PSTR publicKey)
     DestroyStringCopy(publicKey);
 }
 
+QStatus AJ_CALL alljoyn_permissionconfigurator_getconnectedpeerpublickey(alljoyn_permissionconfigurator configurator, const uint8_t* groupId, AJ_PSTR* publicKey)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    qcc::ECCPublicKey eccKey;
+    qcc::String eccKeyStr;
+    GUID128 gid;
+    gid.SetBytes(groupId);
+
+    QStatus status = ((PermissionConfigurator*)configurator)->GetConnectedPeerPublicKey(gid, &eccKey);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    eccKeyStr = eccKey.ToString();
+    *publicKey = CreateStringCopy(static_cast<std::string>(eccKeyStr));
+
+    if (nullptr == *publicKey) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return ER_OK;
+}
+
 QStatus AJ_CALL alljoyn_permissionconfigurator_getmanifesttemplate(alljoyn_permissionconfigurator configurator, AJ_PSTR* manifestTemplateXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
@@ -132,6 +156,13 @@ void AJ_CALL alljoyn_permissionconfigurator_manifesttemplate_destroy(AJ_PSTR man
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     DestroyStringCopy(manifestTemplateXml);
+}
+
+void AJ_CALL alljoyn_permissionconfigurator_manifest_destroy(AJ_PSTR manifestXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    DestroyStringCopy(manifestXml);
 }
 
 QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifesttemplatefromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestTemplateXml)
@@ -362,6 +393,27 @@ void AJ_CALL alljoyn_permissionconfigurator_manifestarray_cleanup(alljoyn_manife
     delete[] manifestArray->xmls;
 
     memset(manifestArray, 0, sizeof(*manifestArray));
+}
+
+void AJ_CALL alljoyn_permissionconfigurator_certificatechainarray_cleanup(alljoyn_certificatechainarray* certChainArray)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QCC_ASSERT(nullptr != certChainArray);
+
+    for (size_t i = 0; i < certChainArray->count; ++i) {
+        for (size_t j = 0; j < certChainArray->chains[i].count; ++j) {
+            // Guard nullptr case instead of using QCC_ASSERT in case this function is called due to
+            // allocation failure for a particular chains[i].certificates
+            if (nullptr != certChainArray->chains[i].certificates) {
+                DestroyStringCopy(certChainArray->chains[i].certificates[j]);
+            }
+        }
+        delete[] certChainArray->chains[i].certificates;
+    }
+    delete[] certChainArray->chains;
+
+    memset(certChainArray, 0, sizeof(*certChainArray));
 }
 
 QStatus AJ_CALL alljoyn_permissionconfigurator_installmanifests(alljoyn_permissionconfigurator configurator,
@@ -652,4 +704,69 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_endmanagement(alljoyn_permissionc
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     return ((PermissionConfigurator*)configurator)->EndManagement();
+}
+
+QStatus AJ_CALL alljoyn_permissionconfigurator_signcertificate(alljoyn_permissionconfigurator configurator, AJ_PCSTR unsignedCertificate, AJ_PSTR* signedCertificate)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status;
+    PermissionConfigurator* pc = (PermissionConfigurator*)configurator;
+    CertificateX509 cert;
+    qcc::String certificateStr(unsignedCertificate);
+
+    status = cert.LoadPEM(certificateStr);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = pc->SignCertificate(cert);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    certificateStr = cert.GetPEM();
+    *signedCertificate = CreateStringCopy(certificateStr);
+
+    if (nullptr == *signedCertificate) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return status;
+}
+
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_signmanifest(alljoyn_permissionconfigurator configurator,
+                                                                   AJ_PCSTR subjectCertificate,
+                                                                   AJ_PCSTR unsignedManifestXml,
+                                                                   AJ_PSTR* signedManifestXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status;
+    PermissionConfigurator* pc = (PermissionConfigurator*)configurator;
+    CertificateX509 cert;
+    std::string input_str(unsignedManifestXml);
+    qcc::String certificate_str(subjectCertificate);
+
+    status = cert.LoadPEM(certificate_str);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = pc->ComputeThumbprintAndSignManifestXml(cert, input_str);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    *signedManifestXml = CreateStringCopy(input_str);
+
+    if (nullptr == *signedManifestXml) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return status;
 }

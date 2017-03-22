@@ -71,18 +71,13 @@ public class ECCPrivateKey {
             return false;
         }
 
-        ECCPrivateKey compPublicKey = (ECCPrivateKey) compObj;
+        ECCPrivateKey compPrivateKey = (ECCPrivateKey) compObj;
 
-        if (d.length != compPublicKey.d.length) {
-            return false;
-        }
+        return Arrays.equals(d, compPrivateKey.d);
+    }
 
-        for (int index = 0; index < d.length; index++) {
-            if (d[index] != compPublicKey.d[index]) {
-                return false;
-            }
-        }
-
-        return true;
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(d);
     }
 }

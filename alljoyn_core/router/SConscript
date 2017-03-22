@@ -24,7 +24,6 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
 
 from os.path import basename
 
@@ -39,9 +38,9 @@ vars.Update(router_env)
 Help(vars.GenerateHelpText(router_env))
 
 
-if router_env['OS'] == "darwin":
+if router_env['OS_SUBGROUP'] == "darwin":
     # Darwin has its own version of the daemon transport
-	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS'] + '/DaemonTransport' + router_env['OS'].capitalize() + '.cc'] ]
+	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS_SUBGROUP'] + '/DaemonTransport' + router_env['OS_SUBGROUP'].capitalize() + '.cc'] ]
 else:
 	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS_GROUP'] + '/DaemonTransport' + router_env['OS_GROUP'].capitalize() + '.cc']]
 
@@ -82,15 +81,15 @@ lib = router_env.StaticLibrary('ajrouter', brobj + router_objs);
 
 # AllJoyn Daemon test programs
 if router_env['OS'] == 'darwin':
-    if router_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
-        print 'Not building unit tests for iOS...'    
+    if router_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64'] or router_env['OS'] == 'iOS':
+        print 'Not building unit tests for iOS...'
         tests = []
     else:
         print 'Building unit tests for darwin...'
         tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs', 'srobj'])
 else:
     tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs', 'srobj'])
-    
+
 # Return daemon and related tests
 ret = progs + tests, lib, srobj, router_objs
 Return('ret')

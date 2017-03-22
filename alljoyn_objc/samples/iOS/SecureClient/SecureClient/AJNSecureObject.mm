@@ -61,21 +61,21 @@ using namespace ajn;
 class SecureObjectImpl : public AJNBusObjectImpl
 {
 private:
-    
-    
+
+
 public:
     SecureObjectImpl(BusAttachment &bus, const char *path, id<SecureObjectDelegate> aDelegate);
 
-    
-    
+
+
     // methods
     //
     void Ping(const InterfaceDescription::Member* member, Message& msg);
 
-    
+
     // signals
     //
-    
+
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -85,21 +85,21 @@ public:
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-SecureObjectImpl::SecureObjectImpl(BusAttachment &bus, const char *path, id<SecureObjectDelegate> aDelegate) : 
+SecureObjectImpl::SecureObjectImpl(BusAttachment &bus, const char *path, id<SecureObjectDelegate> aDelegate) :
     AJNBusObjectImpl(bus,path,aDelegate)
 {
     const InterfaceDescription* interfaceDescription = NULL;
     QStatus status;
     status = ER_OK;
-    
-    
+
+
     // Add the org.alljoyn.bus.samples.secure.SecureInterface interface to this object
     //
     interfaceDescription = bus.GetInterface("org.alljoyn.bus.samples.secure.SecureInterface");
     assert(interfaceDescription);
     AddInterface(*interfaceDescription);
 
-    
+
     // Register the method handlers for interface SecureObjectDelegate with the object
     //
     const MethodEntry methodEntriesForSecureObjectDelegate[] = {
@@ -107,14 +107,14 @@ SecureObjectImpl::SecureObjectImpl(BusAttachment &bus, const char *path, id<Secu
         {
 			interfaceDescription->GetMember("Ping"), static_cast<MessageReceiver::MethodHandler>(&SecureObjectImpl::Ping)
 		}
-    
+
     };
-    
+
     status = AddMethodHandlers(methodEntriesForSecureObjectDelegate, sizeof(methodEntriesForSecureObjectDelegate) / sizeof(methodEntriesForSecureObjectDelegate[0]));
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred while adding method handlers for interface org.alljoyn.bus.samples.secure.SecureInterface to the interface description. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    
+
 
 }
 
@@ -122,39 +122,39 @@ SecureObjectImpl::SecureObjectImpl(BusAttachment &bus, const char *path, id<Secu
 void SecureObjectImpl::Ping(const InterfaceDescription::Member *member, Message& msg)
 {
     @autoreleasepool {
-    
-    
-    
-    
+
+
+
+
     // get all input arguments
     //
-    
+
     qcc::String inArg0 = msg->GetArg(0)->v_string.str;
-        
+
     // declare the output arguments
     //
-    
+
 	NSString* outArg0;
 
-    
+
     // call the Objective-C delegate method
     //
-    
+
 	outArg0 = [(id<SecureObjectDelegate>)delegate sendPingString:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding]];
-            
-        
+
+
     // formulate the reply
     //
     MsgArg outArgs[1];
-    
+
     outArgs[0].Set("s", [outArg0 UTF8String]);
 
     QStatus status = MethodReply(msg, outArgs, 1);
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred when attempting to send a method reply for Ping. %@", [AJNStatus descriptionForStatusCode:status]);
-    }        
-    
-    
+    }
+
+
     }
 }
 
@@ -186,35 +186,35 @@ void SecureObjectImpl::Ping(const InterfaceDescription::Member *member, Message&
         QStatus status;
 
         status = ER_OK;
-        
+
         AJNInterfaceDescription *interfaceDescription;
-        
-    
+
+
         //
         // SecureObjectDelegate interface (org.alljoyn.bus.samples.secure.SecureInterface)
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
         interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.secure.SecureInterface" withInterfaceSecPolicy:AJN_IFC_SECURITY_REQUIRED];
-        
-    
+
+
         // add the methods to the interface description
         //
-    
+
         status = [interfaceDescription addMethodWithName:@"Ping" inputSignature:@"s" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"inStr",@"outStr", nil]];
-        
+
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: Ping" userInfo:nil];
         }
 
-    
+
         [interfaceDescription activate];
 
 
         // create the internal C++ bus object
         //
         SecureObjectImpl *busObject = new SecureObjectImpl(*((ajn::BusAttachment*)busAttachment.handle), [path UTF8String], (id<SecureObjectDelegate>)self);
-        
+
         self.handle = busObject;
     }
     return self;
@@ -227,7 +227,7 @@ void SecureObjectImpl::Ping(const InterfaceDescription::Member *member, Message&
     self.handle = nil;
 }
 
-    
+
 - (NSString*)sendPingString:(NSString*)inStr
 {
     //
@@ -237,7 +237,7 @@ void SecureObjectImpl::Ping(const InterfaceDescription::Member *member, Message&
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-    
+
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -257,38 +257,38 @@ void SecureObjectImpl::Ping(const InterfaceDescription::Member *member, Message&
 @end
 
 @implementation SecureObjectProxy
-    
+
 - (NSString*)sendPingString:(NSString*)inStr
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.samples.secure.SecureInterface"];
-    
+
     // prepare the input arguments
     //
-    
-    Message reply(*((BusAttachment*)self.bus.handle));    
+
+    Message reply(*((BusAttachment*)self.bus.handle));
     MsgArg inArgs[1];
-    
+
     inArgs[0].Set("s", [inStr UTF8String]);
 
 
     // make the function call using the C++ proxy object
     //
-    
+
     QStatus status = self.proxyBusObject->MethodCall("org.alljoyn.bus.samples.secure.SecureInterface", "Ping", inArgs, 1, reply, 60000);
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.samples.secure.SecureInterface failed. %@", [AJNStatus descriptionForStatusCode:status]);
-        
+
         return nil;
-            
+
     }
 
-    
+
     // pass the output arguments back to the caller
     //
-    
-        
+
+
     return [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
-        
+
 
 }
 

@@ -390,11 +390,22 @@ void PeerStateTable::GetGroupKey(qcc::KeyBlob& key)
     groupPeer->SetAuthorization(MESSAGE_SIGNAL, _PeerState::ALLOW_SECURE_TX);
 }
 
-void PeerStateTable::Clear()
+void PeerStateTable::Clear(bool keepLocalPeer)
 {
     qcc::KeyBlob key(0);  /* use version 0 to exchange with older clients that send keyblob instead of key data */
     lock.Lock(MUTEX_CONTEXT);
-    peerMap.clear();
+    if (keepLocalPeer) {
+        for (auto itPeer = peerMap.cbegin(); itPeer != peerMap.cend();) {
+            if (itPeer->second->IsLocalPeer()) {
+                ++itPeer;
+            } else {
+                peerMap.erase(itPeer++);
+            }
+        }
+    } else {
+        peerMap.clear();
+    }
+
     PeerState nullPeer;
     QCC_DbgHLPrintf(("Allocating group key"));
     key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);

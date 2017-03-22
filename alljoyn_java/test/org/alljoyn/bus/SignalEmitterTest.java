@@ -31,6 +31,7 @@ package org.alljoyn.bus;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -42,9 +43,9 @@ import org.alljoyn.bus.Status;
 import org.alljoyn.bus.MessageContext;
 import org.alljoyn.bus.DynamicBusObject;
 import org.alljoyn.bus.GenericInterface;
+import org.alljoyn.bus.InterfaceDescription;
 import org.alljoyn.bus.defs.BusObjectInfo;
 import org.alljoyn.bus.defs.InterfaceDef;
-import org.alljoyn.bus.defs.InterfaceDef.SecurityPolicy;
 import org.alljoyn.bus.defs.SignalDef;
 import org.alljoyn.bus.defs.ArgDef;
 
@@ -58,9 +59,10 @@ public class SignalEmitterTest extends TestCase {
     private static final String DYN_IFACE_NAME  = "org.alljoyn.bus.PingInterface";
     private static final String DYN_SIGNAL_NAME = "Ping";
 
-    private PingEmitter pingEmitter;
+    private DynamicEmitter dynamicEmitter;
     private int receivedGetSignalHandler; // relates to DynamicBusObject.getSignalHandler() called
-    private int receivedSignalHandler;    // relates to SignalEmitterTest.signalHandler() called
+    private int receivedSignal;           // relates to SignalEmitterTest.signalHandler() called
+    private int receivedSignalInDynBusObj; // relates to DynamicEmitter.receiveSignal() called
 
     public SignalEmitterTest(String name) {
         super(name);
@@ -76,6 +78,7 @@ public class SignalEmitterTest extends TestCase {
     }
 
     private BusAttachment bus;
+    private BusAttachment clientBus;
 
     public class Participant {
         private String name;
@@ -236,16 +239,15 @@ public class SignalEmitterTest extends TestCase {
 
     private Emitter emitter;
 
-    /** PingEmitter is a combination of a signal emitter and a dynamic bus object that has a Ping signal. */
-    public class PingEmitter implements DynamicBusObject {
-        private SignalEmitter emitter;
+    /** DynamicEmitter is a combination of a signal emitter and a dynamic bus object that has signals to emit. */
+    public class DynamicEmitter implements DynamicBusObject {
+        private BusAttachment ownerBus; // the bus that this dynamic object is registered to
+        private MessageContext ctx;     // message context from most recent receiveSignal (consumer-side)
         private BusObjectInfo info;
 
-        public PingEmitter() {
-            info = buildInterfaceDefinitions();
-            emitter = new SignalEmitter(this);
-            emitter.setSessionlessFlag(true);
-            emitter.setTimeToLive(0);
+        public DynamicEmitter(BusAttachment bus, BusObjectInfo busObjDefinition) {
+            ownerBus = bus;
+            info = busObjDefinition;
         }
 
         @Override
@@ -258,14 +260,16 @@ public class SignalEmitterTest extends TestCase {
             return info.getInterfaces();
         }
 
+        /**
+         * Return the signal handler Method that matches the given interface name, signal name and signature.
+         */
         @Override
         public Method getSignalHandler(String interfaceName, String signalName, String signature) {
             receivedGetSignalHandler++;
 
-            // implementation specific - determine and return the appropriate implementation Method
             try {
-                // just assume correct signal handler is receivePing(string) - it is the only choice
-                return getClass().getDeclaredMethod( "receivePing", new Class[] {String.class} );
+                // generic handler (supports any number of input parameters)
+                return getClass().getDeclaredMethod( "receiveSignal", new Class[]{Object[].class} );
             } catch (java.lang.NoSuchMethodException ex) {
                 ex.printStackTrace();
                 return null;
@@ -279,43 +283,76 @@ public class SignalEmitterTest extends TestCase {
         public Method[] getPropertyHandler(String interfaceName, String propertyName) {return null;}
 
         /**
-         * Signal handler for a Ping signal received within a session (Note: Method mapped via
-         * DynamicBusObject.getSignalHandler() when the dynamic bus object is registered).
+         * Signal handler for a signal received on the consumer-side.
+         *
+         * Note: The client must register its signal handler methods on its bus using one of
+         * the dynamic interface registration methods in BusAttachment. When the bus object
+         * has multiple interface and/or signal definitions, the most convenient registration
+         * method is registerSignalHandlers(DynamicBusObject).
          */
-        public void receivePing(String string) throws BusException {
-            System.out.println("PingEmitter received a Ping signal: " + string);
+        public void receiveSignal(Object... args) throws BusException {
+            receivedSignalInDynBusObj++;
+
+            ctx = ownerBus.getMessageContext();
+            String msg = Arrays.toString(args).replaceAll("\\[|\\]", "");;
+            System.out.println("DynamicEmitter.receiveSignal() received " +
+                ctx.interfaceName + "." + ctx.memberName + ": " + msg);
         }
 
-        /** Helper method to emit a Ping signal */
-        public void emitPing(String string) throws BusException {
+        /** Used by consumer-side, the message context of the most recent received signal. */
+        public MessageContext getMessageContext() {
+            return ctx;
+        }
+
+        /**
+         * Helper method to emit a signal. Used by producer-side.
+         * @throws BusException if signal to be emitted is not defined by the dynamic bus object.
+         */
+        public void emitSignal(String ifaceName, String signalName, Object... args) throws BusException {
+            SignalEmitter emitter = new SignalEmitter(this);
+            emitter.setSessionlessFlag(true);
+            emitter.setTimeToLive(0);
+
             // DynamicBusObject signals are always emitted using GenericInterface.signal()
             GenericInterface emitterIntf = emitter.getInterface(GenericInterface.class);
-            emitterIntf.signal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, string);
+            emitterIntf.signal(ifaceName, signalName, args);
         }
+    }
 
-        public MessageContext getMessageContext() {
-            return emitter.getMessageContext();
-        }
+    /* Build an interface definition that contains the signal Ping(string). */
+    private static BusObjectInfo buildBusObjectInfo(String path) {
+        SignalDef signalDef = new SignalDef(DYN_SIGNAL_NAME, "s", DYN_IFACE_NAME);
+        signalDef.addArg( new ArgDef("string", "s") );
 
-        /* Build an interface definition that contains the signal Ping(string). */
-        private BusObjectInfo buildInterfaceDefinitions() {
-            SignalDef signalDef = new SignalDef(DYN_SIGNAL_NAME, "s", DYN_IFACE_NAME);
-            signalDef.addArg( new ArgDef("string", "s") );
-            signalDef.addAnnotation(SignalDef.ANNOTATION_SIGNAL_SESSIONLESS, "true");
+        InterfaceDef interfaceDef = new InterfaceDef(DYN_IFACE_NAME, true, null);
+        interfaceDef.addSignal(signalDef);
 
-            InterfaceDef interfaceDef = new InterfaceDef(DYN_IFACE_NAME, true, null);
-            interfaceDef.addAnnotation(InterfaceDef.ANNOTATION_SECURE, SecurityPolicy.OFF.text);
-            interfaceDef.addSignal(signalDef);
+        List<InterfaceDef> ifaces = new ArrayList<InterfaceDef>();
+        ifaces.add(interfaceDef);
+        return new BusObjectInfo(path, ifaces);
+    }
 
-            List<InterfaceDef> ifaces = new ArrayList<InterfaceDef>();
-            ifaces.add(interfaceDef);
-            return new BusObjectInfo(DYN_PATH_NAME, ifaces);
-        }
+    /* Build an interface definition for client-side that contains the signal Ping(string),
+       and has matching criteria for signal handling. */
+    private static BusObjectInfo buildClientBusObjectInfo(String rule, String source) {
+        SignalDef signalDef = new SignalDef(DYN_SIGNAL_NAME, "s", DYN_IFACE_NAME, rule, source);
+        signalDef.addArg(new ArgDef("string", "s"));
+
+        InterfaceDef interfaceDef = new InterfaceDef(DYN_IFACE_NAME, true, null);
+        interfaceDef.addSignal(signalDef);
+
+        List<InterfaceDef> ifaces = new ArrayList<InterfaceDef>();
+        ifaces.add(interfaceDef);
+        return new BusObjectInfo("", ifaces);
     }
 
     public void setUp() throws Exception {
         bus = new BusAttachment(getClass().getName());
         Status status = bus.connect();
+        assertEquals(Status.OK, status);
+
+        clientBus = new BusAttachment(getClass().getName() + "-client");
+        status = clientBus.connect();
         assertEquals(Status.OK, status);
 
         emitter = new Emitter();
@@ -332,7 +369,8 @@ public class SignalEmitterTest extends TestCase {
             throw new GameException("Cannot add rule to receive signals");
         }
 
-        receivedSignalHandler = 0;
+        receivedSignal = 0;
+        receivedSignalInDynBusObj= 0;
         receivedGetSignalHandler = 0;
     }
 
@@ -346,24 +384,31 @@ public class SignalEmitterTest extends TestCase {
             throw new GameException("Cannot remove rule to receive signals");
         }
 
-        if (pingEmitter != null) {
-            bus.unregisterBusObject(pingEmitter);
-            pingEmitter = null;
+        if (dynamicEmitter != null) {
+            bus.unregisterBusObject(dynamicEmitter);
+            dynamicEmitter = null;
 
             // Remove rule to receive non-session based signals
-            status = bus.removeMatch("type='signal',interface='" + DYN_IFACE_NAME + "',member='" + DYN_SIGNAL_NAME + "'");
+            status = clientBus.removeMatch("type='signal',interface='" + DYN_IFACE_NAME + "',member='" + DYN_SIGNAL_NAME + "'");
             if (Status.OK != status) {
-                throw new GameException("Cannot remove rule to receive signals for "
-                        + DYN_IFACE_NAME + "." + DYN_SIGNAL_NAME);
+                status = clientBus.removeMatch("type='signal',interface='" + DYN_IFACE_NAME + "'");
+                if (Status.OK != status) {
+                    throw new GameException("Cannot remove rule to receive signals for "
+                        + DYN_IFACE_NAME + " : " + status.name());
+                }
             }
         }
 
+        bus.unregisterSignalHandler(this, getClass().getMethod("signalHandler", String.class));
+
         bus.disconnect();
         bus = null;
+        clientBus.disconnect();
+        clientBus = null;
     }
 
     public void signalHandler(String string) throws BusException {
-        receivedSignalHandler++;
+        receivedSignal++;
 
         MessageContext ctx = bus.getMessageContext();
         System.out.println("SignalEmitterTest.signalHandler() received " +
@@ -491,37 +536,281 @@ public class SignalEmitterTest extends TestCase {
         C.checkReceived(0);
     }
 
-    public void testSignalEmitterWithDynamicBusObject() throws Exception {
+    public void testDynamicSignalDef_registerHandler() throws Exception {
         Status status;
 
-        // Create and register the dynamic bus object
-        pingEmitter = new PingEmitter(); // a class that models a SignalEmitter and a DynamicBusObject
-        status = bus.registerBusObject(pingEmitter, DYN_PATH_NAME);
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
         assertEquals(Status.OK, status);
         assertEquals(1, receivedGetSignalHandler);
 
-        status = bus.registerSignalHandler(DYN_IFACE_NAME, DYN_SIGNAL_NAME, this,
-                                           getClass().getMethod("signalHandler",String.class));
+        // Register the client signal handler (consumer-side) for a specific signal (matches any source path by default)
+        InterfaceDef ifaceDef = busObjInfo.getInterface(DYN_IFACE_NAME);
+        status = clientBus.registerSignalHandler(ifaceDef, DYN_SIGNAL_NAME, this,
+                              getClass().getMethod("signalHandler",String.class));
         assertEquals(Status.OK, status);
 
-        // Add rule to receive non-session based signals
-        status = bus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "',member='" + DYN_SIGNAL_NAME + "'");
+        // Add rule to receive non-session based signals (Note: can omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "',member='" + DYN_SIGNAL_NAME + "'");
         if (Status.OK != status) {
-            throw new GameException("Cannot add rule to receive signals for PingEmitter");
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
         }
 
-        // Test the signal emitter that is using a dynamic bus obejct
-        pingEmitter.emitPing("Test SignalEmitter with DynamicBusObject");
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandler");
 
-        MessageContext ctx = pingEmitter.getMessageContext();
+        Thread.sleep(1000);
+        assertEquals(1, receivedSignal);
+        assertEquals(0, receivedSignalInDynBusObj);
+
+        clientBus.unregisterSignalHandler(this, getClass().getMethod("signalHandler", String.class));
+    }
+
+    public void testDynamicSignalDef_registerHandler_withRule() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handler (consumer-side) for a specific signal, and with rule expected to match
+        InterfaceDef ifaceDef = busObjInfo.getInterface(DYN_IFACE_NAME);
+        Method m = getClass().getMethod("signalHandler",String.class);
+        String rule = "path='" + DYN_PATH_NAME + "'";
+        status = clientBus.registerSignalHandlerWithRule(ifaceDef, DYN_SIGNAL_NAME, this, m, rule);
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: can omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "',member='" + DYN_SIGNAL_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandler_withRule");
+
+        Thread.sleep(1000);
+        assertEquals(1, receivedSignal);
+        assertEquals(0, receivedSignalInDynBusObj);
+
+        clientBus.unregisterSignalHandler(this, m);
+    }
+
+    public void testDynamicSignalDef_registerHandler_withBogusRule() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handler (consumer-side) for a specific signal, and with rule not expected to match
+        InterfaceDef ifaceDef = busObjInfo.getInterface(DYN_IFACE_NAME);
+        Method m = getClass().getMethod("signalHandler",String.class);
+        status = clientBus.registerSignalHandlerWithRule(ifaceDef, DYN_SIGNAL_NAME, this, m, "path='/bogusPath'");
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: can omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "',member='" + DYN_SIGNAL_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandler_withBogusRule");
+
+        Thread.sleep(1000);
+        assertEquals(0, receivedSignal);  // signal not received since filtering by non-matching rule
+        assertEquals(0, receivedSignalInDynBusObj);
+
+        clientBus.unregisterSignalHandler(this, m);
+    }
+
+    public void testDynamicSignalDef_registerHandlers() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handlers (consumer-side) for all defined signals (matches any source path by default)
+        DynamicBusObject busObjHandler = new DynamicEmitter(
+            clientBus, buildClientBusObjectInfo("","")); // empty rule and source path
+        status = clientBus.registerSignalHandlers(busObjHandler);
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandlers");
+
+        Thread.sleep(1000);
+        assertEquals(0, receivedSignal);
+        assertEquals(1, receivedSignalInDynBusObj);
+
+        MessageContext ctx = ((DynamicEmitter)busObjHandler).getMessageContext();
         assertEquals(DYN_PATH_NAME, ctx.objectPath);
         assertEquals(DYN_IFACE_NAME, ctx.interfaceName);
         assertEquals(DYN_SIGNAL_NAME, ctx.memberName);
-        assertEquals("", ctx.destination);
-        assertEquals(bus.getUniqueName(), ctx.sender);
         assertEquals("s", ctx.signature);
 
-        Thread.sleep(1000);
-        assertEquals(1, receivedSignalHandler);
+        clientBus.unregisterSignalHandlers(busObjHandler);
     }
+
+    public void testDynamicSignalDef_registerHandlers_withSourcePath() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handlers (consumer-side) for all defined signals, and with specified source path
+        DynamicBusObject busObjHandler = new DynamicEmitter(
+            clientBus, buildClientBusObjectInfo("",DYN_PATH_NAME)); // empty rule, non-empty source path
+        status = clientBus.registerSignalHandlers(busObjHandler);
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandlers_withSourcePath");
+
+        Thread.sleep(1000);
+        assertEquals(0, receivedSignal);
+        assertEquals(1, receivedSignalInDynBusObj);
+
+        MessageContext ctx = ((DynamicEmitter)busObjHandler).getMessageContext();
+        assertEquals(DYN_PATH_NAME, ctx.objectPath);
+        assertEquals(DYN_IFACE_NAME, ctx.interfaceName);
+        assertEquals(DYN_SIGNAL_NAME, ctx.memberName);
+        assertEquals("s", ctx.signature);
+
+        clientBus.unregisterSignalHandlers(busObjHandler);
+    }
+
+    public void testDynamicSignalDef_registerHandlers_withBogusSourcePath() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handlers (consumer-side) for all defined signals, and with unknown source path
+        DynamicBusObject busObjHandler = new DynamicEmitter(
+            clientBus, buildClientBusObjectInfo("","/bogusEmitter")); // empty rule, bogus source path
+        status = clientBus.registerSignalHandlers(busObjHandler);
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandlers_withBogusSourcePath");
+
+        Thread.sleep(1000);
+        assertEquals(0, receivedSignal);
+        assertEquals(0, receivedSignalInDynBusObj); // signal not received since producer's DynamicEmitter has wrong path
+
+        clientBus.unregisterSignalHandlers(busObjHandler);
+    }
+
+    public void testDynamicSignalDef_registerHandlers_withRule() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handlers (consumer-side) for all defined signals, and with rule expected to match
+        String rule = "path='" + DYN_PATH_NAME + "'";
+        DynamicBusObject busObjHandler = new DynamicEmitter(
+            clientBus, buildClientBusObjectInfo(rule,"")); // non-empty rule, empty source path
+        status = clientBus.registerSignalHandlers(busObjHandler);
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandlers_withRule");
+
+        Thread.sleep(1000);
+        assertEquals(0, receivedSignal);
+        assertEquals(1, receivedSignalInDynBusObj);
+
+        MessageContext ctx = ((DynamicEmitter)busObjHandler).getMessageContext();
+        assertEquals(DYN_PATH_NAME, ctx.objectPath);
+        assertEquals(DYN_IFACE_NAME, ctx.interfaceName);
+        assertEquals(DYN_SIGNAL_NAME, ctx.memberName);
+        assertEquals("s", ctx.signature);
+
+        clientBus.unregisterSignalHandlers(busObjHandler);
+    }
+
+    public void testDynamicSignalDef_registerHandlers_withBogusRule() throws Exception {
+        Status status;
+
+        // Create and register the dynamic bus object (producer-side)
+        BusObjectInfo busObjInfo = buildBusObjectInfo(DYN_PATH_NAME);
+        dynamicEmitter = new DynamicEmitter(bus, busObjInfo); // models a SignalEmitter and a DynamicBusObject
+        status = bus.registerBusObject(dynamicEmitter, busObjInfo.getPath());
+        assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
+
+        // Register the client signal handlers (consumer-side) for all defined signals, and with rule not expected to match
+        String rule = "path='/bogusPath'";
+        DynamicBusObject busObjHandler = new DynamicEmitter(
+            clientBus, buildClientBusObjectInfo(rule,"")); // bogus rule, empty source path
+        status = clientBus.registerSignalHandlers(busObjHandler);
+        assertEquals(Status.OK, status);
+
+        // Add rule to receive non-session based signals (Note: omit member field to match all signals on interface)
+        status = clientBus.addMatch("type='signal',interface='" + DYN_IFACE_NAME + "'");
+        if (Status.OK != status) {
+            throw new GameException("Cannot add rule to receive signals for DynamicEmitter");
+        }
+
+        // Test the signal emitter that is using a dynamic bus object (producer-side sends signal)
+        dynamicEmitter.emitSignal(DYN_IFACE_NAME, DYN_SIGNAL_NAME, "registerHandlers_withBogusRule");
+
+        Thread.sleep(1000);
+        assertEquals(0, receivedSignal);
+        assertEquals(0, receivedSignalInDynBusObj);  // signal not received since filtering by non-matching rule
+
+        clientBus.unregisterSignalHandlers(busObjHandler);
+    }
+
 }

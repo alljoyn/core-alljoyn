@@ -302,7 +302,7 @@ class CertificateX509 {
      *
      * @see qcc::CertificateX509::Verify(const ECCPublicKey* key);
      *
-     * @param[in] signature An ECCSignature containing the signature.
+     * @param[in] sig An ECCSignature containing the signature.
      */
     void SetSignature(const ECCSignature& sig)
     {

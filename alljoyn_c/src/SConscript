@@ -54,6 +54,11 @@ if env['OS_GROUP'] == 'windows':
     liballjoyn_c_static = env.StaticLibrary('alljoyn_c_static', objs)
 else:
     liballjoyn_c_static = env.StaticLibrary('alljoyn_c', objs)
+
+#Add hardening flags for linux release build only.
+#The goal is to avoid any impact for these flags to our capability of debugging.
+if (env['OS'] == 'linux') and (env['VARIANT'] == 'release'):
+    env.Append(LINKFLAGS = ['-fPIC', '-Wl,-z,relro,-z,now'])
 liballjoyn_c_shared = env.SharedLibrary('alljoyn_c', objs_shared)
 
 Return('liballjoyn_c_static', 'liballjoyn_c_shared', 'objs_shared')

@@ -157,4 +157,10 @@ using namespace qcc;
     return GUID128::IsGUID([thisString UTF8String], exactlLen) ? YES : NO;
 }
 
+- (NSMutableData *)getGuidData
+{
+    NSMutableData *guidData = [NSMutableData dataWithBytes:self.bytes length:GUID128::SIZE];
+    return guidData;
+}
+
 @end

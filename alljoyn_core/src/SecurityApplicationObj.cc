@@ -326,6 +326,8 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
             status = GetDefaultPolicy(val);
         } else if (0 == strcmp("MembershipSummaries", propName)) {
             status = GetMembershipSummaries(val);
+        } else if (0 == strcmp("MembershipCertificates", propName)) {
+            status = GetMembershipCertificates(val);
         }
     } else if (0 == strcmp(org::alljoyn::Bus::Application::InterfaceName, ifcName)) {
         if (0 == strcmp("Version", propName)) {

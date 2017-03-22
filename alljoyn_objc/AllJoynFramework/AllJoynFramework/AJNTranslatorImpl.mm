@@ -104,7 +104,7 @@ void AJNTranslatorImpl::GetBestLanguage(const char *requested, const qcc::String
     NSString *ajnDefaultLang = [NSString stringWithCString:defaultLanguage.c_str() encoding:NSUTF8StringEncoding];
     NSString *ajnBestLang = [m_delegate bestLanguage:ajnReq useDefaultLanguage:ajnDefaultLang];
     if (ajnBestLang != nil && [ajnBestLang length] != 0) {
-        ret.assign([ajnBestLang UTF8String], [ajnBestLang length]);
+        ret.assign_std([ajnBestLang UTF8String], [ajnBestLang length]);
     }
 }
 
