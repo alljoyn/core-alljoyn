@@ -1,22 +1,22 @@
 <!--
      Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
      Project (AJOSP) Contributors and others.
-     
+
      SPDX-License-Identifier: Apache-2.0
-     
+
      All rights reserved. This program and the accompanying materials are
      made available under the terms of the Apache License, Version 2.0
      which accompanies this distribution, and is available at
      http://www.apache.org/licenses/LICENSE-2.0
-     
+
      Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
      Alliance. All rights reserved.
-     
+
      Permission to use, copy, modify, and/or distribute this software for
      any purpose with or without fee is hereby granted, provided that the
      above copyright notice and this permission notice appear in all
      copies.
-     
+
      THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
      WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
      WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -36,7 +36,7 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:orientation="vertical"
     >
-    
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -48,7 +48,7 @@
 		    android:layout_height="0dp"
 		    android:layout_weight=".5"
 		    android:orientation="horizontal" >
-		
+
 		    <fragment
 		        android:id="@+id/rules_events_fragment"
 		        android:name="org.allseen.sample.eventaction.ruleassigner.EventsFragment"
@@ -57,7 +57,7 @@
 		        class="org.allseen.sample.eventaction.EventsFragment"
 		        tools:layout="@layout/event_fragment"
 		        android:layout_weight=".5"/>
-		
+
 		    <fragment
 		        android:id="@+id/rules_actions_fragment"
 		        android:name="org.allseen.sample.eventaction.ruleassigner.ActionsFragment"
@@ -68,7 +68,7 @@
 		        tools:layout="@layout/action_fragment"
 		        android:layout_weight=".5"/>
 		    </LinearLayout>
-	
+
 		<LinearLayout
 		    android:layout_width="match_parent"
 		    android:layout_height="0dp"
@@ -82,7 +82,7 @@
 		        android:layout_height="match_parent"
 		        android:orientation="vertical" >
 
-			    <Spinner 
+			    <Spinner
 					android:id="@+id/rule_selector"
 					android:layout_width="150dip"
 					android:layout_height="40dip"
@@ -90,8 +90,8 @@
 					android:padding="5dip"
 					android:layout_gravity="center_horizontal"
 					android:visibility="gone"
-					/>  
-			    <Button 
+					/>
+			    <Button
 				    android:id="@+id/rule_save"
 				    android:layout_width="wrap_content"
 				    android:layout_height="wrap_content"
@@ -102,13 +102,13 @@
 			        android:layout_width="wrap_content"
 			        android:layout_height="wrap_content"
 			        android:text="@string/clear_all_saved" />
-                
-                <Button 
+
+                <Button
                     android:id="@+id/rule_clear_selected_rules"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/clear_selected_rules"/>
-                
+
 		    </LinearLayout>
 
 	        <fragment
@@ -121,6 +121,6 @@
 	            tools:layout="@layout/rule_fragment" />
 
         </LinearLayout>
-        
+
 	</LinearLayout>
 </LinearLayout>

@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -66,7 +66,7 @@
 	self.alertRefresh = [[UIAlertView alloc] initWithTitle:@"Choose option:" message:@"" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Refresh", nil];
 	self.alertRefresh.alertViewStyle = UIAlertViewStyleDefault;
 	self.alertRefresh.tag = 1;
-    
+
 	self.alertNoSession = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Session is not connected, check the connection and reconnect." delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil];
 	self.alertNoSession.alertViewStyle = UIAlertViewStyleDefault;
 	self.alertNoSession.tag = 2;
@@ -75,18 +75,18 @@
 - (void)setDefaultGui
 {
 	self.btnIconUrlTitle = @"";
-    
+
 	//  create about client
 	self.ajnAboutIconClient = [[AJNAboutIconClient alloc] initWithBus:self.clientBusAttachment];
-    
+
 	//  create sessionOptions
 	AJNSessionOptions *opt1 = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:false proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-    
+
 	//  call joinSession
 	self.sessionID = [self.clientBusAttachment joinSessionWithName:[self.ajnAnnouncement busName] onPort:[self.ajnAnnouncement port] withDelegate:(nil) options:opt1];
-    
+
 	if (self.sessionID == 0 || self.sessionID == -1) {
-        
+
          NSLog(@"[%@] [%@] Failed to join session. sid=%u", @"ERROR", [[self class] description],self.sessionID);
 
         [self.alertNoSession show];
@@ -116,12 +116,12 @@
 			}
 		}
             break;
-            
+
 		case 2: //alertNoSession
 		{
 		}
             break;
-            
+
 		default:
 		{
             NSLog(@"[%@] [%@] alertView.tag is wrong", @"ERROR", [[self class] description]);
@@ -135,10 +135,10 @@
      NSLog(@"[%@] [%@] Display icon data", @"DEBUG", [[self class] description]);
 
     QStatus status;
-    
+
 	//  Icon Data
 	NSString *announcementBusName = [self.ajnAnnouncement busName];
-    
+
 	if (self.ajnAboutIconClient) {
 		//  version
 		int version;
@@ -159,15 +159,15 @@
 		status = [self.ajnAboutIconClient urlFromBusName:announcementBusName url:&url sessionId:self.sessionID];
 		self.btnIconUrlTitle = (status == ER_OK && [url length]) ? url : @"";
 		[self.btnIconUrl setTitle:self.btnIconUrlTitle forState:UIControlStateNormal];
-        
+
 		//  content
          NSLog(@"[%@] [%@] contentSize:%lu", @"DEBUG", [[self class] description],contentSize);
 
-        
+
 		if (contentSize) {
 			uint8_t *content;
 			status = [self.ajnAboutIconClient contentFromBusName:announcementBusName content:&content contentSize:contentSize sessionId:self.sessionID];
-            
+
 			if (status != ER_OK) {
                 NSLog(@"[%@] [%@] Failed to get image content", @"ERROR", [[self class] description]);
 			}
@@ -182,7 +182,7 @@
 				}
 				else {
 					self.iconView.image = retrievedImg;
-                    
+
                     NSLog(@"[%@] [%@] Successfuly retrived image content", @"ERROR", [[self class] description]);
 				}
 			}
@@ -203,7 +203,7 @@
 - (void)viewWillDisappear:(BOOL)animated
 {
 	[self.clientBusAttachment leaveSession:self.sessionID];
-    
+
 	[super viewWillDisappear:animated];
 }
 

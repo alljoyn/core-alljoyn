@@ -5,7 +5,7 @@ AllJoyn Java Samples for Android README
 This directory contains the following set of AllJoyn usage samples:
 
 
-simple -      This sample shows how to connect to a local AllJoyn daemon in 
+simple -      This sample shows how to connect to a local AllJoyn daemon in
               order to publish an AllJoyn object that implements a very simple
               interface. The sample also shows how to connect to the local
               daemon in order to execute a method on the published object.

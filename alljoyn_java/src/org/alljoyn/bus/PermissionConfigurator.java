@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -75,7 +75,7 @@ public class PermissionConfigurator {
      public static final short CLAIM_CAPABILITY_CAPABLE_ECDHE_ECDSA = 0x04;
      public static final short CLAIM_CAPABILITY_CAPABLE_ECDHE_SPEKE = 0x08;
 
-    /** 
+    /**
      * Default ClaimCapabilities: NULL, PSK and SPEKE.
      */
     public static final short CLAIM_CAPABILITIES_DEFAULT = CLAIM_CAPABILITY_CAPABLE_ECDHE_NULL | CLAIM_CAPABILITY_CAPABLE_ECDHE_PSK | CLAIM_CAPABILITY_CAPABLE_ECDHE_SPEKE;
@@ -311,7 +311,7 @@ public class PermissionConfigurator {
     /**
      * Retrieve the local app's identity certificate information.
      *
-     * @return CertificateId 
+     * @return CertificateId
      *
      * @throws BusException
      *    - #ER_CERTIFICATE_NOT_FOUND if no identity certificate is installed

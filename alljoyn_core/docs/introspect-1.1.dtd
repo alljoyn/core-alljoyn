@@ -27,7 +27,7 @@
 <!-- AKA "attribute" -->
 <!ELEMENT property (annotation)*>
 <!ATTLIST property name CDATA #REQUIRED>
-<!ATTLIST property type CDATA #REQUIRED> 
+<!ATTLIST property type CDATA #REQUIRED>
 <!ATTLIST property access (read|write|readwrite) #REQUIRED>
 
 <!ELEMENT annotation EMPTY>  <!-- Generic metadata -->

@@ -1,22 +1,22 @@
 /**
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -180,7 +180,7 @@ public class AuthListenerECDHETest extends TestCase {
             this.sendBackKeys = sendBackKeys;
             setMechanisms(authList);
             /*
-             * In this example, the pre shared secret is a hard coded string. 
+             * In this example, the pre shared secret is a hard coded string.
              * Pre-shared keys should be 128 bits long, and generated with a
              * cryptographically secure random number generator.
              */
@@ -263,14 +263,14 @@ public class AuthListenerECDHETest extends TestCase {
                             peerCertVerified = certPEM.equals(SERVER_ECC_X509_PEM);
                             if (!peerCertVerified) {
                                 System.out.println(getName() + ": verifying cert " + certPEM + " against server PEM " + SERVER_ECC_X509_PEM + " failed");
-                                
+
                             }
                         }
                         else {
                             peerCertVerified = certPEM.equals(CLIENT_ECC_X509_PEM);
                             if (!peerCertVerified) {
                                 System.out.println(getName() + ": verifying cert " + certPEM + " against client PEM " + CLIENT_ECC_X509_PEM + " failed");
-                                
+
                             }
                         }
                         System.out.println(getName() + ": verifying cert succeeds");
@@ -360,7 +360,7 @@ public class AuthListenerECDHETest extends TestCase {
         "HSUEDjAMBgorBgEEAYLefAEBMAwGA1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDRwAw\n" +
         "RAIgevLUXoJBgUr6nVepBHQiv85CGuxu00V4uoARbH6qu1wCIA54iDRh6wit1zbP\n" +
         "kqkBC015LjxucTf3Y7lNGhXuZRsL\n" +
-        "-----END CERTIFICATE-----\n" + 
+        "-----END CERTIFICATE-----\n" +
         "-----BEGIN CERTIFICATE-----\n" +
         "MIIBdTCCARugAwIBAgIJAJTFhmdwDWsvMAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n" +
         "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwODI0MjAxODQ1WhcNMjkw\n" +
@@ -392,7 +392,7 @@ public class AuthListenerECDHETest extends TestCase {
         "aFFhPrtFbwHn\n" +
         "-----END CERTIFICATE-----";
     }
-        
+
     class ServerECDHEKeyXListener extends ECDHEKeyXListener {
         public ServerECDHEKeyXListener(boolean sendBackKeys, String authList) {
             super(SERVER_MODE, sendBackKeys, authList);

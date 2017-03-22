@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -40,23 +40,23 @@ import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 
 public class Service {
-    static { 
+    static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final short CONTACT_PORT=42;
     private static SampleInterface myInterface;
 //    static private SignalInterface gSignalInterface;
-    
+
     static boolean mSessionEstablished = false;
     static int mSessionId;
     static String mJoinerName;
-    
+
     public static class SignalInterface implements SampleInterface, BusObject {
         public void buttonClicked(int id) throws BusException{/*No code needed here*/}
         public void playerPosition(int x, int y, int z) throws BusException{/*No code needed here*/}
     }
-        
+
     private static class MyBusListener extends BusListener {
         public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
             if ("com.my.well.known.name".equals(busName)) {
@@ -64,40 +64,40 @@ public class Service {
             }
         }
     }
-    
+
     public static void main(String[] args) {
-        
+
         BusAttachment mBus;
         mBus = new BusAttachment("AppName", BusAttachment.RemoteMessage.Receive);
-        
+
         Status status;
-        
+
         SignalInterface mySignalInterface = new SignalInterface();
-        
+
         status = mBus.registerBusObject(mySignalInterface, "/MyService/Path");
         if (status != Status.OK) {
             return;
         }
         System.out.println("BusAttachment.registerBusObject successful");
-        
+
         BusListener listener = new MyBusListener();
         mBus.registerBusListener(listener);
-        
+
         status = mBus.connect();
         if (status != Status.OK) {
             return;
         }
-        System.out.println("BusAttachment.connect successful on " + System.getProperty("org.alljoyn.bus.address"));        
-        
+        System.out.println("BusAttachment.connect successful on " + System.getProperty("org.alljoyn.bus.address"));
+
         Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
-        
+
         SessionOpts sessionOpts = new SessionOpts();
         sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
         sessionOpts.isMultipoint = false;
         sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
         sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
-        status = mBus.bindSessionPort(contactPort, sessionOpts, 
+        status = mBus.bindSessionPort(contactPort, sessionOpts,
                 new SessionPortListener() {
             public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
                 System.out.println("SessionPortListener.acceptSessionJoiner called");
@@ -118,14 +118,14 @@ public class Service {
             return;
         }
         System.out.println("BusAttachment.bindSessionPort successful");
-        
+
         int flags = 0; //do not use any request name flags
         status = mBus.requestName("com.my.well.known.name", flags);
         if (status != Status.OK) {
             return;
         }
         System.out.println("BusAttachment.request 'com.my.well.known.name' successful");
-        
+
         status = mBus.advertiseName("com.my.well.known.name", SessionOpts.TRANSPORT_ANY);
         if (status != Status.OK) {
             System.out.println("Status = " + status);
@@ -133,19 +133,19 @@ public class Service {
             return;
         }
         System.out.println("BusAttachment.advertiseName 'com.my.well.known.name' successful");
-        
+
         try {
         while (!mSessionEstablished) {
                 Thread.sleep(10);
         }
-        
+
         System.out.println(String.format("SignalEmitter sessionID = %d", mSessionId));
 
         SignalEmitter emitter = new SignalEmitter(mySignalInterface, mJoinerName, mSessionId, SignalEmitter.GlobalBroadcast.On);
 
         myInterface = emitter.getInterface(SampleInterface.class);
-         
-        
+
+
         while (true) {
             myInterface.buttonClicked(0);
             myInterface.playerPosition(100, 50, 45);
@@ -159,4 +159,4 @@ public class Service {
             System.out.println("Bus Exception: " + ex.toString());
         }
     }
-}
+}

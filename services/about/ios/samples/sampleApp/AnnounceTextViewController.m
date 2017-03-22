@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -40,7 +40,7 @@
 - (NSString *)objectDescriptionsToString:(NSMutableDictionary *)qnsObjectDesc
 {
 	NSMutableString *qnsObjectDescContent = [[NSMutableString alloc] init];
-    
+
 	for (NSString *key in qnsObjectDesc.allKeys) {
 		//  iterate over the NSMutableDictionary
 		//  path: <key>
@@ -53,43 +53,43 @@
 		}
 		[qnsObjectDescContent appendString:[NSString stringWithFormat:@"\n\n"]];
 	}
-    
+
 	return (qnsObjectDescContent);
 } //  parseObjectDescriptions
 
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
-    
+
 	//  retrive AJNAnnouncement by the  announcementButtonCurrentTitle unique name
 	NSString *txt = [[NSString alloc] init];
-    
+
 	//  set title
 	NSString *title = [self.ajnAnnouncement busName];
-    
+
 	txt = [txt stringByAppendingFormat:@"%@\n%@\n", title, [@"" stringByPaddingToLength :[title length] + 10 withString : @"-" startingAtIndex : 0]];
-    
+
 	//  set body
 	txt = [txt stringByAppendingFormat:@"BusName: %@\n", [self.ajnAnnouncement busName]];
-    
+
 	txt = [txt stringByAppendingFormat:@"Port: %hu\n", [self.ajnAnnouncement port]];
-    
+
     txt = [txt stringByAppendingFormat:@"Version: %u\n", [self.ajnAnnouncement version]];
-    
+
 	txt = [txt stringByAppendingString:@"\n\n"];
-    
+
 	//  set AboutMap info
 	txt = [txt stringByAppendingFormat:@"About map:\n"];
-    
+
 	txt = [txt stringByAppendingString:[AJNAboutDataConverter aboutDataDictionaryToString:([self.ajnAnnouncement aboutData])]];
-    
+
 	txt = [txt stringByAppendingString:@"\n\n"];
-    
+
 	//  set ObjectDesc info
 	txt = [txt stringByAppendingFormat:@"Bus Object Description:\n"];
-    
+
 	txt = [txt stringByAppendingString:[self objectDescriptionsToString:[self.ajnAnnouncement objectDescriptions]]];
-    
+
 	self.announceInformation.text = txt;
 }
 

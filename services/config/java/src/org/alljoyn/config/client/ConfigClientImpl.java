@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -42,11 +42,11 @@ import org.alljoyn.services.common.utils.TransportUtil;
 
 /**
  * A default implementation of the ConfigClient interface
- */ 
+ */
 public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient
 {
 	public final static String TAG = ConfigClientImpl.class.getName();
-	
+
 	public ConfigClientImpl(String deviceName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
 	{
 		super(deviceName, bus, serviceAvailabilityListener, ConfigTransport.OBJ_PATH, ConfigTransport.class, port);
@@ -93,7 +93,7 @@ public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient
 	public void restart() throws BusException
 	{
 		ProxyBusObject proxyObj = getProxyObject();
-		// We make calls to the methods of the AllJoyn object through one of its interfaces. 
+		// We make calls to the methods of the AllJoyn object through one of its interfaces.
 		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
 		configTransport.Restart();
 	}
@@ -109,11 +109,11 @@ public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient
 
 	@Override
 	public void ResetConfigurations(String language, String[] fieldsToRemove)throws BusException {
-		
+
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
 		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
 		configTransport.ResetConfigurations(language, fieldsToRemove);
-		
+
 	}
 }

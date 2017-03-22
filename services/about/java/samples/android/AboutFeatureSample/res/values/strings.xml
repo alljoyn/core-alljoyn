@@ -3,22 +3,22 @@
 
            Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
            Project (AJOSP) Contributors and others.
-           
+
            SPDX-License-Identifier: Apache-2.0
-           
+
            All rights reserved. This program and the accompanying materials are
            made available under the terms of the Apache License, Version 2.0
            which accompanies this distribution, and is available at
            http://www.apache.org/licenses/LICENSE-2.0
-           
+
            Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
            Alliance. All rights reserved.
-           
+
            Permission to use, copy, modify, and/or distribute this software for
            any purpose with or without fee is hereby granted, provided that the
            above copyright notice and this permission notice appear in all
            copies.
-           
+
            THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
            WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
            WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -33,7 +33,7 @@
     <!-- General -->
     <string name="app_name">About Client</string>
     <string name="current_network">Current network: %s</string>
-    
+
     <!-- Scan Wifi Activity -->
 	<string name="Scan_WIFI_networks">Scan WIFI networks</string>
 	<string name="scan_wifi_text">Choose network to connect</string>
@@ -43,7 +43,7 @@
     <string name="failed_to_connect_to_wifi_title">Failed to connect</string>
     <string name="failed_to_connect_to_wifi_message">"Failed to connect to %s. Please try to refresh your list, or enter another password and try again"</string>
 	<string name="wifi_activity_scanning">Scanning&#8230;</string>
-    
+
 	<!-- Announced Names Activity -->
 	<string name="AllJoynConnect">Connect to AllJoyn</string>
 	<string name="AllJoynDisconnect">Disconnect from AllJoyn</string>
@@ -55,28 +55,28 @@
 	<string name="bus_path_label">Path:&#160;</string>
 	<string name="bus_interfaces_label">Interfaces:&#160;</string>
 	<string name="menu_about_set_language">Set about language</string>
-	
+
 	<!-- Icon -->
 	<string name="icon_mime_type_label">Mime type:&#160;</string>
 	<string name="icon_size_label">Size:&#160;</string>
 	<string name="icon_url_label">Url:&#160;</string>
 	<string name="device_icon">Device icon</string>
-	
+
 	<!-- Password -->
 	<string name="enterDevicePassword">Enter device password</string>
 	<string name="showPassword">Show password</string>
-	
+
 	<!-- Main menu -->
 	<string name="context_menu_announce">Show announce</string>
 	<string name="context_menu_about">About</string>
 	<string name="context_menu_icon">Icon</string>
-		
+
 	<string name="version">Version:&#160;</string>
 	<string name="menu_refresh">Refresh</string>
-	
+
 	<!-- Language popup -->
 	<string name="enter_language">language</string>
 	<string name="supported_languages">supported languages:&#160;</string>
 	<string name="device_list_item_click_toast">Press long for a menu</string>
-							 
+
 </resources>

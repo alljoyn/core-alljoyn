@@ -50,10 +50,10 @@
             <!-- There can be either only one 'ALL' peer and no other or at most one 'ANY_TRUSTED' peer plus any number of other peers. -->
             <xs:assert test="((count(peer[type[text() = 'ALL']]) = 1) and (count(peer) = 1))
                           or ((count(peer[type[text() = 'ALL']]) = 0) and (count(peer[type[text() = 'ANY_TRUSTED']]) = 1))"/>
-            
+
             <!-- Checking for unique 'WITH_PUBLIC_KEY' elements. XPath 'distinct-values' didn't work and 'xs:unique' doesn't support XPath predicates (e.g. peer[type...]). -->
             <xs:assert test="not(peer[type[text() = 'WITH_PUBLIC_KEY'] and publicKey = preceding-sibling::peer[type[text() = 'WITH_PUBLIC_KEY']]/publicKey])"/>
-            
+
             <!-- Similarly for 'FROM_CERTIFICATE_AUTHORITY'. -->
             <xs:assert test="not(peer[type[text() = 'FROM_CERTIFICATE_AUTHORITY'] and publicKey = preceding-sibling::peer[type[text() = 'FROM_CERTIFICATE_AUTHORITY']]/publicKey])"/>
         </xs:complexType>
@@ -71,8 +71,8 @@
                 <xs:element ref="publicKey" minOccurs="0"/>
                 <xs:element ref="sgID" minOccurs="0"/>
             </xs:sequence>
-            <!-- 'ALL' and 'ANY_TRUSTED' peers have only 'type' elements. 
-                 'FROM_CERTIFICATE_AUTHORITY' and 'WITH_PUBLIC_KEY' have an additional 'publicKey' element. 
+            <!-- 'ALL' and 'ANY_TRUSTED' peers have only 'type' elements.
+                 'FROM_CERTIFICATE_AUTHORITY' and 'WITH_PUBLIC_KEY' have an additional 'publicKey' element.
                  'WITH_MEMBERSHIP' have both 'publicKey' and 'sgID' elements. -->
             <xs:assert test="(((type = 'ALL') or (type = 'ANY_TRUSTED')) and not(publicKey) and not(sgID))
                           or (((type = 'FROM_CERTIFICATE_AUTHORITY') or (type = 'WITH_PUBLIC_KEY')) and publicKey and not(sgID))
@@ -107,7 +107,7 @@
             </xs:restriction>
         </xs:simpleType>
     </xs:element>
-    
+
     <xs:element name="rules">
         <xs:complexType>
             <xs:sequence maxOccurs="unbounded">
