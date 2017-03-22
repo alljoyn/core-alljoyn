@@ -4,11 +4,11 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-	<ListView android:id="@+id/ListView" 
-		android:layout_width="fill_parent" 
+	<ListView android:id="@+id/ListView"
+		android:layout_width="fill_parent"
 		android:layout_height="fill_parent"
 		android:stackFromBottom="false"
 		android:transcriptMode="alwaysScroll"
-		android:layout_weight="1.0" 
+		android:layout_weight="1.0"
 		/>
 </LinearLayout>

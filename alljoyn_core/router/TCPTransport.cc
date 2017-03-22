@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <algorithm>
 #include <qcc/platform.h>
@@ -479,11 +479,10 @@ class _TCPEndpoint : public _RemoteEndpoint {
     _TCPEndpoint(TCPTransport* transport,
                  BusAttachment& bus,
                  bool incoming,
-                 const qcc::String connectSpec,
                  qcc::SocketFd sock,
                  const qcc::IPAddress& ipAddr,
                  uint16_t port) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, "tcp"),
+        _RemoteEndpoint(bus, incoming, &m_stream, "tcp"),
         m_transport(transport),
         m_sideState(SIDE_INITIALIZED),
         m_authState(AUTH_INITIALIZED),
@@ -497,10 +496,10 @@ class _TCPEndpoint : public _RemoteEndpoint {
     _TCPEndpoint(TCPTransport* transport,
                  BusAttachment& bus,
                  bool incoming,
-                 const qcc::String connectSpec,  const AddressFamily family, const SocketType type,
+                 const AddressFamily family, const SocketType type,
                  const qcc::IPAddress& ipAddr,
                  uint16_t port) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, "tcp"),
+        _RemoteEndpoint(bus, incoming, &m_stream, "tcp"),
         m_transport(transport),
         m_sideState(SIDE_INITIALIZED),
         m_authState(AUTH_INITIALIZED),
@@ -1867,7 +1866,7 @@ void* TCPTransport::Run(void* arg)
                 if ((m_authList.size() < maxAuth) && (m_authList.size() + m_endpointList.size() < maxConn)) {
                     static const bool truthiness = true;
                     TCPTransport* ptr = this;
-                    TCPEndpoint conn(ptr, m_bus, truthiness, TCPTransport::TransportName, newSock, remoteAddr, remotePort);
+                    TCPEndpoint conn(ptr, m_bus, truthiness, newSock, remoteAddr, remotePort);
                     conn->SetPassive();
                     Timespec<MonotonicTime> tNow;
                     GetTimeNow(&tNow);
@@ -3125,7 +3124,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     AddressFamily family = QCC_AF_INET;
     SocketType type = QCC_SOCK_STREAM;
 
-    TCPEndpoint tcpEp = TCPEndpoint(ptr, m_bus, falsiness, normSpec, family, type, ipAddr, port);
+    TCPEndpoint tcpEp = TCPEndpoint(ptr, m_bus, falsiness, family, type, ipAddr, port);
     /*
      * Before starting the underlying transport mechanism, we need to create
      * a TCPEndpoint object that will orchestrate the movement of data

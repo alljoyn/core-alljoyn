@@ -5,22 +5,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -29,7 +29,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <qcc/platform.h>
 
 
@@ -99,14 +99,13 @@ class _RemoteEndpoint::Internal {
     } State;
     static const char* StateText[];
 
-    Internal(BusAttachment& bus, bool incoming, const qcc::String& connectSpec, Stream* stream, const char* threadName, bool isSocket) :
+    Internal(BusAttachment& bus, bool incoming, Stream* stream, const char* threadName, bool isSocket) :
         bus(bus),
         stream(stream),
         txQueue(),
         txWaitQueue(),
         lock(LOCK_LEVEL_REMOTEENDPOINT_INTERNAL_LOCK),
         listener(NULL),
-        connSpec(connectSpec),
         incoming(incoming),
         processId((uint32_t)-1),
         alljoynVersion(0),
@@ -145,7 +144,6 @@ class _RemoteEndpoint::Internal {
 
     EndpointListener* listener;              /**< Listener for thread exit and untrusted client start and exit notifications. */
 
-    qcc::String connSpec;                    /**< Connection specification for out-going connections */
     bool incoming;                           /**< Indicates if connection is incoming (true) or outgoing (false) */
 
     Features features;                       /**< Requested and negotiated features of this endpoint */
@@ -263,22 +261,6 @@ qcc::Stream& _RemoteEndpoint::GetStream()
     }
 }
 
-const qcc::String& _RemoteEndpoint::GetConnectSpec() const
-{
-    if (internal) {
-        return internal->connSpec;
-    } else {
-        return String::Empty;
-    }
-}
-
-void _RemoteEndpoint::SetConnectSpec(const qcc::String& connSpec)
-{
-    if (internal) {
-        internal->connSpec = connSpec;
-    }
-}
-
 bool _RemoteEndpoint::IsIncomingConnection() const
 {
     if (internal) {
@@ -346,14 +328,13 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t& idleTimeout)
 /* Endpoint constructor */
 _RemoteEndpoint::_RemoteEndpoint(BusAttachment& bus,
                                  bool incoming,
-                                 const qcc::String& connectSpec,
                                  Stream* stream,
                                  const char* threadName,
                                  bool isSocket,
                                  bool minimal) :
     _BusEndpoint(ENDPOINT_TYPE_REMOTE), minimalEndpoint(minimal)
 {
-    internal = new Internal(bus, incoming, connectSpec, stream, threadName, isSocket);
+    internal = new Internal(bus, incoming, stream, threadName, isSocket);
 }
 
 _RemoteEndpoint::~_RemoteEndpoint()

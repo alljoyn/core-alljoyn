@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -62,7 +62,7 @@ public class Client extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final int MESSAGE_PING = 1;
     private static final int MESSAGE_PING_REPLY = 2;
     private static final int MESSAGE_POST_TOAST = 3;
@@ -75,12 +75,12 @@ public class Client extends Activity {
     private ArrayAdapter<String> mListViewArrayAdapter;
     private ListView mListView;
     private Menu menu;
-    
+
     /* Handler used to make calls to AllJoyn methods. See onCreate(). */
     private BusHandler mBusHandler;
-    
+
     private ProgressDialog mDialog;
-    
+
     private Handler mHandler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -98,9 +98,9 @@ public class Client extends Activity {
                 	Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
                 	break;
                 case MESSAGE_START_PROGRESS_DIALOG:
-                    mDialog = ProgressDialog.show(Client.this, 
-                                                  "", 
-                                                  "Finding Basic Service.\nPlease wait...", 
+                    mDialog = ProgressDialog.show(Client.this,
+                                                  "",
+                                                  "Finding Basic Service.\nPlease wait...",
                                                   true,
                                                   true);
                     break;
@@ -128,7 +128,7 @@ public class Client extends Activity {
                     if (actionId == EditorInfo.IME_NULL
                         && event.getAction() == KeyEvent.ACTION_UP) {
                         /* Call the remote object's cat method. */
-                        Message msg = mBusHandler.obtainMessage(BusHandler.CAT, 
+                        Message msg = mBusHandler.obtainMessage(BusHandler.CAT,
                                                                 view.getText().toString());
                         mBusHandler.sendMessage(msg);
                     }
@@ -145,7 +145,7 @@ public class Client extends Activity {
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -153,7 +153,7 @@ public class Client extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 	    // Handle item selection
@@ -169,13 +169,13 @@ public class Client extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         /* Disconnect to prevent resource leaks. */
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
-    
+
     /* This class will handle all AllJoyn calls. See onCreate(). */
-    class BusHandler extends Handler {    	
+    class BusHandler extends Handler {
         /*
          * Name used as the well-known name and the advertised name of the service this client is
          * interested in.  This name must be a unique name both to the bus and to the network as a
@@ -189,12 +189,12 @@ public class Client extends Activity {
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private BasicInterface mBasicInterface;
-        
+
         private int 	mSessionId;
         private boolean mIsInASession;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
-        
+
         /* These are the messages sent to the BusHandler from the UI. */
         public static final int CONNECT = 1;
         public static final int JOIN_SESSION = 2;
@@ -203,7 +203,7 @@ public class Client extends Activity {
 
         public BusHandler(Looper looper) {
             super(looper);
-            
+
             mIsInASession = false;
             mIsConnected = false;
             mIsStoppingDiscovery = false;
@@ -226,7 +226,7 @@ public class Client extends Activity {
                  * between devices.
                  */
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 /*
                  * Create a bus listener class
                  */
@@ -236,11 +236,11 @@ public class Client extends Activity {
                     	logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
                     	/*
                     	 * This client will only join the first service that it sees advertising
-                    	 * the indicated well-known name.  If the program is already a member of 
-                    	 * a session (i.e. connected to a service) we will not attempt to join 
+                    	 * the indicated well-known name.  If the program is already a member of
+                    	 * a session (i.e. connected to a service) we will not attempt to join
                     	 * another session.
-                    	 * It is possible to join multiple session however joining multiple 
-                    	 * sessions is not shown in this sample. 
+                    	 * It is possible to join multiple session however joining multiple
+                    	 * sessions is not shown in this sample.
                     	 */
                     	if(!mIsConnected) {
                     	    Message msg = obtainMessage(JOIN_SESSION);
@@ -281,12 +281,12 @@ public class Client extends Activity {
                 if (mIsStoppingDiscovery) {
                     break;
                 }
-                
+
                 /*
                  * In order to join the session, we need to provide the well-known
                  * contact port.  This is pre-arranged between both sides as part
                  * of the definition of the chat service.  As a result of joining
-                 * the session, we get a session identifier which we must use to 
+                 * the session, we get a session identifier which we must use to
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
@@ -294,7 +294,7 @@ public class Client extends Activity {
                 SessionOpts sessionOpts = new SessionOpts();
                 sessionOpts.transports = (short)msg.arg1;
                 Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-                
+
                 Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener() {
                     @Override
                     public void sessionLost(int sessionId, int reason) {
@@ -304,30 +304,30 @@ public class Client extends Activity {
                     }
                 });
                 logStatus("BusAttachment.joinSession() - sessionId: " + sessionId.value, status);
-                    
+
                 if (status == Status.OK) {
                 	/*
-                     * To communicate with an AllJoyn object, we create a ProxyBusObject.  
+                     * To communicate with an AllJoyn object, we create a ProxyBusObject.
                      * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
-                     * 
+                     *
                      * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
                      * "/sample", uses sessionID of CONTACT_PORT, and implements the BasicInterface.
                      */
-                	mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME, 
+                	mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
                 										"/sample",
                 										sessionId.value,
                 										new Class<?>[] { BasicInterface.class });
 
                 	/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
                 	mBasicInterface =  mProxyObj.getInterface(BasicInterface.class);
-                	
+
                 	mSessionId = sessionId.value;
                 	mIsConnected = true;
                 	mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
                 }
                 break;
             }
-            
+
             /* Release all resources acquired in the connect. */
             case DISCONNECT: {
             	mIsStoppingDiscovery = true;
@@ -339,7 +339,7 @@ public class Client extends Activity {
                 getLooper().quit();
                 break;
             }
-            
+
             /*
              * Call the service's Cat method through the ProxyBusObject.
              *
@@ -362,7 +362,7 @@ public class Client extends Activity {
                 break;
             }
         }
-        
+
         /* Helper function to send a message to the UI thread. */
         private void sendUiMessage(int what, Object obj) {
             mHandler.sendMessage(mHandler.obtainMessage(what, obj));
@@ -386,11 +386,11 @@ public class Client extends Activity {
         mHandler.sendMessage(toastMsg);
         Log.e(TAG, log, ex);
     }
-    
+
     /*
      * print the status or result to the Android log. If the result is the expected
      * result only print it to the log.  Otherwise print it to the error log and
-     * Sent a Toast to the users screen. 
+     * Sent a Toast to the users screen.
      */
     private void logInfo(String msg) {
             Log.i(TAG, msg);

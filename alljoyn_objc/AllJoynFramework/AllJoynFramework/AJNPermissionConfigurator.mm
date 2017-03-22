@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -28,6 +28,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AJNPermissionConfigurator.h"
+#import "AJNBusAttachment.h"
+#import "alljoyn/BusAttachment.h"
+
+using namespace ajn;
 
 @interface AJNBusAttachment(Private)
 
@@ -299,5 +303,59 @@
     return status;
 }
 
+- (QStatus)getSigningPublicKey:(AJNKeyInfoNISTP256 **)keyInfo
+{
+    if (keyInfo == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    qcc::KeyInfoNISTP256 *qccKeyInfo = new qcc::KeyInfoNISTP256(); //object qccKeyInfo will be released in the AJNKeyInfoNISTP256 keyInfo dealloc method
+    QStatus status = self.permissionConfigurator->GetSigningPublicKey(*qccKeyInfo);
+
+    if (status == ER_OK) {
+        *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)qccKeyInfo];
+    }
+
+    return status;
+}
+
+- (QStatus)signCertificate:(AJNCertificateX509 *)cert
+{
+    if (cert == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    QStatus status = self.permissionConfigurator->SignCertificate(*cert.certificate);
+    return status;
+}
+
+- (QStatus)computeThumbprintAndSignManifestXml:(AJNCertificateX509 *)cert manifestXml:(NSString **)manifestXml
+{
+    if (cert == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    std::string manifest([*manifestXml UTF8String]);
+    QStatus status = self.permissionConfigurator->ComputeThumbprintAndSignManifestXml(*cert.certificate, manifest);
+    *manifestXml = [NSString stringWithUTF8String:manifest.c_str()];
+
+    return status;
+}
+
+- (QStatus)getConnectedPeerPublicKeyForUid:(AJNGUID128 *)guid publicKey:(AJNECCPublicKey **)publicKey
+{
+    if (guid == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    qcc::ECCPublicKey *qccPublicKey = new qcc::ECCPublicKey(); //object qccPublicKey will be released in the AJNECCPublicKey publicKey dealloc method
+    QStatus status = self.permissionConfigurator->GetConnectedPeerPublicKey(*guid.guid128, qccPublicKey);
+
+    if (status == ER_OK) {
+        *publicKey = [[AJNECCPublicKey alloc] initWithHandle:(AJNHandle)qccPublicKey];
+    }
+
+    return status;
+}
 
 @end

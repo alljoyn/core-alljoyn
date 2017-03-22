@@ -8,22 +8,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -32,7 +32,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <qcc/platform.h>
 
 #include <list>
@@ -80,7 +80,7 @@ static const uint32_t LOCAL_ENDPOINT_MAXALARMS = 10;
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
     Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) :
-        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, LOCAL_ENDPOINT_MAXALARMS),
+        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, LOCAL_ENDPOINT_MAXALARMS, true),
         AlarmListener(), endpoint(endpoint), pendingWork(),
         needDeferredCallbacks(false), needObserverWork(false),
         needCachedPropertyReplyWork(false),
@@ -220,9 +220,9 @@ class _LocalEndpoint::CachedGetPropertyReplyContext {
 
 };
 
-_LocalEndpoint::_LocalEndpoint(BusAttachment& bus, uint32_t concurrency) :
+_LocalEndpoint::_LocalEndpoint(BusAttachment& bus) :
     _BusEndpoint(ENDPOINT_TYPE_LOCAL),
-    dispatcher(new Dispatcher(this, concurrency)),
+    dispatcher(new Dispatcher(this)),
     running(false),
     isRegistered(false),
     bus(&bus),

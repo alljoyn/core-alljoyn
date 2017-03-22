@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/Log.h>
@@ -84,9 +84,12 @@ const char* InterfaceName = "org.alljoyn.alljoyn_test.values";
 /** static interrupt flag */
 static volatile sig_atomic_t g_interrupt = false;
 
+class MyAuthListener;
+
 /** Static data */
-static BusAttachment* g_msgBus = NULL;
-static Event* g_discoverEvent = NULL;
+static BusAttachment* g_msgBus = nullptr;
+static Event* g_discoverEvent = nullptr;
+static MyAuthListener* g_myAuthListener = nullptr;
 static String g_remoteBusName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static TransportMask allowedTransports = TRANSPORT_ANY;
 static uint32_t findStartTime = 0;
@@ -98,7 +101,7 @@ static String g_testAboutApplicationName = "bbservice";
 static bool g_useAboutFeatureDiscovery = false;
 static string g_customRouterConfig;
 
-static const char* g_alternatePSK = NULL;
+static const char* g_alternatePSK = nullptr;
 static const char* g_defaultPSK = "faaa0af3dd3f1e0379da046a3ab6ca44";
 
 /** AllJoynListener receives discovery events from AllJoyn */
@@ -192,7 +195,7 @@ class MyAboutListener : public AboutListener {
         char* appName;
         ad.GetAppName(&appName);
 
-        if (appName != NULL && strcmp(g_testAboutApplicationName.c_str(), appName) == 0) {
+        if ((appName != nullptr) && (g_testAboutApplicationName == appName)) {
             findEndTime = GetTimestamp();
 
             g_remoteBusName = busName;
@@ -376,7 +379,7 @@ class MyAuthListener : public AuthListener {
              * this is used instead of the default PSK.
              */
             const char* csPSK;
-            if (NULL != g_alternatePSK) {
+            if (nullptr != g_alternatePSK) {
                 csPSK = g_alternatePSK;
             } else {
                 csPSK = g_defaultPSK;
@@ -464,7 +467,7 @@ int CDECL_CALL main(int argc, char** argv)
     qcc::String authMechs;
     qcc::String pbusConnect;
     qcc::String userId;
-    const char* keyStore = NULL;
+    const char* keyStore = nullptr;
     unsigned long pingCount = 1;
     unsigned long repCount = 1;
     unsigned long authCount = 1000;
@@ -720,17 +723,18 @@ int CDECL_CALL main(int argc, char** argv)
         }
 
         /* Create message bus */
+        g_myAuthListener = new MyAuthListener(userId, authCount);
         g_msgBus = new BusAttachment("bbclient", true);
 
         if (!useIntrospection) {
             /* Add org.alljoyn.alljoyn_test interface */
-            InterfaceDescription* testIntf = NULL;
+            InterfaceDescription* testIntf = nullptr;
             status = g_msgBus->CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf, secPolicy);
             if ((ER_OK == status) && testIntf) {
-                testIntf->AddSignal("my_signal", NULL, NULL, 0);
+                testIntf->AddSignal("my_signal", nullptr, nullptr, 0);
                 testIntf->AddMethod("my_ping", "s", "s", "outStr,inStr", 0);
                 testIntf->AddMethod("delayed_ping", "su", "s", "outStr,delay,inStr", 0);
-                testIntf->AddMethod("time_ping", "uq", "uq", NULL, 0);
+                testIntf->AddMethod("time_ping", "uq", "uq", nullptr, 0);
                 testIntf->Activate();
             } else {
                 if (ER_OK == status) {
@@ -741,7 +745,7 @@ int CDECL_CALL main(int argc, char** argv)
 
             if (ER_OK == status) {
                 /* Add org.alljoyn.alljoyn_test.values interface */
-                InterfaceDescription* valuesIntf = NULL;
+                InterfaceDescription* valuesIntf = nullptr;
                 status = g_msgBus->CreateInterface(::org::alljoyn::alljoyn_test::values::InterfaceName, valuesIntf, secPolicy);
                 if ((ER_OK == status) && valuesIntf) {
                     valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);
@@ -768,7 +772,7 @@ int CDECL_CALL main(int argc, char** argv)
             status = g_msgBus->Start();
             if (ER_OK == status) {
                 if (secPolicy != AJ_IFC_SECURITY_INHERIT) {
-                    g_msgBus->EnablePeerSecurity(authMechs.c_str(), new MyAuthListener(userId, authCount), keyStore, keyStore != NULL);
+                    g_msgBus->EnablePeerSecurity(authMechs.c_str(), g_myAuthListener, keyStore, true);
                     if (clearKeys) {
                         g_msgBus->ClearKeyStore();
                     }
@@ -915,9 +919,9 @@ int CDECL_CALL main(int argc, char** argv)
                 if ((remoteObj.IsSecure() || (secPolicy == AJ_IFC_SECURITY_REQUIRED)) && !g_msgBus->IsPeerSecurityEnabled()) {
                     QCC_SyncPrintf("Enabling peer security\n");
                     g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON",
-                                                 new MyAuthListener(userId, authCount),
+                                                 g_myAuthListener,
                                                  keyStore,
-                                                 keyStore != NULL);
+                                                 true);
                 }
             }
 
@@ -934,7 +938,7 @@ int CDECL_CALL main(int argc, char** argv)
                 MsgArg pingArgs[2];
                 const InterfaceDescription::Member* pingMethod;
                 const InterfaceDescription* ifc = remoteObj.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-                if (ifc == NULL) {
+                if (ifc == nullptr) {
                     status = ER_BUS_NO_SUCH_INTERFACE;
                     QCC_SyncPrintf("Unable to Get InterfaceDecription for the %s interface\n",
                                    ::org::alljoyn::alljoyn_test::InterfaceName);
@@ -1065,13 +1069,16 @@ int CDECL_CALL main(int argc, char** argv)
 
         /* Deallocate bus */
         delete g_msgBus;
-        g_msgBus = NULL;
+        g_msgBus = nullptr;
+
+        delete g_myAuthListener;
+        g_myAuthListener = nullptr;
 
         delete g_busListener;
-        g_busListener = NULL;
+        g_busListener = nullptr;
 
         delete g_aboutListener;
-        g_aboutListener = NULL;
+        g_aboutListener = nullptr;
 
         if (status != ER_OK) {
             break;

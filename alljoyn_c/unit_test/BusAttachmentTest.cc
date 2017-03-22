@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <gtest/gtest.h>
 #include <time.h>
 #include <alljoyn_c/ApplicationStateListener.h>
@@ -383,31 +383,6 @@ TEST(BusAttachmentTest, isstarted_isstopping) {
     status = alljoyn_busattachment_join(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_EQ(QCC_FALSE, alljoyn_busattachment_isstarted(bus));
-    alljoyn_busattachment_destroy(bus);
-}
-
-TEST(BusAttachmentTest, getconcurrency) {
-    alljoyn_busattachment bus = NULL;
-    unsigned int concurrency = (unsigned int)-1;
-    bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
-
-    concurrency = alljoyn_busattachment_getconcurrency(bus);
-    //The default value for getconcurrency is 4
-    EXPECT_EQ(4u, concurrency) << "  Expected a concurrency of 4 got " << concurrency;
-
-    alljoyn_busattachment_destroy(bus);
-
-    bus = NULL;
-    concurrency = (unsigned int)-1;
-
-    bus = alljoyn_busattachment_create_concurrency(s_busAttachmentTestName, QCC_TRUE, 8);
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
-
-    concurrency = alljoyn_busattachment_getconcurrency(bus);
-    //The default value for getconcurrency is 8
-    EXPECT_EQ(8u, concurrency) << "  Expected a concurrency of 8 got " << concurrency;
-
     alljoyn_busattachment_destroy(bus);
 }
 

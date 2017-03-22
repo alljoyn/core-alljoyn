@@ -5,22 +5,22 @@ Rem @brief  Make the .cab file for Win7 installation.
 Rem ****************************************************************************
 Rem     Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 Rem     Project (AJOSP) Contributors and others.
-Rem     
+Rem
 Rem     SPDX-License-Identifier: Apache-2.0
-Rem     
+Rem
 Rem     All rights reserved. This program and the accompanying materials are
 Rem     made available under the terms of the Apache License, Version 2.0
 Rem     which accompanies this distribution, and is available at
 Rem     http://www.apache.org/licenses/LICENSE-2.0
-Rem     
+Rem
 Rem     Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 Rem     Alliance. All rights reserved.
-Rem     
+Rem
 Rem     Permission to use, copy, modify, and/or distribute this software for
 Rem     any purpose with or without fee is hereby granted, provided that the
 Rem     above copyright notice and this permission notice appear in all
 Rem     copies.
-Rem     
+Rem
 Rem     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 Rem     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 Rem     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -31,7 +31,7 @@ Rem     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 Rem     PERFORMANCE OF THIS SOFTWARE.
 Rem ****************************************************************************
 
-setlocal ENABLEDELAYEDEXPANSION 
+setlocal ENABLEDELAYEDEXPANSION
 
 Rem The first argument to this script is the directory to work out of.
 cd %1
@@ -69,7 +69,7 @@ for /R %BUILD_SRC%\x86_64 %%f in (*) do (
         )
 )
 
-makecab /f %DDF_FILE% 
+makecab /f %DDF_FILE%
 if ERRORLEVEL 1 goto MakeCabFail
 
 Rem ******************************************************
@@ -154,7 +154,7 @@ Exit /B 1
 :FoundProc
 
 Rem At this point:
-Rem %1 is x86 or x86_64, 
+Rem %1 is x86 or x86_64,
 Rem %2 is debug or release,
 Rem %3 is dist.
 Rem %4... is the rest of the path and file name.
@@ -187,7 +187,7 @@ shift
 if "%1" NEQ "" set DEST_FILE=%DEST_FILE%\%1
 shift
 
-Rem echo "%SRC_FILE%" "%DEST_FILE%" 
+Rem echo "%SRC_FILE%" "%DEST_FILE%"
 echo "%SRC_FILE%" "%DEST_FILE%">> %DDF_FILE%
 
 Exit /B 0

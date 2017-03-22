@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #ifndef _ALLJOYN_REMOTEENDPOINT_H
 #define _ALLJOYN_REMOTEENDPOINT_H
 
@@ -153,14 +153,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      *
      * @param[in] bus            Message bus associated with transport.
      * @param[in] incoming       true iff this is an incoming connection.
-     * @param[in] connectSpec    AllJoyn connection specification for this endpoint.
      * @param[in] stream         Socket Stream used to communicate with media.
      * @param[in] type           Base name for thread.
      * @param[in] isSocket       true iff stream is actually a socketStream.
      */
     _RemoteEndpoint(BusAttachment& bus,
                     bool incoming,
-                    const qcc::String& connectSpec,
                     qcc::Stream* stream,
                     const char* type = "endpoint",
                     bool isSocket = true, bool minimal = false);
@@ -343,20 +341,6 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[in] remoteGUID GUID of the remote side of a bus-to-bus endpoint.
      */
     void SetRemoteGUID(const qcc::GUID128& remoteGUID);
-
-    /**
-     * Get the connect spec for this endpoint.
-     *
-     * @return The connect spec string (may be empty).
-     */
-    const qcc::String& GetConnectSpec() const;
-
-    /**
-     * Set the connect spec for this endpoint.
-     *
-     * @param[in] connSpec The connect spec string.
-     */
-    void SetConnectSpec(const qcc::String& connSpec);
 
     /**
      * Indicate whether this endpoint can receive messages from other devices.

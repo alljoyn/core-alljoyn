@@ -5,22 +5,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -29,7 +29,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #ifndef _ALLJOYN_SECURITYAPPLICATIONPROXY_H
 #define _ALLJOYN_SECURITYAPPLICATIONPROXY_H
@@ -122,6 +122,19 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetEccPublicKey(qcc::ECCPublicKey& eccPublicKey);
+
+    /**
+     * The manufacturer certificate chain. The leaf cert is listed first. The signing
+     * certs follow.  This chain is installed by the manufacturer at production time.
+     * If no manufacturer certificate is available then this is an empty array.
+     *
+     * @param[out] certificateVector The manufacturer certificate chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetManufacturerCertificate(std::vector<qcc::CertificateX509>& certificateVector);
 
     /**
      * The manufacturer certificate chain. The leaf cert is listed first. The signing
@@ -362,7 +375,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainCount,
-                           const Manifest* manifest, size_t manifestCount);
+                           const Manifest* manifests, size_t manifestCount);
 
     /**
      * This method allows an admin to update the application's identity certificate
@@ -438,7 +451,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *
      * @see ProxyBusObject.SecureConnection(bool)
      *
-     * @param[in] policy    The new policy in XML format. For the policy XSD refer to
+     * @param[in] policyXml    The new policy in XML format. For the policy XSD refer to
      *                      alljoyn_core/docs/policy.xsd.
      *
      * @return
@@ -475,7 +488,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * @param[in] certificateChain      The membership certificate chain. It can be a
      *                                  single certificate if it is issued by the security
      *                                  group authority.
-     * @param[in] certificateChainCount The number of certificates in the certificate chain.
+     * @param[in] certificateChainSize The number of certificates in the certificate chain.
      *
      * @return
      *  - #ER_OK if successful
@@ -528,9 +541,20 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetManagedApplicationVersion(uint16_t& version);
 
     /**
-     * Get the identify certificate chain.
+     * Get the identity certificate chain.
      *
-     * @param[out] identityCertificate the identify certificate chain.
+     * @param[out] certificateVector identity certificate chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetIdentity(std::vector<qcc::CertificateX509>& certificateVector);
+
+    /**
+     * Get the identity certificate chain.
+     *
+     * @param[out] identityCertificate the identity certificate chain.
      *
      * @return
      *  - #ER_OK if successful
@@ -541,7 +565,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
     /**
      * Get the manifests
      *
-     * @param[out] manifests the manifest
+     * @param[out] manifest the manifest
      *
      * @return
      *  - #ER_OK if successful
@@ -595,6 +619,21 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetDefaultPolicy(PermissionPolicy& defaultPolicy);
 
     /**
+     * Get the list of serial numbers and issuers of the currently installed membership
+     * certificates. If the issuer's public key is not available in the case
+     * where the membership is a single cert, the issuer public key field is
+     * empty.
+     *
+     * @param[out] serialsVector    The container for membership serial numbers
+     * @param[out] keyInfosVector   The container for membership KeyInfo
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipSummaries(std::vector<qcc::String>& serialsVector, std::vector<qcc::KeyInfoNISTP256>& keyInfosVector);
+
+    /**
      * The list of serial numbers and issuers of the currently installed membership
      * certificates.  If the issuer's public key is not available in the case
      * where the membership is a single cert, the issuer public key field is
@@ -607,6 +646,19 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetMembershipSummaries(MsgArg& membershipSummaries);
+
+    /**
+     * Retrieve the installed membership certificate chains from the remote peer
+     *
+     * @param[out] certificateChainsVector A 2D container for the membership certificate chains.
+     *             The first dimension represents certificate chains; the second dimension represents
+     *             certificates in that chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipCertificates(std::vector<std::vector<qcc::CertificateX509> >& certificateVector);
 
     /**
      * This method notifies the application about the fact that the Security Manager

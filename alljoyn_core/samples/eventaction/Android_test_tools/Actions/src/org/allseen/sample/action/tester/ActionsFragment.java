@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -49,15 +49,15 @@ import android.widget.ExpandableListView;
 import android.widget.TextView;
 
 public class ActionsFragment extends Fragment {
-	
+
 	private ExpandableListView actionDevices;
 	private static ExpandableAdapter actionAdapter;
-	
+
 	static private Vector<Description> mSelectedActions = new Vector<Description>();
-	
+
 	public Vector<Description> getSelectedActions() { return mSelectedActions; }
 	public void clearSelectedActions() { mSelectedActions.clear(); }
-	
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstance) {
 		View view = inflater.inflate(R.layout.action_fragment, container, false);
@@ -65,20 +65,20 @@ public class ActionsFragment extends Fragment {
 		if(actionAdapter == null)
 			actionAdapter = new ExpandableAdapter(getActivity());
 		actionDevices.setAdapter(actionAdapter);
-		
+
 		return view;
 	}
-	
+
 	public void addDevice(Device info) {
 		actionAdapter.add(info);
 		notifyChanged();
 	}
-	
+
 	public void removeDevice(int sessionId) {
 		actionAdapter.remove(sessionId);
 		notifyChanged();
 	}
-	
+
 	public void unsetAllChecks() {
 		for(int i = 0; i < actionAdapter.checkboxDirtyFlags.size(); i++) {
 			for(int j = 0; j < actionAdapter.checkboxDirtyFlags.elementAt(i).size(); j++) {
@@ -87,7 +87,7 @@ public class ActionsFragment extends Fragment {
 		}
 		notifyChanged();
 	}
-	
+
 	private void notifyChanged() {
 		getActivity().runOnUiThread(new Runnable() {
 			public void run() {
@@ -95,7 +95,7 @@ public class ActionsFragment extends Fragment {
 			}
 		});
 	}
-	
+
 	private class ExpandableAdapter extends BaseExpandableListAdapter {
 
 		private Vector<Vector<Boolean>> checkboxDirtyFlags = new Vector<Vector<Boolean>>();
@@ -105,7 +105,7 @@ public class ActionsFragment extends Fragment {
 		ExpandableAdapter(Context context) {
 			this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		}
-		
+
 		public void add(Device info) {
 			int loc = 0;
 			for(; loc < data.size(); loc++) {
@@ -123,7 +123,7 @@ public class ActionsFragment extends Fragment {
 			}
 			checkboxDirtyFlags.add(loc,dirtyFlags);
 		}
-		
+
 		public void remove(int sessionId) {
 			for(int i = 0; i < data.size(); i++) {
 				Device d = data.get(i);
@@ -143,7 +143,7 @@ public class ActionsFragment extends Fragment {
 		public long getChildId(int groupPosition, int childPosition) {
 			return childPosition;
 		}
-		
+
 		public void checkboxChanged(View v) {
 			CheckBox check = (CheckBox)v;
 			if(check.isChecked()) {
@@ -159,7 +159,7 @@ public class ActionsFragment extends Fragment {
 			if(convertView == null) {
 				convertView = inflater.inflate(R.layout.rule_action_item_actions, null);
 			}
-			{	
+			{
 				final Description eai = (Description)getChild(groupPosition, childPosition);
 				TextView tv = (TextView)convertView.findViewById(R.id.action_name);
 				tv.setText(eai.getDescription());
@@ -174,7 +174,7 @@ public class ActionsFragment extends Fragment {
 				});
 				check.setTag(eai);
 				check.setChecked(false);
-				
+
 				convertView.setOnLongClickListener(new OnLongClickListener() {
 					@Override
 	                public boolean onLongClick(View v) {
@@ -189,7 +189,7 @@ public class ActionsFragment extends Fragment {
 				    				"Sig: "+eai.getSignature()+"\n"
 						    		)
 						    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-						        public void onClick(DialogInterface dialog, int which) { 
+						        public void onClick(DialogInterface dialog, int which) {
 						        	dialog.dismiss();
 						        }
 						     })
@@ -238,7 +238,7 @@ public class ActionsFragment extends Fragment {
 			if(convertView == null) {
 				convertView = inflater.inflate(R.layout.action_item, null);
 			}
-			
+
 			TextView tv = (TextView)convertView.findViewById(R.id.device_name);
 			try{
 				Device info = (Device) getGroup(groupPosition);
@@ -246,7 +246,7 @@ public class ActionsFragment extends Fragment {
 			} catch(Exception e) {
 				tv.setText("Error, restart application");
 			}
-			
+
 			return convertView;
 		}
 

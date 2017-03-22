@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>  
+<resources>
     <string name="app_name">Secure Service</string>
 	<string name="one_time_password_dialog">Password</string>
 	<string name="create_passphrase_dialog">Create passphrase</string>

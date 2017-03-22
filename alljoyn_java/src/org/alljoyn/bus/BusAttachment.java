@@ -1,22 +1,22 @@
 /*
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -60,6 +60,7 @@ import org.alljoyn.bus.annotation.BusSignalHandler;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
 import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.SignalDef;
 
 /**
  * A connection to a message bus.
@@ -81,7 +82,6 @@ public class BusAttachment {
      */
     @Deprecated
     public native void emitChangedSignal(BusObject busObject, String ifcName, String propName, Object val, int sessionId);
-
 
     /**
      * Request a well-known name.
@@ -1294,7 +1294,7 @@ public class BusAttachment {
      * @param busObj the BusObject to register
      * @param objPath the object path of the BusObject
      * @return <ul>
-     *         <li>OK if succesful
+     *         <li>OK if successful
      *         <li>BUS_BAD_OBJ_PATH for a bad object path
      *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
      *         </ul>
@@ -1315,7 +1315,7 @@ public class BusAttachment {
      * @param objPath the object path of the BusObject
      * @param secure true if authentication is required to access this object
      * @return <ul>
-     *         <li>OK if succesful
+     *         <li>OK if successful
      *         <li>BUS_BAD_OBJ_PATH for a bad object path
      *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
      *         </ul>
@@ -1338,7 +1338,7 @@ public class BusAttachment {
      * @param languageTag a language tag describing the language of the description of this BusObject
      * @param description a textual description of this BusObject
      * @return <ul>
-     *         <li>OK if succesful
+     *         <li>OK if successful
      *         <li>BUS_BAD_OBJ_PATH for a bad object path
      *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
      *         </ul>
@@ -1361,7 +1361,7 @@ public class BusAttachment {
      * @param description a textual description of this BusObject
      * @param dt a Translator instance to translate descriptions of this object
      * @return <ul>
-     *         <li>OK if succesful
+     *         <li>OK if successful
      *         <li>BUS_BAD_OBJ_PATH for a bad object path
      *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
      *         </ul>
@@ -1528,7 +1528,7 @@ public class BusAttachment {
      * @param signalName the member name of the signal
      * @param obj the object receiving the signal
      * @param handlerMethod the signal handler method
-     * @return OK if the register is succesful
+     * @return OK if the register is successful
      */
     public Status registerSignalHandler(String ifaceName,
             String signalName,
@@ -1585,7 +1585,7 @@ public class BusAttachment {
     /**
      * Register a signal handler.
      *
-     * Signals are forwarded to the signalHandler if sender, interface, member and rule qualifiers are ALL met.
+     * Signals are forwarded to the signalHandler if interface, member and rule qualifiers are ALL met.
      *
      * @param ifaceName the interface name of the signal
      * @param signalName the member name of the signal
@@ -1594,11 +1594,9 @@ public class BusAttachment {
      * @param matchRule a filter rule.
      * @return OK if the register is successful
      */
-
     public Status registerSignalHandlerWithRule(String ifaceName, String signalName, Object obj, Method handlerMethod,
         String matchRule)
     {
-
         Status status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
         if (status == Status.BUS_NO_SUCH_INTERFACE) {
             try {
@@ -1634,7 +1632,7 @@ public class BusAttachment {
      *
      * @param obj object with methods annotated with as signal handlers
      * @return <ul>
-     *         <li>OK if the register is succesful
+     *         <li>OK if the register is successful
      *         <li>BUS_NO_SUCH_INTERFACE if the interface and signal
      *         specified in any {@code @BusSignalHandler} annotations
      *         of {@code obj} are unknown to this BusAttachment.  See
@@ -1686,6 +1684,137 @@ public class BusAttachment {
     }
 
     /**
+     * Registers a public signal handler method to receive a signal from all
+     * objects emitting it. Once registered, the handler method will receive
+     * the signal specified from all objects implementing the interface.
+     *
+     * @param ifaceDef the dynamic interface definition that describes the signal
+     * @param signalName the member name of the signal
+     * @param obj the object receiving the signal
+     * @param handlerMethod the signal handler method
+     * @return OK if the register is successful
+     */
+    public Status registerSignalHandler(InterfaceDef ifaceDef, String signalName,
+            Object obj, Method handlerMethod) {
+        return registerSignalHandler(ifaceDef, signalName, obj, handlerMethod, "");
+    }
+
+    /**
+     * Registers a public signal handler method to receive a signal from specific
+     * objects emitting it. Once registered, the handler method will receive
+     * the signal specified from objects implementing the interface.
+     *
+     * @param ifaceDef the dynamic interface definition that describes the signal
+     * @param signalName the member name of the signal
+     * @param obj the object receiving the signal
+     * @param handlerMethod the signal handler method
+     * @param source the object path of the emitter of the signal. Ignored if empty.
+     * @return OK if the register is successful
+     */
+    public Status registerSignalHandler(InterfaceDef ifaceDef, String signalName,
+            Object obj, Method handlerMethod, String source) {
+        Status status = registerNativeSignalHandlerWithSrcPath(
+            ifaceDef.getName(), signalName, obj, handlerMethod, source);
+        if (status == Status.BUS_NO_SUCH_INTERFACE) {
+            InterfaceDescription desc = new InterfaceDescription(null);
+            status = desc.create(this, ifaceDef);
+            if (status == Status.OK) {
+                status = registerNativeSignalHandlerWithSrcPath(
+                    ifaceDef.getName(), signalName, obj, handlerMethod, source);
+            }
+        }
+        return status;
+    }
+
+    /**
+     * Register a signal handler.
+     *
+     * Signals are forwarded to the signalHandler if interface, member
+     * and rule qualifiers are ALL met.
+     *
+     * @param ifaceDef the dynamic interface definition that describes the signal
+     * @param signalName the member name of the signal
+     * @param obj the object receiving the signal
+     * @param handlerMethod the signal handler method
+     * @param matchRule a filter rule.
+     * @return OK if the register is successful
+     */
+    public Status registerSignalHandlerWithRule(InterfaceDef ifaceDef, String signalName,
+            Object obj, Method handlerMethod, String matchRule) {
+        Status status = registerNativeSignalHandlerWithRule(
+            ifaceDef.getName(), signalName, obj, handlerMethod, matchRule);
+        if (status == Status.BUS_NO_SUCH_INTERFACE) {
+            InterfaceDescription desc = new InterfaceDescription(null);
+            status = desc.create(this, ifaceDef);
+            if (status == Status.OK) {
+                status = registerNativeSignalHandlerWithRule(ifaceDef.getName(), signalName, obj, handlerMethod, matchRule);
+            }
+        }
+        return status;
+    }
+
+    /**
+     * Registers public signal handler methods for the dynamic bus object provided.
+     * Handler methods will be determined based on the bus object's available
+     * signal definitions (SignalDefs) and the implementation of its dynamic
+     * getSignalHandler(intfName, signalName, signature) callback.
+     *
+     * Note: If a SignalDef's rule field is specified (not empty) then the
+     * rule will be used as a filter on invoking its signal handler. Otherwise,
+     * the SignalDef's source field will be used as a filter (allowed source
+     * path of emitters of the signal), however, the signal handler will accept
+     * all emitter paths if the given SignalDef's source is unspecified (empty).
+     *
+     * @param busObj the DynamicBusObject with signal handler methods to register
+     * @return <ul>
+     *         <li>OK if the register is successful
+     *         <li>BUS_NO_SUCH_INTERFACE if the interface and signal
+     *         specified in any {@code @SignalDef} definition
+     *         of {@code busObj} are unknown to this BusAttachment. See
+     *         {@link org.alljoyn.bus.DynamicBusObject}.getSignalHandler()
+     *         for a discussion of how to specify signal handlers.
+     *         </ul>
+     */
+    public Status registerSignalHandlers(DynamicBusObject busObj) {
+        Status status = Status.OK;
+        for (InterfaceDef ifaceDef : busObj.getInterfaces()) {
+            for (SignalDef signalDef : ifaceDef.getSignals()) {
+                Method m = busObj.getSignalHandler(ifaceDef.getName(), signalDef.getName(), signalDef.getSignature());
+                if (m == null) continue;
+
+                if (!signalDef.getRule().isEmpty()) {
+                    status = registerSignalHandlerWithRule(
+                        ifaceDef, signalDef.getName(), busObj, m, signalDef.getRule());
+                } else {
+                    status = registerSignalHandler(
+                        ifaceDef, signalDef.getName(), busObj, m, signalDef.getSource());
+                }
+
+                if (status != Status.OK) {
+                    return status;
+                }
+            }
+        }
+        return Status.OK;
+    }
+
+    /**
+     * Unregisters signal handler methods for the dynamic bus object provided.
+     *
+     * @param busObj the DynamicBusobject with signal handlers that have been registered.
+     */
+    public void unregisterSignalHandlers(DynamicBusObject busObj) {
+        for (InterfaceDef ifaceDef : busObj.getInterfaces()) {
+            for (SignalDef signalDef : ifaceDef.getSignals()) {
+                Method m = busObj.getSignalHandler(ifaceDef.getName(), signalDef.getName(), signalDef.getSignature());
+                if (m != null) {
+                    unregisterSignalHandler(busObj, m);
+                }
+            }
+        }
+    }
+
+    /**
      * Registers a user-defined key store listener to override the default key store.  This must be
      * called prior to {@link #connect()}.
      *
@@ -1727,7 +1856,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK if the expiration time was succesfully set</li>
+     * <li>OK if the expiration time was successfully set</li>
      * <li>UNKNOWN_GUID if there is no authenticated peer with the specified GUID</li>
      * </ul>
      */
@@ -1743,7 +1872,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK if the expiration time was succesfully set</li>
+     * <li>OK if the expiration time was successfully set</li>
      * <li>UNKNOWN_GUID if there is no authenticated peer with the specified GUID</li>
      * </ul>
      */
@@ -1757,7 +1886,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK if the key store was succesfully reloaded</li>
+     * <li>OK if the key store was successfully reloaded</li>
      * <li>An error status indicating that the key store reload failed</li>
      * </ul>
      */
@@ -2035,4 +2164,5 @@ public class BusAttachment {
      * executing by default.
      */
     private static final int DEFAULT_CONCURRENCY = 4;
+
 }

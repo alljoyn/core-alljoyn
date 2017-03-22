@@ -46,10 +46,10 @@ The following table summarizes the AllJoyn types.
 <tr><td>DICT_ENTRY</td><td>101, 123, 125</td><td>'e','{','}'</td><td>Entry in a dict or map (array of key-value pairs)</td></tr>
 </table>
 <p>
-Four of the types are <em>container</em> types: <tt>STRUCT, ARRAY, VARIANT,</tt> and <tt>DICT_ENTRY</tt>.  All other types are a common basic data types. 
+Four of the types are <em>container</em> types: <tt>STRUCT, ARRAY, VARIANT,</tt> and <tt>DICT_ENTRY</tt>.  All other types are a common basic data types.
 <p>
-When specifying a <tt>STRUCT</tt> or <tt>DICT_ENTRY</tt>, 'r' and 'e' should not be used. Instead use ASCII characters '(', ')', '{', and '}' 
-to mark the beginning and ending of a container.  
+When specifying a <tt>STRUCT</tt> or <tt>DICT_ENTRY</tt>, 'r' and 'e' should not be used. Instead use ASCII characters '(', ')', '{', and '}'
+to mark the beginning and ending of a container.
 <dt><b>Note:</b><dd>Not all of the data types supported by AllJoyn are available in Java.</dd></dt>
 @see org.alljoyn.bus.annotation.Signature org.alljoyn.bus.annotation.Signature</code></a> for a list of which Java types are compatible with AllJoyn types.</dd>
 <p>

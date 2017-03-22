@@ -1,22 +1,22 @@
 /**
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -31,7 +31,9 @@ package org.alljoyn.bus;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +43,11 @@ import junit.framework.TestCase;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 
+import org.alljoyn.bus.DynamicBusObject;
+import org.alljoyn.bus.GenericInterface;
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.MethodDef;
+
 public class ObserverTest extends TestCase {
     private static final String A = "a";
     private static final String B = "b";
@@ -48,6 +55,9 @@ public class ObserverTest extends TestCase {
     private static final String AB = "ab";
     private static final String TEST_PATH_PREFIX = "/TEST/";
     private static final int WAIT_TIMEOUT = 3000;
+
+    private static final String INTERFACE_A_NAME = "org.allseen.test.A";
+    private static final String INTERFACE_B_NAME = "org.allseen.test.B";
 
     static class SingleLambda extends Lambda {
         private ObserverListener listener;
@@ -99,10 +109,18 @@ public class ObserverTest extends TestCase {
         private Map<String, BusObject> objects;
         private Map<String, Boolean> enabled;
 
-        public  BusAttachment bus;
+        public BusAttachment bus;
         public SessionAccepter accepter;
 
+        public boolean useInterfaceClasses; // whether using interface classes or interface definitions
+
+        public Participant(String _name, boolean _useIntfClasses) {
+            this(_name);
+            useInterfaceClasses = _useIntfClasses;
+        }
+
         public Participant(String _name) {
+            useInterfaceClasses = true;
             participants.add(this);
             try {
                 name = _name;
@@ -128,19 +146,30 @@ public class ObserverTest extends TestCase {
 
         public void createA(String name) {
             String path = makePath(name);
-            objects.put(name, new ObjectA(bus, path));
+            BusObject busObj = useInterfaceClasses
+                ? new ObjectA(bus, path)
+                : new DynamicObject(bus, path, Arrays.asList(buildInterfaceDef(INTERFACE_A_NAME,"methodA")));
+            objects.put(name, busObj);
             enabled.put(name, false);
         }
 
         public void createB(String name) {
             String path = makePath(name);
-            objects.put(name, new ObjectB(bus, path));
+            BusObject busObj = useInterfaceClasses
+                ? new ObjectB(bus, path)
+                : new DynamicObject(bus, path, Arrays.asList(buildInterfaceDef(INTERFACE_B_NAME,"methodB")));
+            objects.put(name, busObj);
             enabled.put(name, false);
         }
 
         public void createAB(String name) {
             String path = makePath(name);
-            objects.put(name, new ObjectAB(bus, path));
+            BusObject busObj = useInterfaceClasses
+                ? new ObjectAB(bus, path)
+                : new DynamicObject(bus, path, Arrays.asList(
+                        buildInterfaceDef(INTERFACE_A_NAME,"methodA"),
+                        buildInterfaceDef(INTERFACE_B_NAME,"methodB")));
+            objects.put(name, busObj);
             enabled.put(name, false);
         }
 
@@ -242,6 +271,30 @@ public class ObserverTest extends TestCase {
         }
     }
 
+
+    /* Return a dynamic interface definition containing a method definition like: String methodName() */
+    public static InterfaceDef buildInterfaceDef(String interfaceName, String methodName) {
+        InterfaceDef interfaceDef = new InterfaceDef(interfaceName, true, null); // isAnnounced true
+
+        // Define method: String methodName()
+        MethodDef methodDef = new MethodDef(methodName, "", "s", interfaceName);
+        interfaceDef.addMethod(methodDef);
+
+        return interfaceDef;
+    }
+
+    public class DynamicObject extends AbstractDynamicBusObject {
+        public DynamicObject(BusAttachment bus, String path, List<InterfaceDef> ifaces) {
+            super(bus, path, ifaces);
+        }
+
+        @Override
+        public Object methodReceived(Object... args) throws BusException {
+            return getBus().getUniqueName() + "@" + getPath();
+        }
+    }
+
+
     public class MyAboutData implements AboutDataListener {
 
         @Override
@@ -337,11 +390,13 @@ public class ObserverTest extends TestCase {
         private final AtomicInteger counter;
         private final ArrayList<ProxyBusObject> proxies;
         private boolean allowDuplicates;
+        private boolean useInterfaceClasses; // whether using interface classes or interface definitions
 
         public ObserverListener(Participant p) {
             bus = p.bus;
             counter = new AtomicInteger();
             proxies = new ArrayList<ProxyBusObject>();
+            useInterfaceClasses = p.useInterfaceClasses;
         }
 
         public final int getCounter() {
@@ -356,10 +411,13 @@ public class ObserverTest extends TestCase {
                 assertFalse(found);
             }
             proxies.add(proxy);
-            checkReentrancy(proxy);
+            if (useInterfaceClasses) {
+                checkReentrancy(proxy);
+            } else {
+                checkReentrancyUsingDefs(proxy);
+            }
             counter.decrementAndGet();
         }
-
 
         @Override
         public void objectLost(ProxyBusObject proxy) {
@@ -418,21 +476,51 @@ public class ObserverTest extends TestCase {
                 }
             }
         }
+
+        private void checkReentrancyUsingDefs(ProxyBusObject proxy) {
+            try {
+                /* does the proxy implement InterfaceB? */
+                bus.enableConcurrentCallbacks();
+                String id = callMethodDef(proxy, INTERFACE_B_NAME, "methodB");
+                assertEquals(proxy.getBusName() + "@" + proxy.getObjPath(), id);
+            } catch (BusException e) {
+                if (e.getMessage().startsWith("No such method")) {
+                    /* no it doesn't -> then it must implement InterfaceA, right? */
+                    try {
+                        String id = callMethodDef(proxy, INTERFACE_A_NAME, "methodA");
+                        assertEquals(proxy.getBusName() + "@" + proxy.getObjPath(), id);
+                    } catch (BusException e2) {
+                        fail("method invocation failed: " + e2);
+                    }
+                } else {
+                    e.printStackTrace();
+                    fail("recieved an unexpected BusException.");
+                }
+            }
+        }
     }
 
     public void simpleScenario(Participant provider, Participant consumer) {
+        InterfaceDef interfaceA = buildInterfaceDef(INTERFACE_A_NAME,"methodA");
+        InterfaceDef interfaceB = buildInterfaceDef(INTERFACE_B_NAME,"methodB");
+
         provider.createA("justA");
         provider.createB("justB");
         provider.createAB("both");
 
-        final Observer obsA = newObserver(consumer, InterfaceA.class);
+        final Observer obsA = consumer.useInterfaceClasses
+                ? newObserver(consumer, InterfaceA.class)
+                : newObserver(consumer, Arrays.asList(interfaceA));
         final ObserverListener listenerA = new ObserverListener(consumer);
         obsA.registerListener(listenerA);
-        final Observer obsB = newObserver(consumer, InterfaceB.class);
+        final Observer obsB = consumer.useInterfaceClasses
+                ? newObserver(consumer, InterfaceB.class)
+                : newObserver(consumer, Arrays.asList(interfaceB));
         final ObserverListener listenerB = new ObserverListener(consumer);
         obsB.registerListener(listenerB);
-        final Observer obsAB = newObserver(consumer, InterfaceA.class,
-                InterfaceB.class);
+        final Observer obsAB = consumer.useInterfaceClasses
+                ? newObserver(consumer, InterfaceA.class, InterfaceB.class)
+                : newObserver(consumer, Arrays.asList(interfaceA, interfaceB));
         final ObserverListener listenerAB = new ObserverListener(consumer);
         obsAB.registerListener(listenerAB);
 
@@ -536,7 +624,9 @@ public class ObserverTest extends TestCase {
         assertEquals(1, countProxies(obsAB));
 
         /* test multiple observers for the same set of interfaces */
-        final Observer obsB2 = newObserver(consumer, InterfaceB.class);
+        final Observer obsB2 = consumer.useInterfaceClasses
+                ? newObserver(consumer, InterfaceB.class)
+                : newObserver(consumer, Arrays.asList(interfaceB));
         obsB.unregisterListener(listenerB2); /* unregister listenerB2 from obsB so we can reuse it here */
         listenerA.expectInvocations(0);
         listenerB.expectInvocations(0);
@@ -554,13 +644,29 @@ public class ObserverTest extends TestCase {
         assertTrue(null != proxy);
 
         /* verify that we can indeed perform method calls */
-        InterfaceA intfA = proxy.getInterface(InterfaceA.class);
         try {
-            String id = intfA.methodA();
+            String id = consumer.useInterfaceClasses
+                ? callMethodA(proxy)
+                : callMethodDef(proxy, INTERFACE_A_NAME, "methodA");
             assertEquals(provider.bus.getUniqueName() + "@" + makePath("both"), id);
         } catch (BusException e) {
             fail("method call failed: " + e);
         }
+    }
+
+    private String callMethodA(ProxyBusObject proxy) throws BusException {
+        InterfaceA intfA = proxy.getInterface(InterfaceA.class);
+        return intfA.methodA();
+    }
+
+    private String callMethodB(ProxyBusObject proxy) throws BusException {
+        InterfaceB intfB = proxy.getInterface(InterfaceB.class);
+        return intfB.methodB();
+    }
+
+    private String callMethodDef(ProxyBusObject proxy, String ifaceName, String methodName) throws BusException {
+        GenericInterface intf = proxy.getInterface(GenericInterface.class);
+        return (String)intf.methodCall(ifaceName, methodName);
     }
 
     public void testClose() throws Exception {
@@ -588,14 +694,52 @@ public class ObserverTest extends TestCase {
         listener.expectInvocations(0);
     }
 
+    public void testClose_withInterfaceDefs() throws Exception {
+        InterfaceDef interfaceA = buildInterfaceDef(INTERFACE_A_NAME,"methodA");
+
+        Participant provider = new Participant("prov", false);
+        Participant consumer = new Participant("cons", false);
+        final Observer obs = newObserver(consumer, Arrays.asList(interfaceA));
+        final ObserverListener listener = new ObserverListener(consumer);
+        obs.registerListener(listener);
+        provider.createA(A);
+        waitForEvent(listener, provider, A);
+
+        ProxyBusObject pbo = obs.getFirst();
+        assertNotNull(pbo);
+
+        obs.close();
+        obs.close();
+        obs.registerListener(listener);
+        assertNull(obs.getFirst());
+        assertNull(obs.get(pbo.getBusName(), pbo.getObjPath()));
+        assertNull(obs.getNext(pbo));
+        obs.unregisterListener(listener);
+        obs.unregisterAllListeners();
+        obs.close();
+        Thread.sleep(100);
+        listener.expectInvocations(0);
+    }
+
     public void testSimple() {
         Participant provider = new Participant("prov");
         Participant consumer = new Participant("cons");
         simpleScenario(provider, consumer);
     }
 
+    public void testSimple_withInterfaceDef() {
+        Participant provider = new Participant("prov", false);
+        Participant consumer = new Participant("cons", false);
+        simpleScenario(provider, consumer);
+    }
+
     public void testSimpleSelf() {
         Participant both = new Participant("both");
+        simpleScenario(both, both);
+    }
+
+    public void testSimpleSelf_withInterfaceDefs() {
+        Participant both = new Participant("both", false);
         simpleScenario(both, both);
     }
 
@@ -658,7 +802,7 @@ public class ObserverTest extends TestCase {
         }
         /* must pass in a valid interface Class<?>[] array */
         try {
-            obs = new Observer(test.bus, null);
+            obs = new Observer(test.bus, (Class<?>[]) null);
             fail("null array value is not allowed");
         } catch (NullPointerException rt) { /* OK */
             assertNull(obs);
@@ -733,6 +877,80 @@ public class ObserverTest extends TestCase {
         finalize.setAccessible(true);
         finalize.invoke(obs);
         finalize.invoke(obs);
+        finalize.invoke(obs);
+    }
+
+    public void testInvalidArgs_withInterfaceDefs() throws Exception {
+        InterfaceDef interfaceA = buildInterfaceDef(INTERFACE_A_NAME,"methodA");
+
+        Participant test = new Participant("invArgs", false);
+        Observer obs = null;
+        /* null bus pointer is invalid expect a NullPointerException */
+        try {
+            obs = newObserver(null, Arrays.asList(interfaceA));
+            fail("bus can't be null");
+        } catch (NullPointerException rt) { /* OK */
+            assertNull(obs);
+        }
+        /* must pass in a valid InterfaceDef list */
+        try {
+            obs = new Observer(test.bus, (List<InterfaceDef>) null);
+            fail("null list value is not allowed");
+        } catch (NullPointerException rt) { /* OK */
+            assertNull(obs);
+        }
+        /* list can not contain a null value. */
+        try {
+            obs = newObserver(test, Arrays.asList((InterfaceDef)null));
+            fail("List with null value is not allowed");
+        } catch (NullPointerException rt) { /* OK */
+            assertNull(obs);
+        }
+        /* empty list is not allowed */
+        try {
+            obs = newObserver(test, new ArrayList<InterfaceDef>());
+            fail("Empty list is not allowed");
+        } catch (IllegalArgumentException iae) { /* OK */
+            assertNull(obs);
+        }
+        /* the secondary optional interface list may be null */
+        assertNull(obs);
+        obs = new Observer(test.bus, Arrays.asList(interfaceA), null); // allowed
+
+        /* registered observer listener cannot be null */
+        try {
+            obs.registerListener(null);
+            fail("null not allowed");
+        } catch (IllegalArgumentException rt) { /* OK */
+            assertNotNull(obs);
+        }
+
+        final ObserverListener listener = new ObserverListener(test);
+        obs.registerListener(listener);
+        listener.expectInvocations(1);
+        test.createA(A);
+        test.registerObject(A);
+        assertTrue(waitForLambda(3000, new SingleLambda(listener)));
+
+        // null values are harmless for the object.
+        try {
+            obs.get(null, A);
+            fail("Expected Observer.get(null, path) to throw a NullPointerException.");
+        } catch (NullPointerException npe) { /* OK */
+            assertNotNull(obs);
+        }
+        try {
+            obs.get(test.bus.getUniqueName(), null);
+            fail("Expected Observer.get(bus, null) to throw a NullPointerException.");
+        } catch (NullPointerException npe) { /* OK */
+            assertNotNull(obs);
+        }
+        assertNull(obs.get(test.bus.getUniqueName(), AB));
+        assertNull(obs.get(A, A));
+        assertNotNull(obs.get(test.bus.getUniqueName(), makePath(A)));
+
+        Method finalize = obs.getClass().getDeclaredMethod("finalize");
+        finalize.setAccessible(true);
         finalize.invoke(obs);
     }
 
@@ -929,11 +1147,87 @@ public class ObserverTest extends TestCase {
         }
     }
 
+    public void testNativeCreate_withInterfaceDefs() throws Exception {
+        InterfaceDef interfaceA = buildInterfaceDef(INTERFACE_A_NAME, "methodA");
+
+        final Participant consumer = new Participant("one", false);
+        final Observer obs = newObserver(consumer, Arrays.asList(interfaceA));
+        Method create = obs.getClass().getDeclaredMethod("create",
+                BusAttachment.class, String[].class);
+        create.setAccessible(true);
+        try {
+            create.invoke(obs, null, new String[0]);
+            fail("Expected call to throw InvocationTargetException.");
+        } catch (InvocationTargetException npe) {
+            assertTrue(npe.getCause() instanceof NullPointerException);
+        }
+        try {
+            create.invoke(obs, consumer.bus, null);
+            fail("Expected call to throw InvocationTargetException.");
+        } catch (InvocationTargetException npe) {
+            assertTrue(npe.getCause() instanceof NullPointerException);
+        }
+        try {
+            create.invoke(obs, consumer.bus, new String[1]);
+            fail("Expected call to throw InvocationTargetException.");
+        } catch (InvocationTargetException npe) {
+            assertTrue(npe.getCause() instanceof NullPointerException);
+        }
+    }
+
     public void testGetFirstNext() {
         Participant consumer = new Participant("one");
         Participant provider = new Participant("two");
 
         final Observer obs = newObserver(consumer, InterfaceA.class);
+        final ObserverListener listener = new ObserverListener(consumer);
+        obs.registerListener(listener);
+
+        assertNull(obs.getFirst());
+        assertNull(obs.getNext(null));
+        ArrayList<ProxyBusObject> objects = null;
+
+        String[] names = new String[] { A, AB, B, C };
+        for (int i = 0; i < names.length;) {
+            provider.createA(names[i]);
+            waitForEvent(listener, provider, names[i]);
+            objects = checkObjects(++i, obs);
+        }
+        assertNotNull(objects);
+        ProxyBusObject obj = objects.get(1);
+        unregisterObject(provider, obj, listener);
+        assertSame(objects.get(2), obs.getNext(obj));
+        assertSame(objects.get(2), obs.getNext(objects.get(0)));
+        objects = checkObjects(3, obs);
+        assertFalse(objects.contains(obj));
+
+        obj = objects.get(2);
+        unregisterObject(provider, obj, listener);
+        assertNull(obs.getNext(obj));
+        assertNull(obs.getNext(objects.get(1)));
+        objects = checkObjects(2, obs);
+        assertFalse(objects.contains(obj));
+
+        obj = objects.get(0);
+        unregisterObject(provider, obj, listener);
+        assertSame(objects.get(1), obs.getNext(obj));
+        assertSame(objects.get(1), obs.getFirst());
+        objects = checkObjects(1, obs);
+        assertFalse(objects.contains(obj));
+
+        obj = objects.get(0);
+        unregisterObject(provider, obj, listener);
+        assertNull(obs.getNext(obj));
+        assertNull(obs.getFirst());
+    }
+
+    public void testGetFirstNext_withInterfaceDefs() {
+        InterfaceDef interfaceA = buildInterfaceDef(INTERFACE_A_NAME, "methodA");
+
+        Participant consumer = new Participant("one", false);
+        Participant provider = new Participant("two", false);
+
+        final Observer obs = newObserver(consumer, Arrays.asList(interfaceA));
         final ObserverListener listener = new ObserverListener(consumer);
         obs.registerListener(listener);
 
@@ -1120,4 +1414,11 @@ public class ObserverTest extends TestCase {
         observers.add(obs);
         return obs;
     }
+
+    private Observer newObserver(Participant p, List<InterfaceDef> intfDefs) {
+        Observer obs = new Observer(p.bus, intfDefs);
+        observers.add(obs);
+        return obs;
+    }
+
 }
