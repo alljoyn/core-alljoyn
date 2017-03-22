@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <alljoyn/Message.h>
 #include <alljoyn/BusAttachment.h>
@@ -48,9 +48,9 @@
 #include "ajTestCommon.h"
 #include "KeyInfoHelper.h"
 #include "CredentialAccessor.h"
-#include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "BusInternal.h"
+#include "SecurityTestHelper.h"
 #include <vector>
 #include <string>
 
@@ -61,12 +61,10 @@ using namespace std;
 const char* BasePermissionMgmtTest::INTERFACE_NAME = "org.allseen.Security.PermissionMgmt";
 const char* BasePermissionMgmtTest::ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
 const char* BasePermissionMgmtTest::TV_IFC_NAME = "org.allseenalliance.control.TV";
-
-static void BuildValidity(CertificateX509::ValidPeriod& validity, uint32_t expiredInSecs)
-{
-    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
-    validity.validTo = validity.validFrom + expiredInSecs;
-}
+const char* BasePermissionMgmtTest::ADMIN_BUS_NAME = "PermissionMgmtTestAdmin";
+const char* BasePermissionMgmtTest::SERVICE_BUS_NAME = "PermissionMgmtTestService";
+const char* BasePermissionMgmtTest::CONSUMER_BUS_NAME = "PermissionMgmtTestConsumer";
+const char* BasePermissionMgmtTest::RC_BUS_NAME = "PermissionMgmtTestRemoteControl";
 
 void TestApplicationStateListener::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
 {
@@ -85,276 +83,6 @@ QStatus TestPermissionConfigurationListener::FactoryReset()
 void TestPermissionConfigurationListener::PolicyChanged()
 {
     policyChangedReceived = true;
-}
-
-QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount)
-{
-    if (chainCount > 3) {
-        return ER_INVALID_DATA;
-    }
-    QStatus status = ER_CRYPTO_ERROR;
-
-    qcc::GUID128 ca(0);
-    GetGUID(caBus, ca);
-    String caStr = ca.ToString();
-    PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
-    if (chainCount == 3) {
-        /* generate the self signed CA cert */
-        String caSerial = serial + "02";
-        certChain[2].SetSerial(reinterpret_cast<const uint8_t*>(caSerial.data()), caSerial.size());
-        certChain[2].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
-        certChain[2].SetSubjectCN((const uint8_t*) caStr.data(), caStr.size());
-        CertificateX509::ValidPeriod validity;
-        BuildValidity(validity, expiredInSecs);
-        certChain[2].SetValidity(&validity);
-        certChain[2].SetCA(true);
-        KeyInfoNISTP256 keyInfo;
-        caPC.GetSigningPublicKey(keyInfo);
-        certChain[2].SetSubjectPublicKey(keyInfo.GetPublicKey());
-        status = caPC.SignCertificate(certChain[2]);
-        if (ER_OK != status) {
-            return status;
-        }
-    }
-
-    /* generate the issuer cert */
-    qcc::GUID128 issuer(0);
-    GetGUID(issuerBus, issuer);
-    String issuerStr = issuer.ToString();
-
-    String issuerSerial = serial + "01";
-    certChain[1].SetSerial(reinterpret_cast<const uint8_t*>(issuerSerial.data()), issuerSerial.size());
-    certChain[1].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
-    certChain[1].SetSubjectCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    CertificateX509::ValidPeriod validity;
-    BuildValidity(validity, expiredInSecs);
-    certChain[1].SetValidity(&validity);
-    certChain[1].SetCA(true);
-    PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
-    KeyInfoNISTP256 keyInfo;
-    pc.GetSigningPublicKey(keyInfo);
-    certChain[1].SetSubjectPublicKey(keyInfo.GetPublicKey());
-
-    status = caPC.SignCertificate(certChain[1]);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    /* generate the leaf cert */
-    certChain[0].SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
-    certChain[0].SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    certChain[0].SetSubjectCN((const uint8_t*) subject.data(), subject.size());
-    certChain[0].SetSubjectPublicKey(subjectPubKey);
-    certChain[0].SetAlias(alias);
-    certChain[0].SetValidity(&validity);
-
-    /* use the issuer bus to sign the cert */
-    status = pc.SignCertificate(certChain[0]);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    status = certChain[0].Verify(certChain[1].GetSubjectPublicKey());
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return ER_OK;
-}
-
-QStatus PermissionMgmtTestHelper::CreateAllInclusiveManifest(Manifest& manifest)
-{
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifestRules[manifestSize];
-    manifestRules[0].SetObjPath("*");
-    manifestRules[0].SetInterfaceName("*");
-    {
-        PermissionPolicy::Rule::Member member[3];
-        member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY);
-        member[1].Set("*", PermissionPolicy::Rule::Member::SIGNAL,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        member[2].Set("*", PermissionPolicy::Rule::Member::PROPERTY,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-
-        manifestRules[0].SetMembers(ArraySize(member), member);
-    }
-    return manifest->SetRules(manifestRules, manifestSize);
-}
-
-QStatus PermissionMgmtTestHelper::SignManifests(BusAttachment& issuerBus, const qcc::CertificateX509& subjectCertificate, std::vector<Manifest>& manifests)
-{
-    for (Manifest manifest : manifests) {
-        QStatus status = SignManifest(issuerBus, subjectCertificate, manifest);
-        if (ER_OK != status) {
-            return status;
-        }
-    }
-
-    return ER_OK;
-}
-
-QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const qcc::CertificateX509& subjectCertificate, Manifest& manifest)
-{
-    return issuerBus.GetPermissionConfigurator().ComputeThumbprintAndSignManifest(subjectCertificate, manifest);
-}
-
-QStatus ajn::PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const qcc::CertificateX509& subjectCertificate, AJ_PCSTR unsignedManifestXml, string& signedManifestXml)
-{
-    CredentialAccessor ca(issuerBus);
-    ECCPrivateKey privateKey;
-    AJ_PSTR signedManifestXmlC = nullptr;
-    QStatus status = ca.GetDSAPrivateKey(privateKey);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    status = SecurityApplicationProxy::SignManifest(subjectCertificate, privateKey, unsignedManifestXml, &signedManifestXmlC);
-
-    if (ER_OK != status) {
-        return status;
-    }
-
-    signedManifestXml = signedManifestXmlC;
-    SecurityApplicationProxy::DestroySignedManifest(signedManifestXmlC);
-
-    return ER_OK;
-}
-
-QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest)
-{
-    return issuerBus.GetPermissionConfigurator().SignManifest(subjectThumbprint, manifest);
-}
-
-QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, bool setEmptyAKI)
-{
-    qcc::GUID128 issuer(0);
-    GetGUID(issuerBus, issuer);
-
-    QStatus status = ER_CRYPTO_ERROR;
-
-    cert.SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
-    String issuerStr = issuer.ToString();
-    cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
-    cert.SetSubjectPublicKey(subjectPubKey);
-    cert.SetAlias(alias);
-    CertificateX509::ValidPeriod validity;
-    BuildValidity(validity, expiredInSecs);
-    cert.SetValidity(&validity);
-
-    /* use the issuer bus to sign the cert */
-    PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
-    if (setEmptyAKI) {
-        CredentialAccessor ca(issuerBus);
-        ECCPrivateKey privateKey;
-        status = ca.GetDSAPrivateKey(privateKey);
-        if (ER_OK != status) {
-            return status;
-        }
-        status = cert.Sign(&privateKey);
-    } else {
-        status = pc.SignCertificate(cert);
-    }
-    if (ER_OK != status) {
-        return status;
-    }
-
-    KeyInfoNISTP256 keyInfo;
-    pc.GetSigningPublicKey(keyInfo);
-    status = cert.Verify(keyInfo.GetPublicKey());
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return ER_OK;
-}
-
-QStatus PermissionMgmtTestHelper::SetCAFlagOnCert(BusAttachment& issuerBus, qcc::CertificateX509& certificate)
-{
-    certificate.SetCA(true);
-    PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
-    return pc.SignCertificate(certificate);
-}
-
-QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der)
-{
-    IdentityCertificate cert;
-    QStatus status = CreateIdentityCert(issuerBus, serial, subject, subjectPubKey, alias, expiredInSecs, cert);
-    if (ER_OK != status) {
-        return status;
-    }
-    return cert.EncodeCertificateDER(der);
-}
-
-QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der)
-{
-    /* expire the cert in 1 hour */
-    return CreateIdentityCert(issuerBus, serial, subject, subjectPubKey, alias, 24 * 3600, der);
-}
-
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::MembershipCertificate& cert, bool setEmptyAKI)
-{
-    qcc::GUID128 issuer(0);
-    GetGUID(signingBus, issuer);
-
-    if (subject.empty()) {
-        /* Produce log output for the test run. */
-        EXPECT_TRUE(false) << "TEST BUG: Subject given to CreateMembershipCert cannot be empty";
-        return ER_BAD_ARG_3;
-    }
-
-    cert.SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
-    String issuerStr = issuer.ToString();
-    cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
-    cert.SetSubjectPublicKey(subjectPubKey);
-    cert.SetGuild(guild);
-    cert.SetCA(delegate);
-    CertificateX509::ValidPeriod validity;
-    BuildValidity(validity, expiredInSecs);
-    cert.SetValidity(&validity);
-    /* use the signing bus to sign the cert */
-    PermissionConfigurator& pc = signingBus.GetPermissionConfigurator();
-    QStatus status = ER_CRYPTO_ERROR;
-    if (setEmptyAKI) {
-        CredentialAccessor ca(signingBus);
-        ECCPrivateKey privateKey;
-        status = ca.GetDSAPrivateKey(privateKey);
-        if (ER_OK != status) {
-            return status;
-        }
-        status = cert.Sign(&privateKey);
-    } else {
-        status = pc.SignCertificate(cert);
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der)
-{
-    MembershipCertificate cert;
-    QStatus status = CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, delegate, expiredInSecs, cert);
-    if (ER_OK != status) {
-        return status;
-    }
-    return cert.EncodeCertificateDER(der);
-}
-
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der)
-{
-    /* expire the cert in 1 hour */
-    return CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, delegate, 24 * 3600, der);
-}
-
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
-{
-    return CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, false, der);
 }
 
 QStatus BasePermissionMgmtTest::InterestInChannelChangedSignal(BusAttachment* bus)
@@ -412,13 +140,13 @@ void BasePermissionMgmtTest::TearDown()
     status = TeardownBus(remoteControlBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     delete serviceKeyListener;
-    serviceKeyListener = NULL;
+    serviceKeyListener = nullptr;
     delete adminKeyListener;
-    adminKeyListener = NULL;
+    adminKeyListener = nullptr;
     delete consumerKeyListener;
-    consumerKeyListener = NULL;
+    consumerKeyListener = nullptr;
     delete remoteControlKeyListener;
-    remoteControlKeyListener = NULL;
+    remoteControlKeyListener = nullptr;
 }
 
 void BasePermissionMgmtTest::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
@@ -447,7 +175,7 @@ static AuthListener* GenAuthListener(const char* keyExchange) {
     if (strstr(keyExchange, "ECDHE_PSK")) {
         qcc::String psk("38347892FFBEF5B2442AEDE9E53C4B32");
         DefaultECDHEAuthListener* authListener = new DefaultECDHEAuthListener();
-        PermissionMgmtTestHelper::CallDeprecatedSetPSK(authListener, reinterpret_cast<const uint8_t*>(psk.data()), psk.size());
+        SecurityTestHelper::CallDeprecatedSetPSK(authListener, reinterpret_cast<const uint8_t*>(psk.data()), psk.size());
         return authListener;
     }
     return new DefaultECDHEAuthListener();
@@ -459,16 +187,16 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     }
     delete adminKeyListener;
     adminKeyListener = GenAuthListener(keyExchange);
-    adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
+    adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, nullptr, true);
     delete serviceKeyListener;
     serviceKeyListener = GenAuthListener(keyExchange);
-    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false, &testPCL);
+    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, nullptr, false, &testPCL);
     delete consumerKeyListener;
     consumerKeyListener = GenAuthListener(keyExchange);
-    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false, &testPCL);
+    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, nullptr, false, &testPCL);
     delete remoteControlKeyListener;
     remoteControlKeyListener = GenAuthListener(keyExchange);
-    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false, &testPCL);
+    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, nullptr, false, &testPCL);
     authMechanisms = keyExchange;
 }
 
@@ -480,14 +208,14 @@ const qcc::String& BasePermissionMgmtTest::GetAuthMechanisms() const
 void BasePermissionMgmtTest::CreateOnOffAppInterface(BusAttachment& bus, bool addService)
 {
     /* create/activate alljoyn_interface */
-    InterfaceDescription* ifc = NULL;
+    InterfaceDescription* ifc = nullptr;
     QStatus status = bus.CreateInterface(BasePermissionMgmtTest::ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(ifc != NULL);
-    if (ifc != NULL) {
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "On", NULL, NULL, NULL);
+    EXPECT_TRUE(ifc != nullptr);
+    if (ifc != nullptr) {
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "On", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Off", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Off", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         ifc->Activate();
     }
@@ -503,20 +231,20 @@ void BasePermissionMgmtTest::CreateOnOffAppInterface(BusAttachment& bus, bool ad
 void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addService)
 {
     /* create/activate alljoyn_interface */
-    InterfaceDescription* ifc = NULL;
+    InterfaceDescription* ifc = nullptr;
     QStatus status = bus.CreateInterface(BasePermissionMgmtTest::TV_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(ifc != NULL);
-    if (ifc != NULL) {
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Up", NULL, NULL, NULL);
+    EXPECT_TRUE(ifc != nullptr);
+    if (ifc != nullptr) {
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Up", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Down", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Down", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Channel", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Channel", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "InputSource", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "InputSource", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -541,7 +269,7 @@ void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addSe
 
         ifc->Activate();
         status = bus.RegisterSignalHandler(this,
-                                           static_cast<MessageReceiver::SignalHandler>(&BasePermissionMgmtTest::ChannelChangedSignalHandler), ifc->GetMember("ChannelChanged"), NULL);
+                                           static_cast<MessageReceiver::SignalHandler>(&BasePermissionMgmtTest::ChannelChangedSignalHandler), ifc->GetMember("ChannelChanged"), nullptr);
         EXPECT_EQ(ER_OK, status) << "  Failed to register channel changed signal handler.  Actual Status: " << QCC_StatusText(status);
         status = InterestInChannelChangedSignal(&bus);
         EXPECT_EQ(ER_OK, status) << "  Failed to show interest in channel changed signal.  Actual Status: " << QCC_StatusText(status);
@@ -674,10 +402,10 @@ void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member
     MsgArg args[1];
     args[0].Set("u", currentTVChannel);
     if (sendMethod == SEND_SIGNAL_SESSIONCAST) {
-        Signal(NULL, SESSION_ID_ALL_HOSTED, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+        Signal(nullptr, SESSION_ID_ALL_HOSTED, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
     } else if (sendMethod == SEND_SIGNAL_BROADCAST) {
         /* sending a broadcast signal */
-        Signal(NULL, 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+        Signal(nullptr, 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
     } else {
         Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
         Signal(remoteControlBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
@@ -736,183 +464,6 @@ void BasePermissionMgmtTest::DetermineStateSignalReachable()
     SetApplicationStateSignalReceived(false);
 }
 
-bool PermissionMgmtTestHelper::IsPermissionDeniedError(QStatus status, Message& msg)
-{
-    if (ER_PERMISSION_DENIED == status) {
-        return true;
-    }
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        qcc::String errorMsg;
-        const char* errorName = msg->GetErrorName(&errorMsg);
-        if (errorName == NULL) {
-            return false;
-        }
-        if (strcmp(errorName, "org.alljoyn.Bus.Security.Error.PermissionDenied") == 0) {
-            return true;
-        }
-        if (strcmp(errorName, "org.alljoyn.Bus.ErStatus") != 0) {
-            return false;
-        }
-        if (errorMsg == "ER_PERMISSION_DENIED") {
-            return true;
-        }
-    }
-    return false;
-}
-
-QStatus PermissionMgmtTestHelper::RetrievePublicKeyFromMsgArg(MsgArg& arg, ECCPublicKey* pubKey)
-{
-    uint8_t keyFormat;
-    MsgArg* variantArg;
-    QStatus status = arg.Get("(yv)", &keyFormat, &variantArg);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (keyFormat != KeyInfo::FORMAT_ALLJOYN) {
-        return status;
-    }
-    uint8_t* kid;
-    size_t kidLen;
-    uint8_t keyUsageType;
-    uint8_t keyType;
-    MsgArg* keyVariantArg;
-    status = variantArg->Get("(ayyyv)", &kidLen, &kid, &keyUsageType, &keyType, &keyVariantArg);
-    if (ER_OK != status) {
-        return status;
-    }
-    if ((keyUsageType != KeyInfo::USAGE_SIGNING) && (keyUsageType != KeyInfo::USAGE_ENCRYPTION)) {
-        return status;
-    }
-    if (keyType != KeyInfoECC::KEY_TYPE) {
-        return status;
-    }
-    uint8_t algorithm;
-    uint8_t curve;
-    MsgArg* curveVariant;
-    status = keyVariantArg->Get("(yyv)", &algorithm, &curve, &curveVariant);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (curve != Crypto_ECC::ECC_NIST_P256) {
-        return status;
-    }
-
-    uint8_t* xCoord;
-    size_t xLen;
-    uint8_t* yCoord;
-    size_t yLen;
-    status = curveVariant->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
-    if (ER_OK != status) {
-        return status;
-    }
-    if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
-        return status;
-    }
-    return pubKey->Import(xCoord, xLen, yCoord, yLen);
-}
-
-QStatus PermissionMgmtTestHelper::ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)
-{
-    return RetrievePublicKeyFromMsgArg((MsgArg&) *msg->GetArg(0), pubKey);
-}
-
-QStatus PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
-{
-    CredentialAccessor ca(bus);
-    return ca.GetDSAPublicKey(*publicKey);
-}
-
-QStatus PermissionMgmtTestHelper::LoadCertificateBytes(Message& msg, CertificateX509& cert)
-{
-    uint8_t encoding;
-    uint8_t* encoded;
-    size_t encodedLen;
-    QStatus status = msg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
-    if (ER_OK != status) {
-        return status;
-    }
-    status = ER_NOT_IMPLEMENTED;
-    if (encoding == CertificateX509::ENCODING_X509_DER) {
-        status = cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
-    } else if (encoding == CertificateX509::ENCODING_X509_DER_PEM) {
-        status = cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild)
-{
-    SecurityApplicationProxy saProxy(bus, remoteObjName.c_str());
-    QStatus status;
-
-    qcc::MembershipCertificate certs[1];
-    status = CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, false, 24 * 3600, certs[0]);
-    if (status != ER_OK) {
-        return status;
-    }
-
-    return saProxy.InstallMembership(certs, 1);
-}
-
-QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild, bool setEmptyAKI)
-{
-    SecurityApplicationProxy saSecondProxy(secondBus, remoteObjName.c_str());
-
-    /* create the second cert first -- with delegate on  */
-    qcc::MembershipCertificate certs[2];
-    QStatus status = CreateMembershipCert(serial1, topBus, secondSubject, secondPubKey, guild, true, 24 * 3600, certs[1], setEmptyAKI);
-    if (status != ER_OK) {
-        return status;
-    }
-
-    /* create the leaf cert signed by the subject */
-    status = CreateMembershipCert(serial0, secondBus, targetSubject, targetPubKey, guild, false, 24 * 3600, certs[0], setEmptyAKI);
-    if (status != ER_OK) {
-        return status;
-    }
-
-    /* install cert chain */
-    return saSecondProxy.InstallMembership(certs, 2);
-}
-
-QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& caBus, BusAttachment& intermediateBus, BusAttachment& targetBus, qcc::String& leafSerial, const qcc::GUID128& sgID)
-{
-    qcc::MembershipCertificate certs[3];
-    /* create the top cert first self signed CA cert with delegate on  */
-    PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
-    String caSerial = leafSerial + "02";
-    KeyInfoNISTP256 keyInfo;
-    caPC.GetSigningPublicKey(keyInfo);
-    qcc::GUID128 subject(0);
-    GetGUID(caBus, subject);
-    QStatus status = CreateMembershipCert(caSerial, caBus, subject.ToString(), keyInfo.GetPublicKey(), sgID, true, 24 * 3600, certs[2]);
-    if (status != ER_OK) {
-        return status;
-    }
-    /* create the intermediate cert with delegate on  */
-    PermissionConfigurator& intermediatePC = intermediateBus.GetPermissionConfigurator();
-    String intermediateSerial = leafSerial + "01";
-    intermediatePC.GetSigningPublicKey(keyInfo);
-    GetGUID(intermediateBus, subject);
-    status = CreateMembershipCert(intermediateSerial, caBus, subject.ToString(), keyInfo.GetPublicKey(), sgID, true, 24 * 3600, certs[1]);
-    if (status != ER_OK) {
-        return status;
-    }
-
-    /* create the leaf cert delegate off */
-    PermissionConfigurator& targetPC = targetBus.GetPermissionConfigurator();
-    targetPC.GetSigningPublicKey(keyInfo);
-    GetGUID(targetBus, subject);
-    status = CreateMembershipCert(leafSerial, intermediateBus, subject.ToString(), keyInfo.GetPublicKey(), sgID, false, 24 * 3600, certs[0]);
-    if (status != ER_OK) {
-        return status;
-    }
-
-    /* install cert chain */
-    SecurityApplicationProxy saProxy(intermediateBus, targetBus.GetUniqueName().c_str());
-    return saProxy.InstallMembership(certs, ArraySize(certs));
-}
-
 QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
@@ -920,9 +471,9 @@ QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject&
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
@@ -936,9 +487,9 @@ QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
@@ -952,9 +503,9 @@ QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObjec
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
@@ -1009,9 +560,9 @@ QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
@@ -1025,9 +576,9 @@ QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBus
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
@@ -1041,9 +592,9 @@ QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
@@ -1057,27 +608,11 @@ QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, Prox
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
+        if (SecurityTestHelper::IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
         }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId)
-{
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    QStatus status = ER_FAIL;
-    for (int cnt = 0; cnt < 30; cnt++) {
-        status = initiator.JoinSession(responder.GetUniqueName().c_str(),
-                                       ALLJOYN_SESSIONPORT_PERMISSION_MGMT, NULL, sessionId, opts);
-        if (ER_OK == status) {
-            return status;
-        }
-        /* sleep a few seconds since the responder may not yet setup the listener port */
-        qcc::Sleep(WAIT_TIME_100);
     }
     return status;
 }
@@ -1086,7 +621,7 @@ QStatus BasePermissionMgmtTest::JoinSessionWithService(BusAttachment& initiator,
 {
     servicePortListener.lastJoiner = String::Empty;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    QStatus status = initiator.JoinSession(serviceBus.GetUniqueName().c_str(), servicePort, NULL, sessionId, opts);
+    QStatus status = initiator.JoinSession(serviceBus.GetUniqueName().c_str(), servicePort, nullptr, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }
@@ -1097,18 +632,6 @@ QStatus BasePermissionMgmtTest::JoinSessionWithService(BusAttachment& initiator,
         qcc::Sleep(WAIT_TIME_100);
     }
     return ER_TIMEOUT;
-}
-
-QStatus PermissionMgmtTestHelper::GetGUID(BusAttachment& bus, qcc::GUID128& guid)
-{
-    CredentialAccessor ca(bus);
-    return ca.GetGuid(guid);
-}
-
-QStatus PermissionMgmtTestHelper::GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid)
-{
-    CredentialAccessor ca(bus);
-    return ca.GetPeerGuid(peerName, peerGuid);
 }
 
 QStatus BasePermissionMgmtTest::Get(const char* ifcName, const char* propName, MsgArg& val)
@@ -1141,40 +664,4 @@ QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, M
         return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
-}
-
-void PermissionMgmtTestHelper::CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const uint8_t* pskBytes, size_t pskLength)
-{
-    /*
-     * This function suppresses compiler warnings when calling SetPSK, which is deprecated.
-     * ECHDE_PSK is deprecated as of 16.04, but we still test it, per the Alliance deprecation policy.
-     * ASACORE-2762 tracks removal of the ECDHE_PSK tests (and this function can be removed as a part of that work).
-     * https://jira.allseenalliance.org/browse/ASACORE-2762
-     */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif
-
-    QCC_VERIFY(ER_OK == authListener->SetPSK(pskBytes, pskLength));
-
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(pop)
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
-}
-
-void PermissionMgmtTestHelper::UnwrapStrings(const vector<string>& strings, vector<AJ_PCSTR>& unwrapped)
-{
-    unwrapped.resize(strings.size());
-    for (vector<string>::size_type i = 0; i < strings.size(); i++) {
-        unwrapped[i] = strings[i].c_str();
-    }
 }

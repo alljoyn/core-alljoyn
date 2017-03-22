@@ -4,21 +4,21 @@
     android:gravity="center"
     android:layout_width="250dp"
     android:layout_height="match_parent">
-    
+
     <View
         android:layout_width="match_parent"
     	android:layout_height="5dip">
     </View>
-    
-    <TextView 
+
+    <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="Select a channel from the list below"
     />
-    
-    <ListView 
-        android:id="@+id/useJoinChannelList"           
+
+    <ListView
+        android:id="@+id/useJoinChannelList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
@@ -30,12 +30,12 @@
         android:dividerHeight="1dp"
         android:transcriptMode="alwaysScroll"
     />
-    
+
     <Button
         android:id="@+id/useJoinCancel"
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:text="Cancel"
     />
-        
+
 </LinearLayout>

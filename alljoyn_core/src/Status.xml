@@ -1,21 +1,21 @@
 <!--   Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
    Project (AJOSP) Contributors and others.
-   
+
    SPDX-License-Identifier: Apache-2.0
-   
+
    All rights reserved. This program and the accompanying materials are
    made available under the terms of the Apache License, Version 2.0
    which accompanies this distribution, and is available at
    http://www.apache.org/licenses/LICENSE-2.0
-   
+
    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
    Alliance. All rights reserved.
-   
+
    Permission to use, copy, modify, and/or distribute this software for
    any purpose with or without fee is hereby granted, provided that the
    above copyright notice and this permission notice appear in all
    copies.
-   
+
    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -214,8 +214,8 @@
   <status name="ER_P2P_NOT_CONNECTED" value="0x90df" comment="A required Wi-Fi Direct network connection does not exist"/>
   <status name="ER_BAD_TRANSPORT_MASK" value="0x90e0" comment="Exactly one mask bit was not set in the provided TransportMask"/>
   <status name="ER_PROXIMITY_CONNECTION_ESTABLISH_FAIL" value="0x90e1" comment="Fail to establish P2P proximity connection"/>
-  <status name="ER_PROXIMITY_NO_PEERS_FOUND" value="0x90e2" comment="Cannot find proximity P2P peers"/>  
-  <status name="ER_BUS_OBJECT_NOT_REGISTERED" value="0x90e3" comment="Operation not permitted on unregistered bus object"/>  
+  <status name="ER_PROXIMITY_NO_PEERS_FOUND" value="0x90e2" comment="Cannot find proximity P2P peers"/>
+  <status name="ER_BUS_OBJECT_NOT_REGISTERED" value="0x90e3" comment="Operation not permitted on unregistered bus object"/>
   <status name="ER_P2P_DISABLED" value="0x90e4" comment="Wi-Fi Direct is disabled on the device"/>
   <status name="ER_P2P_BUSY" value="0x90e5" comment="Wi-Fi Direct resources are in busy state"/>
   <status name="ER_BUS_INCOMPATIBLE_DAEMON" value="0x90e6" comment="The router version is too old to be used by this client"/>
@@ -307,7 +307,7 @@
   <status name="ER_POLICY_NOT_NEWER" value="0x913c" comment="Installing permission policy not newer than existing policy"/>
   <status name="ER_MANIFEST_REJECTED" value="0x913d" comment="The manifest of the application was rejected."/>
   <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913e" comment="The certificate extended key usage is not Alljoyn specific."/>
-  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>  
+  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>
   <status name="ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS" value="0x9140" comment="Application state listener already exists."/>
   <status name="ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER" value="0x9141" comment="Application state listener does not exist."/>
   <status name="ER_MANAGEMENT_ALREADY_STARTED" value="0x9142" comment="StartManagement has been called already. The app will not receive a second StartManagement callback."/>

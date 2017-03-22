@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -27,7 +27,6 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <Status.h>
 #import "AJNBusAttachment.h"
 #import "AJNInterfaceDescription.h"
 #import "AJNVersion.h"
@@ -57,7 +56,7 @@ static BasicService *s_basicService;
 @synthesize bus = _bus;
 @synthesize basicSampleObject = _basicSampleObject;
 
-+ (BasicService*)sharedInstance 
++ (BasicService*)sharedInstance
 {
     @synchronized(self) {
         if (s_basicService == nil) {
@@ -77,32 +76,32 @@ static BasicService *s_basicService;
 }
 
 - (void)startService
-{    
-    @try 
+{
+    @try
     {
         QStatus status;
-        
+
         AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-        
+
         // output the version of alljoyn being consumed
         //
         [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library version: %@\n", [AJNVersion versionInformation]]];
         [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library build info: %@\n", [AJNVersion buildInformation]]];
-        
+
         // allocate and initialize the bus attachment
         //
-        self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"myApp" allowRemoteMessages:YES];        
-        
+        self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"myApp" allowRemoteMessages:YES];
+
         // register as a bus listener
         //
         [self.bus registerBusListener:self];
-        
+
         // create our custom sample bus object that will concatenate two strings
         // and return the result of the concatenation
         //
         self.basicSampleObject = [[MyBasicSampleObject alloc] initWithBusAttachment:self.bus onPath:kBasicObjectServicePath];
 
-        
+
         // this is the delegate used for displaying status messages in the UI
         //
         self.basicSampleObject.delegate = self.delegate;
@@ -110,44 +109,44 @@ static BasicService *s_basicService;
         // start the bus
         //
         status = [self.bus start];
-        
+
         if (status != ER_OK) {
-            [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Start failed\n"];            
-            
+            [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Start failed\n"];
+
             @throw [NSException exceptionWithName:@"StartServiceFailed" reason:@"Unable to start bus" userInfo:nil];
         }
-        [self.delegate didReceiveStatusUpdateMessage:@"BusAttachement started.\n"];        
-        
+        [self.delegate didReceiveStatusUpdateMessage:@"BusAttachement started.\n"];
+
         // register the sample object with the bus
         //
         status = [self.bus registerBusObject:self.basicSampleObject];
-        
+
         if (status != ER_OK) {
             @throw [NSException exceptionWithName:@"StartServiceFailed" reason:@"Unable to register bus object" userInfo:nil];
         }
-        
+
         [self.delegate didReceiveStatusUpdateMessage:@"Object registered successfully.\n"];
-        
+
         // connect the bus
         //
         status = [self.bus connectWithArguments:@"null:"];
-        
+
         if (status != ER_OK) {
             [self.delegate didReceiveStatusUpdateMessage:@"Failed to connect to null:"];
-            
+
             @throw [NSException exceptionWithName:@"StartServiceFailed" reason:@"Unable to connect to bus" userInfo:nil];
         }
-        
-        [self.delegate didReceiveStatusUpdateMessage:@"Bus now connected to null:\n"];        
-        
+
+        [self.delegate didReceiveStatusUpdateMessage:@"Bus now connected to null:\n"];
+
         // request the service name for the sample object
         //
         status = [self.bus requestWellKnownName:kBasicObjectServiceName withFlags:kAJNBusNameFlagReplaceExisting|kAJNBusNameFlagDoNotQueue];
-        
+
         if (status != ER_OK) {
             @throw [NSException exceptionWithName:@"StartServiceFailed" reason:@"Request for service name failed" userInfo:nil];
-        }        
-        
+        }
+
         // bind the session to a specific service port
         //
         status = [self.bus bindSessionOnPort:kBasicObjectServicePort withOptions:sessionOptions withDelegate:self];
@@ -163,7 +162,7 @@ static BasicService *s_basicService;
         if (status != ER_OK) {
             @throw [NSException exceptionWithName:@"StartServiceFailed" reason:@"Unable to advertise service name on bus" userInfo:nil];
         }
-        
+
     }
     @catch (NSException *exception) {
         [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"ERROR: Exception thrown: %@. %@.", exception.name, exception.reason]];
@@ -177,7 +176,7 @@ static BasicService *s_basicService;
 {
     if (newOwner && [busName compare:kBasicObjectServiceName] == NSOrderedSame) {
         [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"Bus named %@ changed ownership from: %@ to %@\n", busName, previousOwner, newOwner]];
-    }    
+    }
 }
 
 - (BOOL)shouldAcceptSessionJoinerNamed:(NSString *)joiner onSessionPort:(AJNSessionPort)sessionPort withSessionOptions:(AJNSessionOptions *)options

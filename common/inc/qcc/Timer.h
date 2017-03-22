@@ -7,22 +7,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -31,7 +31,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #ifndef _QCC_TIMER_H
 #define _QCC_TIMER_H
 
@@ -62,13 +62,14 @@ class Timer {
     /**
      * Constructor
      *
-     * @param name               Name for the thread.
-     * @param expireOnExit       If true call all pending alarms when this thread exits.
-     * @param concurrency         Dispatch up to this number of alarms concurently (using multiple threads).
-     * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
-     * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
+     * @param name                  Name for the thread.
+     * @param expireOnExit          If true call all pending alarms when this thread exits.
+     * @param concurrency           Number of preallocated slots for threads which will process alarms.
+     * @param prevenReentrancy      Prevent re-entrant call of AlarmTriggered.
+     * @param maxAlarms             Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
+     * @param allowMoreConcurrency  If true, more than @concurrency threads can be created to process alarms.
      */
-    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurrency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0);
+    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurrency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0, bool allowMoreConcurrency = false);
 
     /**
      * Destructor.

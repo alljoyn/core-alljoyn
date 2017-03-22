@@ -1,21 +1,21 @@
 #    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 #    Project (AJOSP) Contributors and others.
-#    
+#
 #    SPDX-License-Identifier: Apache-2.0
-#    
+#
 #    All rights reserved. This program and the accompanying materials are
 #    made available under the terms of the Apache License, Version 2.0
 #    which accompanies this distribution, and is available at
 #    http://www.apache.org/licenses/LICENSE-2.0
-#    
+#
 #    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 #    Alliance. All rights reserved.
-#    
+#
 #    Permission to use, copy, modify, and/or distribute this software for
 #    any purpose with or without fee is hereby granted, provided that the
 #    above copyright notice and this permission notice appear in all
 #    copies.
-#    
+#
 #    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 #    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 #    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -24,7 +24,6 @@
 #    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 #    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #    PERFORMANCE OF THIS SOFTWARE.
-# 
 
 Import('env')
 
@@ -42,16 +41,16 @@ else:
 returnValue = []
 
 # Application samples
-for sample in ['simple/client', 
-               'simple/service', 
-               'chat', 
-               'observer', 
-               'raw/client', 
-               'raw/service', 
-               'secure/logonclient', 
-               'secure/srpclient', 
-               'secure/service', 
-               'secure/ECDHEclient', 
+for sample in ['simple/client',
+               'simple/service',
+               'chat',
+               'observer',
+               'raw/client',
+               'raw/service',
+               'secure/logonclient',
+               'secure/srpclient',
+               'secure/service',
+               'secure/ECDHEclient',
                'properties/PropertiesClient',
                'properties/PropertiesService',
                'contacts/ContactsClient',
@@ -59,7 +58,7 @@ for sample in ['simple/client',
                'sessionless/chat',
                'sessionless/client',
                'sessionless/service']:
-    returnValue += env.Install('$JAVA_DISTDIR/samples/%s' % sample, 
+    returnValue += env.Install('$JAVA_DISTDIR/samples/%s' % sample,
                 ['%s/AndroidManifest.xml' % sample,
                  '%s/.classpath' % sample,
                  '%s/project.properties' % sample,
@@ -73,9 +72,9 @@ for sample in ['simple/client',
 
 returnValue += env.Install('$JAVA_DISTDIR/samples', 'README.txt')
 
-# install the alljoyn_java.jar and liballjoyn_java.so into the shared 
+# install the alljoyn_java.jar and liballjoyn_java.so into the shared
 # keystore samples at this time the shared keystore samples are not being placed
-# in the dist folder if they are the samples could be moved into the Application 
+# in the dist folder if they are the samples could be moved into the Application
 # samples loop shown above.
 for sample in ['secure/sharedks/service',
                'secure/sharedks/srpclientA',

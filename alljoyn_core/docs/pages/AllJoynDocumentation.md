@@ -5,7 +5,7 @@ Overview  {#overview_section}
 <!------------------------------------------------------------------------------
 Copyright AllSeen Alliance.
 
-THIS DOCUMENT AND ALL INFORMATION CONTAINED HEREIN ARE PROVIDED ON AN AS-IS 
+THIS DOCUMENT AND ALL INFORMATION CONTAINED HEREIN ARE PROVIDED ON AN AS-IS
 BASIS WITHOUT WARRANTY OF ANY KIND.
 ------------------------------------------------------------------------------->
 

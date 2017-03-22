@@ -7,22 +7,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -31,7 +31,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <ctype.h>
 #include <qcc/platform.h>
@@ -64,7 +64,7 @@ using namespace std;
 using namespace ajn;
 
 
-static BusAttachment* gBus;
+static BusAttachment* gBus = nullptr;
 static bool fuzzing = false;
 static bool nobig = false;
 static bool quiet = false;
@@ -319,7 +319,7 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
     TestPipe stream;
     MyMessage msg;
     TestPipe* pStream = &stream;
-    RemoteEndpoint ep(*gBus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*gBus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     if (numArgs == 0) {
@@ -1037,7 +1037,7 @@ QStatus TestMsgUnpack()
     size_t numArgs = ArraySize(args);
     double dbl = 0.9;
     TestPipe* pStream = &stream;
-    RemoteEndpoint ep(*gBus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*gBus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, dbl);
@@ -1201,18 +1201,6 @@ int CDECL_CALL main(int argc, char** argv)
         if (SignatureUtils::IsValidSignature(sig)) {
             status = ER_FAIL;
         }
-        if (status == ER_OK) {
-            sig[255] = 0;
-            if (!SignatureUtils::IsValidSignature(sig)) {
-                status = ER_FAIL;
-            }
-        }
-        if (status == ER_OK) {
-            sig[0] = 0;
-            if (!SignatureUtils::IsValidSignature(sig)) {
-                status = ER_FAIL;
-            }
-        }
     }
     /*
      * Maximum nested arrays (32) and structs
@@ -1351,6 +1339,16 @@ int CDECL_CALL main(int argc, char** argv)
 
         if (10000 == count) {
             printf("\n FUZZING PASSED \n");
+        }
+    }
+
+    if (gBus != nullptr) {
+        if (gBus->IsConnected()) {
+            gBus->Disconnect();
+        }
+        status = gBus->Stop();
+        if (status == ER_OK) {
+            gBus->Join();
         }
     }
 

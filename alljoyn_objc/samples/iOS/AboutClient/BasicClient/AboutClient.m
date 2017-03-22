@@ -1,22 +1,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -105,27 +105,27 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Creating bus attachment                                                                 +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    
+
     QStatus status;
-    
+
     // create the message bus
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicClient" allowRemoteMessages:YES];
-    
+
     // create an interface description
     //
     AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"com.example.about.feature.interface.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
-    
+
     // add the methods to the interface description
     //
     status = [interfaceDescription addMethodWithName:@"cat" inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr", nil]];
-    
+
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: cat" userInfo:nil];
     }
-    
+
     [interfaceDescription activate];
-    
+
     self.receivedAnnounce = [[NSCondition alloc] init];
     [self.receivedAnnounce lock];
 
@@ -134,7 +134,7 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     //
     [self.bus registerBusListener:self];
 
-    
+
     // start the message bus
     //
     status =  [self.bus start];
@@ -147,11 +147,11 @@ static const AJNSessionPort kAboutClientServicePort = 900;
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment started.\n"];
     }
 
-    
+
     // connect to the message bus
     //
     status = [self.bus connectWithArguments:@"null:"];
-    
+
     if (ER_OK != status) {
         NSLog(@"Bus connect failed.");
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Connect(\"null:\") failed\n"];
@@ -160,20 +160,20 @@ static const AJNSessionPort kAboutClientServicePort = 900;
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachement connected to null:\n"];
     }
 
-    
+
     // begin discovery of the well known name of the service to be called
     //
     [self.bus whoImplementsInterface:kAboutClientServiceName];
-    
+
     [self.delegate didReceiveStatusUpdateMessage:@"Waiting to discover service...\n"];
 
     [self.receivedAnnounce waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:60]];
-    
+
     [self.receivedAnnounce unlock];
 
     [self.bus disconnect];
     [self.bus stop];
-    
+
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Destroying bus attachment                                                               +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -181,7 +181,7 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     // deallocate the bus
     //
     self.bus = nil;
-    
+
     [self.delegate didReceiveStatusUpdateMessage:@"Bus deallocated\n"];
 }
 
@@ -210,10 +210,10 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     [self.bus enableConcurrentCallbacks];
     AJNSessionId sessionId = [self.bus joinSessionWithName:busName onPort:port withDelegate:self options:sessionOptions];
-    
+
     // Create AboutProxy
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:self.bus busName:busName sessionId:sessionId];
-    
+
     // Make a call to GetAboutData and GetVersion
     uint16_t aboutVersion;
     NSMutableDictionary *aboutData;
@@ -221,7 +221,7 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:&aboutData];
     NSLog(@"Version %d", version);
     [self.receivedAnnounce signal];
-    
+
 
 }
 
@@ -241,34 +241,34 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     [self.delegate didReceiveStatusUpdateMessage:@"Found advertised name\n"];
 
     if ([namePrefix compare:kAboutClientServiceName] == NSOrderedSame) {
-        
+
         BOOL shouldReturn;
         @synchronized(self) {
             shouldReturn = self.wasNameAlreadyFound;
             self.wasNameAlreadyFound = true;
         }
-        
+
         if (shouldReturn) {
             NSLog(@"Already found an advertised name, ignoring this name %@...", name);
             return;
         }
-        
+
         // Since we are in a callback we must enable concurrent callbacks before calling a synchronous method.
         //
         [self.bus enableConcurrentCallbacks];
 
         self.sessionId = [self.bus joinSessionWithName:name onPort:kAboutClientServicePort withDelegate:self options:[[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny]];
-        
+
         if (self.sessionId) {
             self.foundServiceName = name;
-            
+
             NSLog(@"Client joined session %d", self.sessionId);
             [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"JoinSession SUCCESS (Session id=%d)\n", self.sessionId]];
         }
         else {
-            [self.delegate didReceiveStatusUpdateMessage:@"JoinSession failed\n"];            
+            [self.delegate didReceiveStatusUpdateMessage:@"JoinSession failed\n"];
         }
-        
+
         [self.joinedSessionCondition signal];
     }
 }
@@ -281,7 +281,7 @@ static const AJNSessionPort kAboutClientServicePort = 900;
 - (void)nameOwnerChanged:(NSString*)name to:(NSString*)newOwner from:(NSString*)previousOwner
 {
     NSLog(@"AJNBusListener::nameOwnerChanged:%@ to:%@ from:%@", name, newOwner, previousOwner);
-    [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"NameOwnerChanged: name=%@, oldOwner=%@, newOwner=%@\n", name, previousOwner, newOwner]];    
+    [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"NameOwnerChanged: name=%@, oldOwner=%@, newOwner=%@\n", name, previousOwner, newOwner]];
 }
 
 - (void)busWillStop

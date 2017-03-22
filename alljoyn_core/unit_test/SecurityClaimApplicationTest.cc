@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <gtest/gtest.h>
 #include <alljoyn/ApplicationStateListener.h>
 #include <alljoyn/AuthListener.h>
@@ -38,10 +38,9 @@
 
 #include <queue>
 
-#include "PermissionMgmtObj.h"
-#include "PermissionMgmtTest.h"
 #include "InMemoryKeyStore.h"
 #include "ajTestCommon.h"
+#include "SecurityTestHelper.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -112,15 +111,13 @@ class SecurityClaimApplicationTest : public testing::Test {
 
         String membershipSerial = "1";
         qcc::MembershipCertificate managerMembershipCertificate[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        securityManagerBus,
-                                                                        securityManagerBus.GetUniqueName(),
-                                                                        managerKey.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        false,
-                                                                        3600,
-                                                                        managerMembershipCertificate[0]
-                                                                        ));
+        EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  securityManagerBus,
+                                                                  securityManagerBus.GetUniqueName(),
+                                                                  managerKey.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  managerMembershipCertificate[0]
+                                                                  ));
         SecurityApplicationProxy sapWithManagerBus(securityManagerBus, securityManagerBus.GetUniqueName().c_str());
         EXPECT_EQ(ER_OK, sapWithManagerBus.InstallMembership(managerMembershipCertificate, 1));
     }
@@ -144,13 +141,6 @@ class SecurityClaimApplicationTest : public testing::Test {
     GUID128 managerGuid;
 
 };
-
-static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
-{
-    KeyInfoNISTP256 keyInfo;
-    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    publicKey = *keyInfo.GetPublicKey();
-}
 
 TEST_F(SecurityClaimApplicationTest, IsUnclaimableByDefault)
 {
@@ -264,18 +254,17 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -378,18 +367,17 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_PS
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -483,17 +471,16 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_SP
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0])) << "Failed to sign manifest";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0])) << "Failed to sign manifest";
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -566,18 +553,17 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_caPublicKeyIdentifi
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "1215",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "1215",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     /* set claimable */
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
@@ -655,18 +641,17 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_adminGroupSecurityP
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "1215",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "1215",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /* set claimable */
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     /*
@@ -779,19 +764,18 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // peer2 will become the one signing the identity certificate.
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(peer2Bus,
-                                                                  "1215",
-                                                                  caGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(peer2Bus,
+                                                            "1215",
+                                                            caGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer2Bus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer2Bus, identityCertChain[0], manifests[0]));
     //Verify the caPublicKey != adminGroupSecurityPublicKey.
     EXPECT_NE(caKey, securityManagerKey);
     /*
@@ -845,7 +829,7 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     //EnablePeerSecurity
     const uint8_t psk[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
     securityManagerKeyListener = new DefaultECDHEAuthListener();
-    PermissionMgmtTestHelper::CallDeprecatedSetPSK(securityManagerKeyListener, psk, sizeof(psk));
+    SecurityTestHelper::CallDeprecatedSetPSK(securityManagerKeyListener, psk, sizeof(psk));
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", securityManagerKeyListener);
 
     /* The State signal is only emitted if manifest template is installed */
@@ -862,7 +846,7 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     appStateListener.stateChanged = false;
 
     peer1KeyListener = new DefaultECDHEAuthListener();
-    PermissionMgmtTestHelper::CallDeprecatedSetPSK(peer1KeyListener, psk, sizeof(psk));
+    SecurityTestHelper::CallDeprecatedSetPSK(peer1KeyListener, psk, sizeof(psk));
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", peer1KeyListener);
 
     EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetClaimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_PSK));
@@ -907,18 +891,17 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -1032,18 +1015,17 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_SPEKE_session_successful)
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0])) << "Failed to sign manifest";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0])) << "Failed to sign manifest";
     /*
      * Claim Peer1
      * The certificate authority is self signed so the certificateAuthority
@@ -1142,18 +1124,17 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -1260,18 +1241,17 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -1304,15 +1284,14 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
     //Create identityCertChain
     IdentityCertificate identityCertChain2[1];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain2[0])) << "Failed to create identity certificate.";
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain2[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain2[0], manifests[0]));
 
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1.Claim(securityManagerKey,
                                                        securityManagerGuid,
@@ -1393,18 +1372,17 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
     EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -1487,17 +1465,16 @@ TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
     EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1Key));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(peer2Bus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(peer2Bus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer2Bus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer2Bus, identityCertChain[0], manifests[0]));
     EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, sapWithPeer1.Claim(caKey,
                                                               securityManagerGuid,
                                                               caKey,
@@ -1554,18 +1531,17 @@ TEST_F(SecurityClaimApplicationTest, fail_when_peer_being_claimed_is_not_securit
     IdentityCertificate identityCertChain[1];
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  securityManagerKey.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            securityManagerKey.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
     /*
      * Claim Peer1
@@ -1608,20 +1584,19 @@ class ClaimThread1 : public Thread {
 
         // peer public key used to generate the identity certificate chain
         ECCPublicKey peer1PublicKey;
-        GetAppPublicKey(thiz->peer1Bus, peer1PublicKey);
+        SecurityTestHelper::GetAppPublicKey(thiz->peer1Bus, peer1PublicKey);
 
         Manifest manifests[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+        EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(thiz->securityManagerBus,
-                                                                      "0",
-                                                                      securityManagerGuid.ToString(),
-                                                                      &peer1PublicKey,
-                                                                      "Alias",
-                                                                      3600,
-                                                                      identityCertChain[0])) << "Failed to create identity certificate.";
+        EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(thiz->securityManagerBus,
+                                                                "0",
+                                                                securityManagerGuid.ToString(),
+                                                                &peer1PublicKey,
+                                                                "Alias",
+                                                                identityCertChain[0])) << "Failed to create identity certificate.";
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(thiz->securityManagerBus, identityCertChain[0], manifests[0]));
+        EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(thiz->securityManagerBus, identityCertChain[0], manifests[0]));
 
         status = sapWithPeer1.Claim(securityManagerKey,
                                     securityManagerGuid,
@@ -1661,17 +1636,16 @@ class ClaimThread2 : public Thread {
         peer1PublicKey = *keyInfo.GetPublicKey();
 
         Manifest manifests[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+        EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(thiz->peer2Bus,
-                                                                      "0",
-                                                                      securityManagerGuid.ToString(),
-                                                                      &peer1PublicKey,
-                                                                      "Alias",
-                                                                      3600,
-                                                                      identityCertChain[0])) << "Failed to create identity certificate.";
+        EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(thiz->peer2Bus,
+                                                                "0",
+                                                                securityManagerGuid.ToString(),
+                                                                &peer1PublicKey,
+                                                                "Alias",
+                                                                identityCertChain[0])) << "Failed to create identity certificate.";
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(thiz->peer2Bus, identityCertChain[0], manifests[0]));
+        EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(thiz->peer2Bus, identityCertChain[0], manifests[0]));
 
         status = sapWithPeer1.Claim(securityManagerKey,
                                     securityManagerGuid,
@@ -1845,18 +1819,17 @@ TEST_F(SecurityClaimApplicationTest, fail_when_admin_and_peer_use_different_secu
     EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1Key));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     EXPECT_EQ(ER_AUTH_FAIL, sapWithPeer1.Claim(securityManagerKey,
                                                securityManagerGuid,
@@ -1938,21 +1911,20 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
     EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1Key));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // securityManagerKey used instead of Peer1 key to make sure we create an
     // invalid cert.
     EXPECT_NE(*peer1Key.GetPublicKey(), *securityManagerKey.GetPublicKey());
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  securityManagerKey.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            securityManagerKey.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     EXPECT_EQ(ER_UNKNOWN_CERTIFICATE, sapWithPeer1.Claim(securityManagerKey,
                                                          securityManagerGuid,
@@ -2155,21 +2127,20 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
     IdentityCertificate identityCertChain[1];
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
     peer1AppStateListener.stateChanged = false;
     peer1AppStateListener.stateToCheck = PermissionConfigurator::CLAIMED;
 
     EXPECT_TRUE(peer1AppStateListener.busNames.size() == 0 && peer1AppStateListener.publicKeys.size() == 0 && peer1AppStateListener.states.size() == 0);
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(securityManagerKey,
                                         securityManagerGuid,
                                         securityManagerKey,
@@ -2253,18 +2224,17 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
     IdentityCertificate identityCertChain[1];
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // Manager bus claims itself
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  managerGuid.ToString(),
-                                                                  securityManagerKey.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            managerGuid.ToString(),
+                                                            securityManagerKey.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     EXPECT_EQ(ER_OK, sapWithManager.Claim(securityManagerKey,
                                           managerGuid,
@@ -2272,15 +2242,14 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
                                           identityCertChain, ArraySize(identityCertChain),
                                           manifests, ArraySize(manifests)));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  managerGuid.ToString(),
-                                                                  peer1PublicKey.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            managerGuid.ToString(),
+                                                            peer1PublicKey.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(securityManagerKey,
                                         managerGuid,

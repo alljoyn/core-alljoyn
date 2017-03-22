@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -79,7 +79,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	[super viewDidLoad];
 	self.isAboutServiceConnected = false;
 	[self aboutServiceButtonTitle:self.isAboutServiceConnected];
-    
+
     // Create unique ID
 	self.uniqueID = [[NSUUID UUID] UUIDString];
 }
@@ -111,20 +111,20 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 - (void)startAboutService
 {
     QStatus serviceStatus;
-   
+
     NSLog(@"[%@] [%@] Start About Service", @"DEBUG", [[self class] description]);
-    
+
     NSLog(@"[%@] [%@] AboutService using port %hu", @"DEBUG", [[self class] description], SERVICE_PORT);
-  
+
 	// Create message bus
-    
+
     NSLog(@"[%@] [%@] Create a message bus", @"DEBUG", [[self class] description]);
-    
+
 	self.serviceBusAttachment = [[AJNBusAttachment alloc] initWithApplicationName:@"AboutServiceName" allowRemoteMessages:ALLOWREMOTEMESSAGES];
 	if (!self.serviceBusAttachment) {
-        
+
         NSLog(@"[%@] [%@] Failed to create a message bus - exiting application", @"DEBUG", [[self class] description]);
-        
+
 		serviceStatus = ER_OUT_OF_MEMORY;
 		exit(serviceStatus);
 	}
@@ -133,12 +133,12 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 
 	serviceStatus = [self.serviceBusAttachment start];
 	if (serviceStatus != ER_OK) {
-        
+
         NSLog(@"[%@] [%@] Failed to start bus - exiting application", @"FATAL", [[self class] description]);
 
 		exit(serviceStatus);
 	}
-    
+
      NSLog(@"[%@] [%@] Connect to an AllJoyn daemon", @"DEBUG", [[self class] description]);
 
 	serviceStatus = [self.serviceBusAttachment connectWithArguments:@""];
@@ -147,35 +147,35 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 
 		exit(serviceStatus);
 	}
-    
+
      NSLog(@"[%@] [%@] Create AboutSessionPortListener", @"DEBUG", [[self class] description]);
 
 	self.aboutSessionPortListener = [[CommonBusListener alloc] initWithServicePort:SERVICE_PORT];
-    
+
 	if (self.aboutSessionPortListener) {
          NSLog(@"[%@] [%@] Register AboutSessionPortListener", @"DEBUG", [[self class] description]);
 
 		[self.serviceBusAttachment registerBusListener:self.aboutSessionPortListener];
 	}
-    
+
 	// prepare data for propertyStoreImpl
 	self.aboutPropertyStoreImpl = [[AJNAboutPropertyStoreImpl alloc] init];
-    
+
 	if (!self.aboutPropertyStoreImpl) {
         NSLog(@"[%@] [%@] Failed to create propertyStoreImpl object - exiting application", @"FATAL", [[self class] description]);
 
 		exit(1);
 	}
-    
+
 	serviceStatus = [self fillAboutPropertyStoreImplData];
-    
+
 	if (serviceStatus != ER_OK) {
         NSLog(@"[%@] [%@] Failed to fill propertyStore - exiting application", @"FATAL", [[self class] description]);
 
 		exit(1);
 	}
-    
-    
+
+
      NSLog(@"[%@] [%@] Create aboutServiceApi", @"DEBUG", [[self class] description]);
 
 	self.aboutServiceApi = [AJNAboutServiceApi sharedInstance];
@@ -184,36 +184,36 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 
 		exit(1);
 	}
-    
+
      NSLog(@"[%@] [%@] Start aboutServiceApi", @"DEBUG", [[self class] description]);
 
 	[self.aboutServiceApi startWithBus:self.serviceBusAttachment andPropertyStore:self.aboutPropertyStoreImpl];
-    
+
 	// Register Port
      NSLog(@"[%@] [%@] Register the AboutService on the AllJoyn bus", @"DEBUG", [[self class] description]);
 
 	if (self.aboutServiceApi.isServiceStarted) {
 		serviceStatus = [self.aboutServiceApi registerPort:(SERVICE_PORT)];
 	}
-    
+
 	if (serviceStatus != ER_OK) {
         NSLog(@"[%@] [%@] Failed register port - exiting application", @"FATAL", [[self class] description]);
 
 		exit(1);
 	}
-    
+
 	// Bind session port
 	AJNSessionOptions *opt = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:false proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-    
+
      NSLog(@"[%@] [%@] Bind session", @"DEBUG", [[self class] description]);
 
-  
+
 	serviceStatus = [self.serviceBusAttachment bindSessionOnPort:SERVICE_PORT withOptions:opt withDelegate:self.aboutSessionPortListener];
-    
+
 	if (serviceStatus == ER_ALLJOYN_BINDSESSIONPORT_REPLY_ALREADY_EXISTS) {
         NSLog(@"[%@] [%@] SessionPort already exists", @"DEBUG", [[self class] description]);
 	}
-    
+
 	// Start AboutIcon
 	serviceStatus = [self startAboutIcon];
 	if (serviceStatus != ER_OK) {
@@ -228,7 +228,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
             serviceStatus = [self.serviceBusAttachment advertiseName:([self.serviceBusAttachment uniqueName]) withTransportMask:(kAJNTransportMaskAny)];
 		}
 	}
-    
+
 	if (serviceStatus == ER_OK) {
 		if (self.aboutServiceApi.isServiceStarted) {
              NSLog(@"[%@] [%@] Calling Announce", @"DEBUG", [[self class] description]);
@@ -238,7 +238,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
              NSLog(@"[%@] [%@] Successfully announced", @"DEBUG", [[self class] description]);
 		}
 	}
-    
+
 	self.isAboutServiceConnected = true;
 }
 
@@ -251,7 +251,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	[interfaces addObject:ABOUT_ICON_INTERFACE_NAME];
 	NSString *path = ABOUT_ICON_OBJECT_PATH;
 	QStatus aboutIconStatus = [self.aboutServiceApi addObjectDescriptionWithPath:path andInterfaceNames:interfaces];
-    
+
 	if (aboutIconStatus != ER_OK) {
         NSLog(@"[%@] [%@] Failed to addObjectDescription.   %@", @"DEBUG", [[self class] description], [AJNStatus descriptionForStatusCode:aboutIconStatus]);
 		return aboutIconStatus;
@@ -261,15 +261,15 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	NSString *url = @"http://tinyurl.com/llrqvrb";
 	size_t csize = sizeof(aboutIconContent) / sizeof(*aboutIconContent);
 	self.aboutIconService = [[AJNAboutIconService alloc] initWithBus:self.serviceBusAttachment mimeType:mimeType url:url content:aboutIconContent csize:csize];
-    
+
 	aboutIconStatus = [self.aboutIconService registerAboutIconService];
 	if (aboutIconStatus != ER_OK) {
         NSLog(@"[%@] [%@] Failed to registerAboutIconService.   %@", @"ERROR", [[self class] description], [AJNStatus descriptionForStatusCode:aboutIconStatus]);
-        
+
 		return aboutIconStatus;
 	}
 	aboutIconStatus = [self.serviceBusAttachment registerBusObject:self.aboutIconService];
-    
+
 	if (aboutIconStatus != ER_OK) {
         NSLog(@"[%@] [%@] Failed to registerBusObject.   %@", @"ERROR", [[self class] description], [AJNStatus descriptionForStatusCode:aboutIconStatus]);
 	}
@@ -279,60 +279,60 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 - (QStatus)fillAboutPropertyStoreImplData
 {
 	QStatus status;
-    
+
 	// AppId
 	status = [self.aboutPropertyStoreImpl setAppId:self.uniqueID];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	// AppName
 	status = [self.aboutPropertyStoreImpl setAppName:@"AboutConfig"];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	// DeviceId
 	status = [self.aboutPropertyStoreImpl setDeviceId:@"1231232145667745675477"];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	// DeviceName
 	status = [self.aboutPropertyStoreImpl setDeviceName:@"Screen" language:@"en"];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
     status = [self.aboutPropertyStoreImpl setDeviceName:@"écran" language:@"fr"];
     if (status != ER_OK) {
 		return status;
 	}
-    
+
     status = [self.aboutPropertyStoreImpl setDeviceName:@"pantalla" language:@"sp"];
     if (status != ER_OK) {
 		return status;
 	}
-    
+
 	// SupportedLangs
 	NSArray *languages = @[@"en", @"sp", @"fr"];
 	status = [self.aboutPropertyStoreImpl setSupportedLangs:languages];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	//  DefaultLang
 	status = [self.aboutPropertyStoreImpl setDefaultLang:@"en"];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	//  ModelNumbe
 	status = [self.aboutPropertyStoreImpl setModelNumber:@"Wxfy388i"];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	//  DateOfManufacture
 	status = [self.aboutPropertyStoreImpl setDateOfManufacture:@"10/1/2199"];
 	if (status != ER_OK) {
@@ -343,13 +343,13 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	//  AjSoftwareVersion
 	status = [self.aboutPropertyStoreImpl setAjSoftwareVersion:[AJNVersion versionInformation]];
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	//  HardwareVersion
 	status = [self.aboutPropertyStoreImpl setHardwareVersion:@"355.499. b"];
 	if (status != ER_OK) {
@@ -381,7 +381,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	if (status != ER_OK) {
 		return status;
 	}
-    
+
 	//  SupportedUrl
 	status = [self.aboutPropertyStoreImpl setSupportUrl:@"http://www.alljoyn.org"];
 	if (status != ER_OK) {
@@ -393,44 +393,44 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 - (void)stopAboutService
 {
 	QStatus status;
-    
+
      NSLog(@"[%@] [%@] Stop About Service", @"DEBUG", [[self class] description]);
 
-    
+
 	//  Stop AbouIcon
-    
+
 	[self.serviceBusAttachment unregisterBusObject:self.aboutIconService];
 	self.aboutIconService = nil;
-    
+
 	//  Delete AboutServiceApi
 	[self.aboutServiceApi destroyInstance];
 	self.aboutServiceApi = nil;
-    
+
 	//  Delete AboutPropertyStoreImpl
 	self.aboutPropertyStoreImpl = nil;
-    
+
 	//  Bus attachment cleanup
 	status = [self.serviceBusAttachment cancelAdvertisedName:[self.serviceBusAttachment uniqueName] withTransportMask:kAJNTransportMaskAny];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully cancel advertised name", @"DEBUG", [[self class] description]);
 	}
-    
+
 	status = [self.serviceBusAttachment unbindSessionFromPort:SERVICE_PORT];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully unbind Session", @"DEBUG", [[self class] description]);
 	}
-    
+
 	//  Delete AboutSessionPortListener
 	[self.serviceBusAttachment unregisterBusListener:self.aboutSessionPortListener];
 	self.aboutSessionPortListener = nil;
-    
+
 	//  Stop bus attachment
 	status = [self.serviceBusAttachment stop];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully stopped bus", @"DEBUG", [[self class] description]);
 	}
 	self.serviceBusAttachment = nil;
-    
+
 	//  set flag
 	self.isAboutServiceConnected = false;
      NSLog(@"[%@] [%@] About Service is stopped", @"DEBUG", [[self class] description]);

@@ -10,22 +10,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -34,7 +34,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <qcc/platform.h>
 
@@ -201,6 +201,7 @@ class BusObject : public MessageReceiver {
      *                       being received twice.
      *
      * @param msg          [OUT] If non-null, the sent signal message is returned to the caller.
+     *                           This should be NULL when using SESSION_ID_ALL_HOSTED, otherwise the call will error.
      * @return
      *      - #ER_OK if successful
      *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
@@ -689,7 +690,7 @@ class BusObject : public MessageReceiver {
      * This utility method is called by the bus during object registration.
      * Do not call this object explicitly.
      *
-     * @param bus  BusAttachement to associate with BusObject.
+     * @param busAttachment  BusAttachement to associate with BusObject.
      * @return
      *      - #ER_OK if all the methods were added
      *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.

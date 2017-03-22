@@ -2,22 +2,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -28,7 +28,7 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 -->
-<xsl:stylesheet version="1.0" 
+<xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <xsl:param name="fileName"/>
@@ -42,22 +42,22 @@
 <xsl:template match="/">////////////////////////////////////////////////////////////////////////////////
 //    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
 //    Project (AJOSP) Contributors and others.
-//    
+//
 //    SPDX-License-Identifier: Apache-2.0
-//    
+//
 //    All rights reserved. This program and the accompanying materials are
 //    made available under the terms of the Apache License, Version 2.0
 //    which accompanies this distribution, and is available at
 //    http://www.apache.org/licenses/LICENSE-2.0
-//    
+//
 //    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
 //    Alliance. All rights reserved.
-//    
+//
 //    Permission to use, copy, modify, and/or distribute this software for
 //    any purpose with or without fee is hereby granted, provided that the
 //    above copyright notice and this permission notice appear in all
 //    copies.
-//    
+//
 //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
 //    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 //    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -67,6 +67,7 @@
 //    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 //  ALLJOYN MODELING TOOL - GENERATED CODE
@@ -145,7 +146,7 @@
         <xsl:apply-templates select="./arg" mode="objc-messageParam"/>
         <xsl:text> </xsl:text>
     </xsl:if>
-    <xsl:text>inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath</xsl:text>
+    <xsl:text>inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath</xsl:text>
     <xsl:text>;&#10;</xsl:text>
 </xsl:template>
 
@@ -189,60 +190,60 @@
 <xsl:template name="objcArgType">
     <xsl:choose>
         <xsl:when test="@type='y'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='b'">
             <xsl:text>BOOL</xsl:text>
         </xsl:when>
         <xsl:when test="@type='n'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='q'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='i'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='u'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='x'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='t'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='d'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='s'">
-            <xsl:text>NSString*</xsl:text>
+            <xsl:text>NSString *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='o'">
-            <xsl:text>NString*</xsl:text>
+            <xsl:text>NString *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='a'">
-            <xsl:text>NSArray*</xsl:text>
+            <xsl:text>NSArray *</xsl:text>
         </xsl:when>
         <xsl:otherwise>
-            <xsl:text>AJNMessageArgument*</xsl:text>
+            <xsl:text>AJNMessageArgument *</xsl:text>
         </xsl:otherwise>
     </xsl:choose>
 </xsl:template>
 
-<xsl:template name="capitalizeFirstLetterOfNameAttr">  
-   <xsl:variable name="value">  
-        <xsl:value-of select="@name"/>  
-   </xsl:variable>  
-    <xsl:variable name= "ufirstChar" select="translate(substring($value,1,1),$vLower,$vUpper)"/>  
+<xsl:template name="capitalizeFirstLetterOfNameAttr">
+   <xsl:variable name="value">
+        <xsl:value-of select="@name"/>
+   </xsl:variable>
+    <xsl:variable name= "ufirstChar" select="translate(substring($value,1,1),$vLower,$vUpper)"/>
     <xsl:value-of select="concat($ufirstChar,substring($value,2))"/>
 </xsl:template>
 
-<xsl:template name="uncapitalizeFirstLetterOfNameAttr">  
-   <xsl:variable name="value">  
-        <xsl:value-of select="@name"/>  
-   </xsl:variable>  
-    <xsl:variable name= "lfirstChar" select="translate(substring($value,1,1),$vUpper,$vLower)"/>  
+<xsl:template name="uncapitalizeFirstLetterOfNameAttr">
+   <xsl:variable name="value">
+        <xsl:value-of select="@name"/>
+   </xsl:variable>
+    <xsl:variable name= "lfirstChar" select="translate(substring($value,1,1),$vUpper,$vLower)"/>
     <xsl:value-of select="concat($lfirstChar,substring($value,2))"/>
 </xsl:template>
 

@@ -6,22 +6,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -30,7 +30,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 #include <map>
 #include <alljoyn/AllJoynStd.h>
@@ -97,8 +97,10 @@ class ClearSecretsWhenMsgDeliveredNotification : public MessageEncryptionNotific
          * Clear out the master secrets used in ECDSA key exchange
          */
         bus.GetInternal().GetKeyStore().Clear(ECDHE_ECDSA_NAME_PATTERN);
-        /* clear all the peer states to force re-authentication */
-        bus.GetInternal().GetPeerStateTable()->Clear();
+        /* Clear other peers' states to force re-authentication.
+         * Do not clear own peer state to keep track of own memberships and
+         * to be able to decrypt own response if we are communicating with ourselves. */
+        bus.GetInternal().GetPeerStateTable()->Clear(true);
     }
 
   private:
@@ -119,7 +121,7 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
     BusObject(objectPath), bus(bus), claimCapabilities(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT),
-    claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL), ready(false), managementStarted(false)
+    claimCapabilityAdditionalInfo(0), portListener(nullptr), callbackToClearSecrets(nullptr), ready(false), managementStarted(false)
 {
 }
 
@@ -157,7 +159,7 @@ void PermissionMgmtObj::Load()
     } else {
         policyVersion = 0;
         delete policy;
-        policy = NULL;
+        policy = nullptr;
     }
     PolicyChanged(policy);
     bool hasManifestTemplate;
@@ -709,10 +711,10 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
 
-    TrustAnchor* adminGroupAuthority = NULL;
+    TrustAnchor* adminGroupAuthority = nullptr;
     TrustAnchor* certificateAuthority = new TrustAnchor(TRUST_ANCHOR_CA);
-    std::vector<CertificateX509> certs;
-    std::vector<Manifest> manifests;
+    vector<CertificateX509> certs;
+    vector<Manifest> manifests;
     QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], certificateAuthority->keyInfo);
     if (ER_OK != status) {
         goto DoneValidation;
@@ -906,7 +908,7 @@ QStatus PermissionMgmtObj::GetDefaultPolicy(MsgArg& msgArg)
 
 QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy, bool defaultPolicy)
 {
-    uint8_t* buf = NULL;
+    uint8_t* buf = nullptr;
     size_t size;
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
@@ -1024,7 +1026,7 @@ static QStatus ValidateMembershipCertificateChain(const CertificateX509* certCha
     return ER_INVALID_CERTIFICATE;
 }
 
-static QStatus ValidateMembershipCertificateChain(std::vector<CertificateX509*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateMembershipCertificateChain(vector<CertificateX509*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
 {
     if (certs.size() == 0) {
         return ER_INVALID_CERTIFICATE;
@@ -1032,7 +1034,7 @@ static QStatus ValidateMembershipCertificateChain(std::vector<CertificateX509*>&
 
     /* build an array of base CertificateX509 instances for validation */
     CertificateX509* certChain = new CertificateX509[certs.size()];
-    if (certChain == NULL) {
+    if (certChain == nullptr) {
         return ER_OUT_OF_MEMORY;
     }
     for (size_t cnt = 0; cnt < certs.size(); cnt++) {
@@ -1046,9 +1048,9 @@ static QStatus ValidateMembershipCertificateChain(std::vector<CertificateX509*>&
 static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert)
 {
     if (encoding == CertificateX509::ENCODING_X509_DER) {
-        return cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
+        return cert.DecodeCertificateDER(qcc::String((const char*) encoded, encodedLen));
     } else if (encoding == CertificateX509::ENCODING_X509_DER_PEM) {
-        return cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
+        return cert.DecodeCertificatePEM(qcc::String((const char*) encoded, encodedLen));
     }
     return ER_NOT_IMPLEMENTED;
 }
@@ -1069,7 +1071,7 @@ QStatus PermissionMgmtObj::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
     return ca->GetDSAPrivateKey(privateKey);
 }
 
-QStatus PermissionMgmtObj::RetrieveCertsFromMsgArg(const MsgArg& certArg, std::vector<CertificateX509>& certs)
+QStatus PermissionMgmtObj::RetrieveCertsFromMsgArg(const MsgArg& certArg, vector<CertificateX509>& certs)
 {
     size_t certChainCount;
     MsgArg* certChain;
@@ -1129,7 +1131,7 @@ QStatus PermissionMgmtObj::StoreIdentityCertChain(size_t certChainCount, const C
     }
     /* now storing the cert chain */
     for (size_t cnt = 0; cnt < certChainCount; cnt++) {
-        String der;
+        qcc::String der;
         status = certs[cnt].EncodeCertificateDER(der);
         KeyBlob kb((const uint8_t*) der.data(), der.size(), KeyBlob::GENERIC);
         if (cnt == 0) {
@@ -1171,7 +1173,7 @@ ExitStoreIdentity:
     return status;
 }
 
-static QStatus RetrieveIdentityCertChainBlobs(CredentialAccessor* ca, KeyStore::Key identityHead, std::vector<KeyBlob*>& blobs)
+static QStatus RetrieveIdentityCertChainBlobs(CredentialAccessor* ca, KeyStore::Key identityHead, vector<KeyBlob*>& blobs)
 {
     KeyBlob* kb = new KeyBlob();
     QStatus status = ca->GetKey(identityHead, *kb);
@@ -1185,7 +1187,7 @@ static QStatus RetrieveIdentityCertChainBlobs(CredentialAccessor* ca, KeyStore::
     blobs.push_back(kb);
 
     /* go thru the issuers */
-    KeyStore::Key* keys = NULL;
+    KeyStore::Key* keys = nullptr;
     size_t numOfKeys = 0;
     status = ca->GetKeys(identityHead, &keys, &numOfKeys);
     if (ER_OK != status) {
@@ -1199,7 +1201,7 @@ static QStatus RetrieveIdentityCertChainBlobs(CredentialAccessor* ca, KeyStore::
     }
 Exit:
     if (ER_OK != status) {
-        for (std::vector<KeyBlob*>::iterator it = blobs.begin(); it != blobs.end(); it++) {
+        for (vector<KeyBlob*>::iterator it = blobs.begin(); it != blobs.end(); it++) {
             delete *it;
         }
         blobs.clear();
@@ -1208,7 +1210,7 @@ Exit:
     return status;
 }
 
-QStatus PermissionMgmtObj::GetIdentity(std::vector<qcc::CertificateX509>& certChain)
+QStatus PermissionMgmtObj::GetIdentity(vector<qcc::CertificateX509>& certChain)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     MsgArg certArg;
@@ -1232,7 +1234,7 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertChain(MsgArg** certArgs, size_t* 
 {
     KeyStore::Key identityHead;
     GetACLKey(ENTRY_IDENTITY, identityHead);
-    std::vector<KeyBlob*> blobs;
+    vector<KeyBlob*> blobs;
     QStatus status = RetrieveIdentityCertChainBlobs(ca, identityHead, blobs);
     if (ER_OK != status) {
         return status;
@@ -1253,10 +1255,10 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertChain(MsgArg** certArgs, size_t* 
 Exit:
     if (ER_OK != status) {
         delete [] *certArgs;
-        *certArgs = NULL;
+        *certArgs = nullptr;
         *count = 0;
     }
-    for (std::vector<KeyBlob*>::iterator it = blobs.begin(); it != blobs.end(); it++) {
+    for (vector<KeyBlob*>::iterator it = blobs.begin(); it != blobs.end(); it++) {
         delete *it;
     }
     blobs.clear();
@@ -1267,7 +1269,7 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertChainPEM(qcc::String& pem)
 {
     KeyStore::Key identityHead;
     GetACLKey(ENTRY_IDENTITY, identityHead);
-    std::vector<KeyBlob*> blobs;
+    vector<KeyBlob*> blobs;
     QStatus status = RetrieveIdentityCertChainBlobs(ca, identityHead, blobs);
     if (ER_OK != status) {
         return status;
@@ -1277,8 +1279,8 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertChainPEM(qcc::String& pem)
     }
     for (size_t cnt = 0; cnt < blobs.size(); cnt++) {
         KeyBlob* kb = blobs[cnt];
-        String der((const char*) kb->GetData(), kb->GetSize());
-        String localPEM;
+        qcc::String der((const char*) kb->GetData(), kb->GetSize());
+        qcc::String localPEM;
         status = CertificateX509::EncodeCertificatePEM(der, localPEM);
         if (ER_OK != status) {
             goto Exit;
@@ -1290,7 +1292,7 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertChainPEM(qcc::String& pem)
         }
     }
 Exit:
-    for (std::vector<KeyBlob*>::iterator it = blobs.begin(); it != blobs.end(); it++) {
+    for (vector<KeyBlob*>::iterator it = blobs.begin(); it != blobs.end(); it++) {
         delete *it;
     }
     blobs.clear();
@@ -1320,7 +1322,7 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertificateId(qcc::String& serial, qc
     issuerKeyInfo.SetKeyId((uint8_t*) leafCert.GetAuthorityKeyId().data(), leafCert.GetAuthorityKeyId().size());
 
     /* locate the next cert in the identity cert chain for the issuer public key */
-    KeyStore::Key* keys = NULL;
+    KeyStore::Key* keys = nullptr;
     size_t numOfKeys = 0;
     status = ca->GetKeys(identityHead, &keys, &numOfKeys);
     if (ER_OK != status) {
@@ -1368,7 +1370,7 @@ QStatus PermissionMgmtObj::UpdateIdentity(
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     /* save the current identity cert chain to rollback */
-    MsgArg* currentCertArgs = NULL;
+    MsgArg* currentCertArgs = nullptr;
     size_t count = 0;
     QStatus status = RetrieveIdentityCertChain(&currentCertArgs, &count);
     if (ER_OK != status) {
@@ -1389,9 +1391,9 @@ QStatus PermissionMgmtObj::UpdateIdentity(
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not StoreManifests"));
         /* In this case, we have to undo setting the identity cert chain. */
-        if (currentCertArgs != NULL) {
+        if (currentCertArgs != nullptr) {
             MsgArg arg("a(yay)", count, currentCertArgs);
-            std::vector<CertificateX509> origCerts;
+            vector<CertificateX509> origCerts;
             QStatus aStatus = RetrieveCertsFromMsgArg(arg, origCerts);
             if (ER_OK != aStatus) {
                 QCC_LogError(aStatus, ("PermissionMgmtObj::DoUpdateIdentity restoring the identity certificate failed RetrieveCertsFromMsgArg"));
@@ -1417,8 +1419,8 @@ QStatus PermissionMgmtObj::UpdateIdentity(
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
-    std::vector<CertificateX509> certs;
-    std::vector<Manifest> manifests;
+    vector<CertificateX509> certs;
+    vector<Manifest> manifests;
 
     QStatus status = RetrieveCertsFromMsgArg((MsgArg&)*msg->GetArg(0), certs);
     if (ER_OK != status) {
@@ -1459,7 +1461,7 @@ QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
 
 QStatus PermissionMgmtObj::GetIdentity(MsgArg& arg)
 {
-    MsgArg* certArgs = NULL;
+    MsgArg* certArgs = nullptr;
     size_t count = 0;
     QStatus status = RetrieveIdentityCertChain(&certArgs, &count);
     if (ER_OK != status) {
@@ -1496,7 +1498,7 @@ QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const Perm
     return marshaller.Digest(rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
 }
 
-QStatus PermissionMgmtObj::RetrieveManifestsFromMsgArg(const MsgArg& signedManifestsArg, std::vector<Manifest>& manifests)
+QStatus PermissionMgmtObj::RetrieveManifestsFromMsgArg(const MsgArg& signedManifestsArg, vector<Manifest>& manifests)
 {
     MsgArg* signedManifestArgArray;
     size_t signedManifestCount;
@@ -1544,7 +1546,7 @@ QStatus PermissionMgmtObj::StoreManifests(size_t manifestCount, const Manifest* 
         return ER_DIGEST_MISMATCH;
     }
 
-    std::vector<Manifest> newManifests;
+    vector<Manifest> newManifests;
     for (size_t i = 0; i < manifestCount; i++) {
         newManifests.push_back(manifests[i]);
     }
@@ -1553,7 +1555,7 @@ QStatus PermissionMgmtObj::StoreManifests(size_t manifestCount, const Manifest* 
         /* Retrieve the current set of manifests from the keystore first, and combine them with
          * the new set.
          */
-        std::vector<Manifest> previousManifests;
+        vector<Manifest> previousManifests;
         status = RetrieveManifests(previousManifests);
         if (ER_OK != status) {
             QCC_LogError(status, ("Could not retrieve already-installed manifests"));
@@ -1566,7 +1568,7 @@ QStatus PermissionMgmtObj::StoreManifests(size_t manifestCount, const Manifest* 
     /* store the manifests into the key store */
     KeyStore::Key key;
     GetACLKey(ENTRY_MANIFEST, key);
-    std::vector<uint8_t> serializedManifestArray;
+    vector<uint8_t> serializedManifestArray;
     status = _Manifest::SerializeArray(newManifests, serializedManifestArray);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to serialize array of passed manifests for storage"));
@@ -1583,15 +1585,15 @@ QStatus PermissionMgmtObj::StoreManifests(size_t manifestCount, const Manifest* 
     return status;
 }
 
-static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
+static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey)
 {
-    KeyStore::Key* keys = NULL;
+    KeyStore::Key* keys = nullptr;
     size_t numOfKeys;
     QStatus status = ca->GetKeys(membershipHead, &keys, &numOfKeys);
     if (ER_OK != status) {
         return status;
     }
-    String tag = serialNum.substr(0, KeyBlob::MAX_TAG_LEN);
+    qcc::String tag = serialNum.substr(0, KeyBlob::MAX_TAG_LEN);
     bool found = false;
     status = ER_OK;
     for (size_t cnt = 0; cnt < numOfKeys; cnt++) {
@@ -1669,7 +1671,7 @@ QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain
         QCC_DbgPrintf(("PermissionMgmtObj::StoreMembership failed since certificate subject public key is not the same as target public key"));
         return ER_INVALID_CERTIFICATE;
     }
-    status = ValidateMembershipCertificateChain(certChain, count, NULL);
+    status = ValidateMembershipCertificateChain(certChain, count, nullptr);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::StoreMembership failed to validate certificate chain 0x%x", status));
         return status;
@@ -1677,7 +1679,7 @@ QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain
     GUID128 membershipGuid;
     KeyStore::Key membershipKey(KeyStore::Key::LOCAL, membershipGuid);
     for (size_t cnt = 0; cnt < count; cnt++) {
-        String der;
+        qcc::String der;
         status = certChain[cnt].EncodeCertificateDER(der);
         if (ER_OK != status) {
             return status;
@@ -1685,7 +1687,7 @@ QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain
         KeyBlob kb((const uint8_t*) der.data(), der.size(), KeyBlob::GENERIC);
         if (cnt == 0) {
             /* handle the leaf cert */
-            String serialTag;
+            qcc::String serialTag;
             if (certChain[cnt].GetSerialLen() > 0) {
                 serialTag.assign_std(reinterpret_cast<const char*>(certChain[cnt].GetSerial()), certChain[cnt].GetSerialLen());
             }
@@ -1741,7 +1743,7 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
     }
 
     CertificateX509* certs = new CertificateX509[certChainCount];
-    if (certs == NULL) {
+    if (certs == nullptr) {
         return ER_OUT_OF_MEMORY;
     }
     for (size_t cnt = 0; cnt < certChainCount; cnt++) {
@@ -1751,13 +1753,20 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
             goto Exit;
         }
     }
+
     status = StoreMembership(certs, certChainCount);
+    if (status == ER_OK) {
+        /* Store own membership data in own PeerState. */
+        PeerState peerState =  bus.GetInternal().GetPeerStateTable()->GetPeerState(bus.GetUniqueName());
+        status = AddMembershipsToPeerState(peerState, certs, certChainCount);
+    }
+
 Exit:
     delete [] certs;
     return status;
 }
 
-QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
+QStatus PermissionMgmtObj::LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey)
 {
     /* look for memberships head in the key store */
     KeyStore::Key membershipHead;
@@ -1771,7 +1780,7 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const 
     return GetMembershipKey(ca, membershipHead, serialNum, issuerAki, membershipKey);
 }
 
-QStatus PermissionMgmtObj::RemoveMembership(const String& serial, const ECCPublicKey* issuerPublicKey, const String& issuerAki)
+QStatus PermissionMgmtObj::RemoveMembership(const qcc::String& serial, const ECCPublicKey* issuerPublicKey, const qcc::String& issuerAki)
 {
     QStatus status = RemoveMembershipInternal(serial, issuerPublicKey, issuerAki);
 
@@ -1782,13 +1791,13 @@ QStatus PermissionMgmtObj::RemoveMembership(const String& serial, const ECCPubli
     }
 }
 
-static QStatus SetKeyInfo(const ECCPublicKey* publicKey, const String& aki, KeyInfoNISTP256& keyInfo)
+static QStatus SetKeyInfo(const ECCPublicKey* publicKey, const qcc::String& aki, KeyInfoNISTP256& keyInfo)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     keyInfo.SetPublicKey(publicKey);
     if (aki.empty()) {
-        String computedAki;
+        qcc::String computedAki;
         /* calculate it */
         QStatus status = CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), computedAki);
         if (ER_OK != status) {
@@ -1803,7 +1812,7 @@ static QStatus SetKeyInfo(const ECCPublicKey* publicKey, const String& aki, KeyI
     return ER_OK;
 }
 
-QStatus PermissionMgmtObj::RemoveMembershipInternal(const String& serial, const ECCPublicKey* issuerPublicKey, const String& issuerAki)
+QStatus PermissionMgmtObj::RemoveMembershipInternal(const qcc::String& serial, const ECCPublicKey* issuerPublicKey, const qcc::String& issuerAki)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     KeyStore::Key membershipKey;
@@ -1889,8 +1898,8 @@ void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* mem
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    String serial((const char*) serialVal, serialLen);
-    String issuerAki((const char*)akiVal, akiLen);
+    qcc::String serial((const char*) serialVal, serialLen);
+    qcc::String issuerAki((const char*)akiVal, akiLen);
     status = RemoveMembership(serial, &publicKey, issuerAki);
     MethodReply(msg, status);
 }
@@ -1941,7 +1950,7 @@ void PermissionMgmtObj::InstallManifests(const InterfaceDescription::Member* mem
 {
     QCC_UNUSED(member);
 
-    std::vector<Manifest> manifests;
+    vector<Manifest> manifests;
     QStatus status = RetrieveManifestsFromMsgArg((MsgArg&)*msg->GetArg(0), manifests);
     if (ER_OK != status) {
         QCC_LogError(status, ("%s: Could not RetrieveManifestsFromMsgArg", __FUNCTION__));
@@ -1969,7 +1978,7 @@ QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap, boo
     if (status == ER_BUS_KEY_UNAVAILABLE) {
         return ER_OK;  /* nothing to do */
     }
-    KeyStore::Key* keys = NULL;
+    KeyStore::Key* keys = nullptr;
     size_t numOfKeys;
     status = ca->GetKeys(membershipHead, &keys, &numOfKeys);
     if (ER_OK != status) {
@@ -1987,7 +1996,7 @@ QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap, boo
             delete [] keys;
             return status;
         }
-        MembershipCertificate* cert = NULL;
+        MembershipCertificate* cert = nullptr;
         if (loadCert) {
             cert = new MembershipCertificate();
             status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert);
@@ -2017,9 +2026,9 @@ void PermissionMgmtObj::ClearMembershipCertMap(MembershipCertMap& certMap)
     certMap.clear();
 }
 
-static void ClearArgVector(std::vector<MsgArg*>& argList)
+static void ClearArgVector(vector<MsgArg*>& argList)
 {
-    for (std::vector<MsgArg*>::iterator it = argList.begin(); it != argList.end(); it++) {
+    for (vector<MsgArg*>::iterator it = argList.begin(); it != argList.end(); it++) {
         delete *it;
     }
     argList.clear();
@@ -2046,9 +2055,9 @@ static void ClearArgVector(std::vector<MsgArg*>& argList)
  */
 
 
-static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, CredentialAccessor* ca, KeyStore::Key& entryKey, std::vector<MsgArg*>& argList)
+static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, CredentialAccessor* ca, KeyStore::Key& entryKey, vector<MsgArg*>& argList)
 {
-    KeyStore::Key* keys = NULL;
+    KeyStore::Key* keys = nullptr;
     size_t numOfKeys;
     QStatus status = ca->GetKeys(entryKey, &keys, &numOfKeys);
     if (ER_OK != status) {
@@ -2059,8 +2068,8 @@ static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, Credential
         return status;
     }
 
-    std::vector<MsgArg*> addOns;
-    /* go through the associated entries of this keys */
+    vector<MsgArg*> addOns;
+    /* go through the associated entries of these keys */
     for (size_t cnt = 0; cnt < numOfKeys; cnt++) {
         KeyBlob kb;
         status = ca->GetKey(keys[cnt], kb);
@@ -2095,6 +2104,113 @@ Exit:
     return status;
 }
 
+static QStatus GetMembershipCertificateEntryChain(BusAttachment& bus, CredentialAccessor* ca, KeyStore::Key& entryKey, vector<qcc::String>& certChainStrs)
+{
+    KeyStore::Key* keys = nullptr;
+    size_t numOfKeys;
+    QStatus status = ca->GetKeys(entryKey, &keys, &numOfKeys);
+    if (ER_OK != status) {
+        delete [] keys;
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            return ER_OK; /* nothing to generate */
+        }
+        return status;
+    }
+
+    vector<qcc::String> addOns;
+    /* go through the associated entries of these keys */
+    for (size_t cnt = 0; cnt < numOfKeys; cnt++) {
+        KeyBlob kb;
+        status = ca->GetKey(keys[cnt], kb);
+        if (ER_OK != status) {
+            break;
+        }
+
+        /* this cert chain node may have a parent cert */
+        std::string certStr(reinterpret_cast<const char*>(kb.GetData()), kb.GetSize());
+        addOns.push_back(static_cast<qcc::String>(certStr));
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        status = GetMembershipCertificateEntryChain(bus, ca, keys[cnt], addOns);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+    }
+Exit:
+    if (ER_OK == status) {
+        certChainStrs.reserve(certChainStrs.size() + addOns.size());
+        certChainStrs.insert(certChainStrs.end(), addOns.begin(), addOns.end());
+    }
+
+    addOns.clear();
+    delete [] keys;
+    return status;
+}
+
+QStatus PermissionMgmtObj::GetMembershipCertificates(MsgArg& args)
+{
+    MembershipCertMap certMap;
+
+    QStatus status = GetAllMembershipCerts(certMap);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    size_t numCertChains = certMap.size();
+    if (0 == numCertChains) {
+        args.Set("aa(yay)", 0, nullptr);
+        return ER_OK;
+    }
+
+    size_t cnt = 0;
+    vector<MsgArg> certChainArgs;
+    certChainArgs.resize(numCertChains);
+    for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
+        vector<qcc::String> certList;
+        MembershipCertificate* cert = it->second;
+        qcc::String der;
+        status = cert->EncodeCertificateDER(der);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        certList.push_back(der);
+
+        status = GetMembershipCertificateEntryChain(bus, ca, (KeyStore::Key&)it->first, certList);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+
+        size_t certChainSize = certList.size();
+        vector<MsgArg> certChainArg;
+        certChainArg.resize(certChainSize);
+        size_t certCnt = 0;
+        for (auto& cert : certList) {
+            status = certChainArg[certCnt].Set("(yay)", CertificateX509::ENCODING_X509_DER, cert.size(), cert.c_str());
+            if (ER_OK != status) {
+                goto Exit;
+            }
+            ++certCnt;
+        }
+
+        status = certChainArgs[cnt].Set("a(yay)", certChainArg.size(), certChainArg.data());
+        if (ER_OK != status) {
+            goto Exit;
+        }
+
+        certChainArgs[cnt].Stabilize();
+        ++cnt;
+    }
+
+    status = args.Set("aa(yay)", certChainArgs.size(), certChainArgs.data());
+Exit:
+    if (ER_OK == status) {
+        args.Stabilize();
+    }
+    ClearMembershipCertMap(certMap);
+    return status;
+}
+
 QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
 {
     MembershipCertMap certMap;
@@ -2103,20 +2219,21 @@ QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
         return status;
     }
     if (certMap.size() == 0) {
-        arg.Set("a(ayay(yyayay))", 0, NULL);
+        arg.Set("a(ayay(yyayay))", 0, nullptr);
         return ER_OK;
     }
 
-    MsgArg* membershipArgs = new MsgArg[certMap.size()];
+    vector<MsgArg> membershipArgs;
+    membershipArgs.resize(certMap.size());
     size_t cnt = 0;
-    KeyStore::Key* issuerKeys = NULL;
+    KeyStore::Key* issuerKeys = nullptr;
     for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
         KeyInfoNISTP256 issuerKeyInfo;
         KeyStore::Key leafKey = it->first;
         MembershipCertificate* leafCert = it->second;
         issuerKeyInfo.SetKeyId((const uint8_t*) leafCert->GetAuthorityKeyId().data(), leafCert->GetAuthorityKeyId().size());
         delete [] issuerKeys;
-        issuerKeys = NULL;
+        issuerKeys = nullptr;
         size_t numOfIssuerKeys = 0;
         bool locateIssuer = false;
         status = ca->GetKeys(leafKey, &issuerKeys, &numOfIssuerKeys);
@@ -2140,7 +2257,7 @@ QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
                 }
                 issuerKeyInfo.SetPublicKey(issuerCert.GetSubjectPublicKey());
                 if (issuerKeyInfo.GetKeyIdLen() == 0) {
-                    String aki;
+                    qcc::String aki;
                     if (ER_OK != CertificateX509::GenerateAuthorityKeyId(issuerKeyInfo.GetPublicKey(), aki)) {
                         goto Exit;
                     }
@@ -2183,16 +2300,15 @@ QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
 Exit:
     delete [] issuerKeys;
     if (ER_OK == status) {
-        arg.Set("a(ayay(yyayay))", certMap.size(), membershipArgs);
+        arg.Set("a(ayay(yyayay))", membershipArgs.size(), membershipArgs.data());
+        arg.Stabilize();
         arg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-    } else {
-        delete [] membershipArgs;
     }
     ClearMembershipCertMap(certMap);
     return status;
 }
 
-bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<ECCPublicKey> peerIssuers)
+bool PermissionMgmtObj::IsRelevantMembershipCert(vector<MsgArg*>& membershipChain, vector<ECCPublicKey> peerIssuers)
 {
     QStatus status;
     CertificateX509 cert;
@@ -2240,11 +2356,11 @@ bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershi
     return false;
 }
 
-QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args, const qcc::GUID128& remotePeerGuid)
+QStatus PermissionMgmtObj::GenerateSendMemberships(vector<vector<MsgArg*> >& args, const qcc::GUID128& remotePeerGuid)
 {
     MembershipCertMap certMap;
     ECCPublicKey peerPublicKey;
-    std::vector<ECCPublicKey> peerIssuers;
+    vector<ECCPublicKey> peerIssuers;
     bool publicKeyFound = false;
     qcc::String authMechanism;
 
@@ -2256,15 +2372,15 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgAr
         return ER_OK;
     }
 
-    status = this->GetConnectedPeerAuthMetadata(remotePeerGuid, authMechanism, publicKeyFound, &peerPublicKey, NULL, peerIssuers);
+    status = this->GetConnectedPeerAuthMetadata(remotePeerGuid, authMechanism, publicKeyFound, &peerPublicKey, nullptr, peerIssuers);
     if ((status != ER_OK) || !publicKeyFound) {
         goto Exit;
     }
 
     for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
-        std::vector<MsgArg*> argList;
+        vector<MsgArg*> argList;
         MembershipCertificate* cert = it->second;
-        String der;
+        qcc::String der;
         status = cert->EncodeCertificateDER(der);
         if (ER_OK != status) {
             goto Exit;
@@ -2298,7 +2414,7 @@ Exit:
 
 QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState)
 {
-    std::vector<ECCPublicKey> issuerKeys;
+    vector<ECCPublicKey> issuerKeys;
     MsgArg* signedManifestArgs;
     size_t signedManifestCount;
     QStatus status = msg->GetArg(0)->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgs);
@@ -2307,7 +2423,7 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
     }
 
     ECCPublicKey peerPublicKey;
-    std::vector<ECCPublicKey> issuerPublicKeys;
+    vector<ECCPublicKey> issuerPublicKeys;
     qcc::String authMechanism;
     bool publicKeyFound = false;
     uint8_t identityCertificateThumbprint[Crypto_SHA256::DIGEST_SIZE];
@@ -2318,7 +2434,7 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
         return status;
     }
 
-    std::vector<uint8_t> thumbprintVector(Crypto_SHA256::DIGEST_SIZE);
+    vector<uint8_t> thumbprintVector(Crypto_SHA256::DIGEST_SIZE);
     thumbprintVector.assign(identityCertificateThumbprint, identityCertificateThumbprint + Crypto_SHA256::DIGEST_SIZE);
 
     for (size_t i = 0; i < signedManifestCount; i++) {
@@ -2405,7 +2521,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
     }
 
     PeerState peerState =  bus.GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
-    _PeerState::GuildMetadata* meta = NULL;
+    _PeerState::GuildMetadata* meta = nullptr;
     for (size_t idx = 0; idx < count; idx++) {
         CertificateX509* cert = new CertificateX509();
         if (idx == 0) {
@@ -2418,7 +2534,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 return status;
             }
             meta->certChain.push_back(cert);
-            String serialTag;
+            qcc::String serialTag;
             if (cert->GetSerialLen() > 0) {
                 serialTag.assign_std(reinterpret_cast<const char*>(cert->GetSerial()), cert->GetSerialLen());
             }
@@ -2659,7 +2775,7 @@ QStatus PermissionMgmtObj::Reset(bool endManagement)
     /* Reset the security configuration. */
     status = PerformReset(true, endManagement);
     if (ER_OK == status) {
-        PolicyChanged(NULL);
+        PolicyChanged(nullptr);
         StateChanged();
     }
     return status;
@@ -2671,7 +2787,7 @@ void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Messag
     MethodReply(msg, Reset());
 }
 
-QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* identityCertificateThumbprint, std::vector<ECCPublicKey>& issuerPublicKeys)
+QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* identityCertificateThumbprint, vector<ECCPublicKey>& issuerPublicKeys)
 {
     CredentialAccessor ca(bus);
     KeyBlob kb;
@@ -2690,7 +2806,7 @@ QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc
     return status;
 }
 
-QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, std::vector<ECCPublicKey>& issuerPublicKeys)
+QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, vector<ECCPublicKey>& issuerPublicKeys)
 {
     bool publicKeyFound = false;
     qcc::String authMechanism;
@@ -2706,7 +2822,7 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
 
 QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
 {
-    std::vector<ECCPublicKey> issuerPublicKeys;
+    vector<ECCPublicKey> issuerPublicKeys;
     return GetConnectedPeerPublicKey(guid, publicKey, issuerPublicKeys);
 }
 
@@ -2753,7 +2869,7 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     return status;
 }
 
-QStatus PermissionMgmtObj::RetrieveManifests(std::vector<Manifest>& manifests)
+QStatus PermissionMgmtObj::RetrieveManifests(vector<Manifest>& manifests)
 {
     KeyBlob kb;
     KeyStore::Key key;
@@ -2952,7 +3068,7 @@ bool PermissionMgmtObj::KeyExchangeListener::RequestCredentials(const char* auth
                 if (ER_OK != pmo->GetDSAPrivateKey(pk)) {
                     handled = false;
                 }
-                String pem;
+                qcc::String pem;
                 CertificateX509::EncodePrivateKeyPEM(&pk, pem);
                 credentials.SetPrivateKey(pem);
             }
@@ -2992,24 +3108,24 @@ QStatus PermissionMgmtObj::BindPort()
     if (portListener) {
         if (ER_OK == bus.UnbindSessionPort(sessionPort)) {
             delete portListener;
-            portListener = NULL;
+            portListener = nullptr;
         }
     }
 
-    if (portListener == NULL) {
+    if (portListener == nullptr) {
         portListener = new PortListener();
     }
     QStatus status = bus.BindSessionPort(sessionPort, opts, *portListener);
     if (ER_OK != status) {
         delete portListener;
-        portListener = NULL;
+        portListener = nullptr;
     }
     return status;
 }
 
 QStatus PermissionMgmtObj::ManageTrustAnchors(PermissionPolicy* policy)
 {
-    if (policy == NULL) {
+    if (policy == nullptr) {
         return ER_OK;
     }
     ClearTrustAnchors();
@@ -3106,7 +3222,7 @@ static bool IsStdInterface(const char* iName)
 }
 
 /* Helper function borrowed from PermissionManager.cc. */
-static bool MatchesPrefix(const String& str, const String& prefix)
+static bool MatchesPrefix(const qcc::String& str, const qcc::String& prefix)
 {
     return !WildcardMatch(str, prefix);
 }
@@ -3118,7 +3234,7 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
     }
 
     const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Peer::Authentication::InterfaceName);
-    if (ifc == NULL) {
+    if (ifc == nullptr) {
         return ER_BUS_NO_SUCH_INTERFACE;
     }
 
@@ -3158,7 +3274,7 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
     QCC_DbgTrace(("%s: passed early exit checks. Destination is %s, peer GUID is %s",
                   __FUNCTION__, destination, peerState->GetGuid().ToString().c_str()));
 
-    std::vector<Manifest> manifests;
+    vector<Manifest> manifests;
     QStatus status = RetrieveManifests(manifests);
     if (ER_OK != status) {
         if (ER_MANIFEST_NOT_FOUND == status) {
@@ -3168,7 +3284,7 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
         }
     }
 
-    std::vector<Manifest> manifestsToSend;
+    vector<Manifest> manifestsToSend;
 
     /* We don't have a copy of the message, probably because the app is calling SecureConnection
      * explicitly. This gives us no basis on which to send manifests.
@@ -3280,6 +3396,44 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
     }
     /* process the reply */
     return ParseSendManifests(replyMsg, peerState);
+}
+
+QStatus PermissionMgmtObj::AddMembershipsToPeerState(PeerState& peerState,
+                                                     const qcc::CertificateX509* certs,
+                                                     size_t certChainCount) const
+{
+    if (certChainCount == 0) {
+        return ER_OK;
+    }
+
+    unique_ptr<CertificateX509> leafCert(new (nothrow) CertificateX509(certs[0]));
+    if (leafCert.get() == nullptr) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate leaf certificate object"));
+        return ER_OUT_OF_MEMORY;
+    }
+    unique_ptr<_PeerState::GuildMetadata> metadata(new (nothrow) _PeerState::GuildMetadata());
+    if (metadata.get() == nullptr) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate GUILD metadata object"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    qcc::String serialTag;
+    if (leafCert->GetSerialLen() > 0) {
+        serialTag.assign_std(reinterpret_cast<const char*>(leafCert->GetSerial()), leafCert->GetSerialLen());
+    }
+    qcc::String issuerAki = leafCert->GetAuthorityKeyId();
+    metadata->certChain.push_back(leafCert.release());
+
+    for (size_t idx = 1; idx < certChainCount; idx++) {
+        std::unique_ptr<CertificateX509> cert(new (nothrow) CertificateX509(certs[idx]));
+        if (cert.get() == nullptr) {
+            QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate certificate object"));
+            return ER_OUT_OF_MEMORY;
+        }
+        metadata->certChain.push_back(cert.release());
+    }
+    peerState->SetGuildMetadata(serialTag, issuerAki, metadata.release());
+    return ER_OK;
 }
 
 } /* namespace ajn */

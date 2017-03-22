@@ -1,22 +1,22 @@
 /******************************************************************************
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
- *    
+ *
  *    SPDX-License-Identifier: Apache-2.0
- *    
+ *
  *    All rights reserved. This program and the accompanying materials are
  *    made available under the terms of the Apache License, Version 2.0
  *    which accompanies this distribution, and is available at
  *    http://www.apache.org/licenses/LICENSE-2.0
- *    
+ *
  *    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
  *    Alliance. All rights reserved.
- *    
+ *
  *    Permission to use, copy, modify, and/or distribute this software for
  *    any purpose with or without fee is hereby granted, provided that the
  *    above copyright notice and this permission notice appear in all
  *    copies.
- *    
+ *
  *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
  *    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
  *    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 #include <qcc/platform.h>
 
 #include <alljoyn/BusAttachment.h>
@@ -44,7 +44,7 @@ using namespace ajn;
  */
 TEST(BusAttachmentTest, RegisterTwoBusObjectsWithSamePathFails)
 {
-    BusAttachment bus(NULL);
+    BusAttachment bus("TestBus");
     BusObject busObj0("/parent/child");
     BusObject busObj1("/parent/child");
     EXPECT_EQ(ER_OK, bus.RegisterBusObject(busObj0));
@@ -53,7 +53,7 @@ TEST(BusAttachmentTest, RegisterTwoBusObjectsWithSamePathFails)
 
 TEST(BusAttachmentTest, RegisterChildThenParentBusObjectSucceeds)
 {
-    BusAttachment bus(NULL);
+    BusAttachment bus("TestBus");
     BusObject child("/parent/child");
     BusObject parent("/parent");
     EXPECT_EQ(ER_OK, bus.RegisterBusObject(child));
@@ -84,7 +84,7 @@ class TestBusAttachment : public BusAttachment {
     class TestInternal : public Internal {
       public:
         TestInternal(TestBusAttachment& bus, TransportFactoryContainer& factories) :
-            Internal(NULL, bus, factories, NULL, false, NULL, 4), bus(bus) { }
+            Internal(NULL, bus, factories, NULL, false, NULL), bus(bus) { }
         virtual QStatus TransportsStart() { return ER_OK; }
         virtual QStatus TransportsStop() { return ER_OK; }
         virtual QStatus TransportsJoin() { return ER_OK; }
@@ -126,7 +126,7 @@ class TestBusAttachment : public BusAttachment {
     TransportFactoryContainer factories;
     int nameOwnerChangedHandlerRegistered;
 
-    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories), 4), nameOwnerChangedHandlerRegistered(0) { }
+    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories)), nameOwnerChangedHandlerRegistered(0) { }
 };
 
 TEST(BusAttachmentTest, SingleSignalRegistrationWhenBusAttachmentIsLocallyDisconnectedThenConnected)

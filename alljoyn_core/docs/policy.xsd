@@ -46,7 +46,7 @@
             <xs:sequence maxOccurs="unbounded">
                 <xs:element ref="peer"/>
             </xs:sequence>
-            
+
         </xs:complexType>
         <xs:unique name="groupGUIDsUnique">
             <xs:selector xpath="peer"/>
@@ -92,7 +92,7 @@
             </xs:restriction>
         </xs:simpleType>
     </xs:element>
-    
+
     <xs:element name="rules">
         <xs:complexType>
             <xs:sequence maxOccurs="unbounded">
