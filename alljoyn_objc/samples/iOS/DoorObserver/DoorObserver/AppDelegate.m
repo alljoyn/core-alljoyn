@@ -32,13 +32,14 @@
 #import "AJNAboutObject.h"
 #import "AJNInit.h"
 #import "DoorObject.h"
+#import "AJNAboutData.h"
 
 static NSString * const kDoorPathPrefix = @"/org/alljoyn/sample/door/";
 const NSInteger kDoorServicePort = 42;
 
 #pragma mark - Extension
-@interface AppDelegate () <AJNSessionListener, AJNSessionPortListener, AJNAboutDataListener>
-@property (nonatomic, strong) NSMutableDictionary *aboutData;
+@interface AppDelegate () <AJNSessionListener, AJNSessionPortListener>
+@property (nonatomic, strong) AJNAboutData *aboutData;
 @property (nonatomic, strong) AJNAboutObject *aboutObj;
 @property (nonatomic, strong) NSMutableArray *localDoorObjects;
 @property (nonatomic,readwrite) AJNSessionId sessionId;
@@ -54,94 +55,27 @@ const NSInteger kDoorServicePort = 42;
 //--------------------------
 
 - (void)initAbout {
-    self.aboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
 
-    AJNMessageArgument *appID = [[AJNMessageArgument alloc] init];
-    uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    [appID setValue:@"ay", sizeof(originalAppId) / sizeof(originalAppId[0]), originalAppId];
-    [appID stabilize];
-    [self.aboutData setValue:appID forKey:@"AppId"];
-
-    AJNMessageArgument *defaultLang = [[AJNMessageArgument alloc] init];
-    [defaultLang setValue:@"s", "en"];
-    [defaultLang stabilize];
-    [self.aboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-
-    AJNMessageArgument *deviceName = [[AJNMessageArgument alloc] init];
-    [deviceName setValue:@"s", "Device Name"];
-    [deviceName stabilize];
-    [self.aboutData setValue:deviceName forKey:@"DeviceName"];
-
-    AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
-    [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
-    [deviceId stabilize];
-    [self.aboutData setValue:deviceId forKey:@"DeviceId"];
-
-    AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
-    [appName setValue:@"s", "App Name"];
-    [appName stabilize];
-    [self.aboutData setValue:appName forKey:@"AppName"];
-
-    AJNMessageArgument *manufacturer = [[AJNMessageArgument alloc] init];
-    [manufacturer setValue:@"s", "Manufacturer"];
-    [manufacturer stabilize];
-    [self.aboutData setValue:manufacturer forKey:@"Manufacturer"];
-
-    AJNMessageArgument *modelNo = [[AJNMessageArgument alloc] init];
-    [modelNo setValue:@"s", "ModelNo"];
-    [modelNo stabilize];
-    [self.aboutData setValue:modelNo forKey:@"ModelNumber"];
-
-    AJNMessageArgument *supportedLang = [[AJNMessageArgument alloc] init];
-    const char *supportedLangs[] = {"en"};
-    [supportedLang setValue:@"as", 1, supportedLangs];
-    [supportedLang stabilize];
-    [self.aboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-
-    AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
-    [description setValue:@"s", "Description"];
-    [description stabilize];
-    [self.aboutData setValue:description forKey:@"Description"];
-
-    AJNMessageArgument *dateOfManufacture = [[AJNMessageArgument alloc] init];
-    [dateOfManufacture setValue:@"s", "1-1-2014"];
-    [dateOfManufacture stabilize];
-    [self.aboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-
-    AJNMessageArgument *softwareVersion = [[AJNMessageArgument alloc] init];
-    [softwareVersion setValue:@"s", "1.0"];
-    [softwareVersion stabilize];
-    [self.aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-
-    AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "16.10.00"];
-    [ajSoftwareVersion stabilize];
-    [self.aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-
-    AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "16.10.00"];
-    [hwSoftwareVersion stabilize];
-    [self.aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-
-    AJNMessageArgument *supportURL = [[AJNMessageArgument alloc] init];
-    [supportURL setValue:@"s", "some.random.url"];
-    [supportURL stabilize];
-    [self.aboutData setValue:supportURL forKey:@"SupportUrl"];
+    // Setup the about data
+    // The default language is specified in the constructor. If the default language
+    // is not specified any Field that should be localized will return an error
+    self.aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
+    //AppId is a 128bit uuid
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    [self.aboutData setAppId:appId];
+    [self.aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
+    //DeviceId is a string encoded 128bit UUID
+    [self.aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
+    [self.aboutData setAppName:@"App Name" andLanguage:@"en"];
+    [self.aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
+    [self.aboutData setModelNumber:@"ModelNo"];
+    [self.aboutData setDescription:@"A poetic description of this application" andLanguage:@"en"];
+    [self.aboutData setDateOfManufacture:@"DateOfManufacture"];
+    [self.aboutData setSoftwareVersion:@"1.0"];
+    [self.aboutData setHardwareVersion:@"16.10.00"];
+    [self.aboutData setSupportUrl:@"some.random.url"];
 
     self.aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-}
-
-#pragma mark - AJNAboutDataListener protocol
-
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary **)aboutData
-{
-    return [self getDefaultAnnounceData:aboutData];
-}
-
--(QStatus)getDefaultAnnounceData:(NSMutableDictionary **)aboutData
-{
-    *aboutData = self.aboutData;
-    return ER_OK;
 }
 
 #pragma mark - Local Door
@@ -168,8 +102,9 @@ NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     door = [[DoorObject alloc] initWithLocation:location keyCode:@1111 isOpen:NO busAttachment:self.bus path:path];
 
     [self.bus registerBusObject:door];
-    [self.aboutObj announceForSessionPort:kDoorServicePort withAboutDataListener:self];
+    QStatus status = [self.aboutObj announceForSessionPort:kDoorServicePort withAboutDataListener:self.aboutData];
 
+    NSLog(@"Status = %u", status);
     [self.localDoorObjects addObject:door];
 }
 

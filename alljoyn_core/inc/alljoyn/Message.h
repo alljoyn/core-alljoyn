@@ -1084,7 +1084,7 @@ class _Message {
      * @param sender       sender of the message
      * @param allowRemote  true iff connection allows messages from remote devices.
      * @param guid         GUID of sender of message
-     * @param nametype     specify what names are transfered
+     * @param nameType     specify what names are transfered
      *
      * @return
      *      - #ER_OK if hello method call was sent successfully.

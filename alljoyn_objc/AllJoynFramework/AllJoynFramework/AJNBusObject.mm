@@ -27,6 +27,7 @@
 //    PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
+#import <vector>
 #import <alljoyn/BusObject.h>
 #import <alljoyn/InterfaceDescription.h>
 #import <alljoyn/MsgArg.h>
@@ -217,7 +218,26 @@ using namespace ajn;
     return self.busObject->SetAnnounceFlag((ajn::InterfaceDescription *)iface.handle, (BusObject::AnnounceFlag)flag);
 }
 
--(void)dealloc
+- (NSArray<NSString *> *)announcedInterfaceNames
+{
+    size_t numInterfaces = self.busObject->GetAnnouncedInterfaceNames(NULL, 0);
+
+    std::vector<const char *> interfaces(numInterfaces);
+
+    self.busObject->GetAnnouncedInterfaceNames(&(interfaces[0]), numInterfaces);
+
+    NSMutableArray<NSString *> *retInterfaces = [[NSMutableArray<NSString *> alloc] init];
+
+    for (auto it : interfaces) {
+        NSString *interface = [NSString stringWithCString:it encoding:NSUTF8StringEncoding];
+
+        [retInterfaces addObject:interface];
+    }
+
+    return retInterfaces;
+}
+
+- (void)dealloc
 {
     if(self.translator)
     {

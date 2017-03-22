@@ -80,10 +80,10 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
-    
+
     // allocate the client bus controller and set bus properties
     //
-    
+
     self.serviceController = [[AJNServiceController alloc] init];
     self.serviceController.trafficType = kAJNTrafficMessages;
     self.serviceController.proximityOptions = kAJNProximityAny;
@@ -91,13 +91,13 @@
     self.serviceController.allowRemoteMessages = YES;
     self.serviceController.multiPointSessionsEnabled = YES;
     self.serviceController.delegate = self;
-    
+
 }
 
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
-    
+
     self.passwordLabel.text = self.password;
 }
 
@@ -109,7 +109,7 @@
     }
     else {
         [self.serviceController start];
-        [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];        
+        [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
     }
 }
 
@@ -122,13 +122,13 @@
 - (void)shouldUnloadObjectOnBus:(AJNBusAttachment *)bus
 {
     self.secureObject = nil;
-    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];        
+    [self.startButton setTitle:@"Start" forState:UIControlStateNormal];
 }
 
 - (AJNBusObject *)objectOnBus:(AJNBusAttachment *)bus
 {
     self.secureObject = [[SecureObject alloc] initWithBusAttachment:self.serviceController.bus onPath:kServicePath];
-    
+
     return self.secureObject;
 }
 

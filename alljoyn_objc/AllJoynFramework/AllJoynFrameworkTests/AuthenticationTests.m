@@ -68,45 +68,15 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
 @implementation AuthenticationTests
 
-@synthesize bus = _bus;
-@synthesize listenerDidRegisterWithBusCompleted = _listenerDidRegisterWithBusCompleted;
-@synthesize listenerDidUnregisterWithBusCompleted = _listenerDidUnregisterWithBusCompleted;
-@synthesize didFindAdvertisedNameCompleted = _didFindAdvertisedNameCompleted;
-@synthesize didLoseAdvertisedNameCompleted = _didLoseAdvertisedNameCompleted;
-@synthesize nameOwnerChangedCompleted = _nameOwnerChangedCompleted;
-@synthesize busWillStopCompleted = _busWillStopCompleted;
-@synthesize busDidDisconnectCompleted = _busDidDisconnectCompleted;
-@synthesize sessionWasLost = _sessionWasLost;
-@synthesize didAddMemberNamed = _didAddMemberNamed;
-@synthesize didRemoveMemberNamed = _didRemoveMemberNamed;
-@synthesize shouldAcceptSessionJoinerNamed = _shouldAcceptSessionJoinerNamed;
-@synthesize didJoinInSession = _didJoinInSession;
-@synthesize testSessionId = _testSessionId;
-@synthesize testSessionJoiner = _testSessionJoiner;
-@synthesize isTestClient = _isTestClient;
-@synthesize clientConnectionCompleted = _clientConnectionCompleted;
-@synthesize didReceiveSignal = _didReceiveSignal;
-@synthesize authenticationListener = _authenticationListener;
 @synthesize handle = _handle;
-
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
 
 - (void)setUp
 {
     [super setUp];
 
-    // Set-up code here. Executed before each test case is run.
-    //
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
     self.authenticationListener = [[TestAuthenticationListener alloc] initOnBus:self.bus withUserName:@"Code Monkey" maximumAuthenticationsAllowed:5];
     self.listenerDidRegisterWithBusCompleted = NO;
@@ -131,8 +101,6 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self.bus destroy];
     [self.bus destroyBusListener:self];
     self.bus = nil;
@@ -156,6 +124,9 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     self.testSessionId = -1;
     self.testSessionJoiner = nil;
 
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
     [super tearDown];
 }
 
@@ -178,7 +149,8 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
     basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kAuthenticationTestsObjectPath];
 
-    [self.bus registerBusObject:basicObject];
+    status = [self.bus registerBusObject:basicObject];
+    XCTAssertTrue(status == ER_OK, @"Unable to register Bus Object.");
 
     status = [self.bus enablePeerSecurity:@"ALLJOYN_SRP_LOGON" authenticationListener:self.authenticationListener];
     XCTAssertTrue(status == ER_OK, @"Unable to enable peer security on service side. %@", [AJNStatus descriptionForStatusCode:status]);
@@ -216,17 +188,31 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
 
-    BasicObjectProxy *proxy = [[BasicObjectProxy alloc] initWithBusAttachment:client.bus serviceName:kAuthenticationTestsAdvertisedName objectPath:kAuthenticationTestsObjectPath sessionId:self.testSessionId];
+    AJNProxyBusObject *proxy = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:kAuthenticationTestsAdvertisedName objectPath:kAuthenticationTestsObjectPath sessionId:self.testSessionId];
 
-    [proxy introspectRemoteObject];
+    status = [proxy introspectRemoteObject];
+    XCTAssertTrue(status == ER_OK, @"Unable to introspect Remote Object");
 
-    NSString *resultantString = [proxy concatenateString:@"Hello " withString:@"World!"];
-    XCTAssertTrue([resultantString compare:@"Hello World!"] == NSOrderedSame, @"Test client call to method via proxy object failed.");
+    AJNMessageArgument *firstArgument = [[AJNMessageArgument alloc] init];
+    [firstArgument setValue:@"s", "Hello "];
+    [firstArgument stabilize];
+    AJNMessageArgument *secondArgument = [[AJNMessageArgument alloc] init];
+    [secondArgument setValue:@"s", "world!"];
+    [secondArgument stabilize];
+    NSArray *arguments = [[NSArray alloc]initWithObjects:firstArgument, secondArgument, nil];
 
-    status = [client.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    AJNMessage *reply;
+
+    [proxy callMethodWithName:@"Concatentate" onInterfaceWithName:@"org.alljoyn.bus.sample.strings" withArguments:arguments methodReply:&reply];
+
+    NSString *replyXml = [reply arg:0].xml;
+    NSString *expectedXmlString = @"<string>Hello world!</string>";
+    XCTAssertTrue([replyXml compare:expectedXmlString] == NSOrderedSame, @"Method call return reply message with wrong xml. Value is [%@], have to be [%@]", replyXml, expectedXmlString);
+
+    status = [client.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus failed.");
+    status = [self.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus failed.");
 
     status = [client.bus stop];
     XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");

@@ -42,6 +42,7 @@
 #import "AJNBusObject.h"
 #import "AJNProxyBusObject.h"
 #import "AJNTranslator.h"
+#import "AJNAboutData.h"
 
 BOOL announceFlag = NO;
 static NSString * const eaObjectPath = @"/events_actions";
@@ -64,7 +65,7 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 
 
 
-/*
+/* TODO: add unit tests for check full description (new uni description)
     The following test cases from regression test plan are covered
     001		Global translator and Client using empty string to Introspect
     002		Global translator and Client using unsupported language to Introspect
@@ -113,6 +114,8 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
  </xml>
 */
 
+/*
+ Seems it's redundant here because of deprecating of IntrospectWithLanguege interface
 @interface GlobalTranslator : NSObject<AJNTranslator>
 
 - (size_t)numTargetLanguages;
@@ -131,6 +134,15 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 - (NSString*)getTargetLanguage:(size_t)index
 {
     NSLog(@"getTargetLanguage called");
+    return @"en";
+}
+
+- (NSString*)targetLanguage:(size_t)index {
+    NSLog(@"targetLanguage called");
+    return @"en";
+}
+
+- (NSString*)bestLanguage:(NSString*)requested useDefaultLanguage:(NSString*)defaultLanguage {
     return @"en";
 }
 
@@ -175,6 +187,15 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     return @"en";
 }
 
+- (NSString*)targetLanguage:(size_t)index {
+    NSLog(@"targetLanguage called");
+    return @"en";
+}
+
+- (NSString*)bestLanguage:(NSString*)requested useDefaultLanguage:(NSString*)defaultLanguage {
+    return @"en";
+}
+
 - (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang
 {
     NSLog(@"Bus Object level Translator called for text %@ from language %@ to language %@", text, fromLang, toLang);
@@ -216,6 +237,15 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     return @"en";
 }
 
+- (NSString*)targetLanguage:(size_t)index {
+    NSLog(@"targetLanguage called");
+    return @"en";
+}
+
+- (NSString*)bestLanguage:(NSString*)requested useDefaultLanguage:(NSString*)defaultLanguage {
+    return @"en";
+}
+
 - (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang
 {
     NSLog(@"Interface Level Translator called for text %@ from language %@ to language %@", text, fromLang, toLang);
@@ -235,6 +265,7 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 }
 
 @end
+*/
 
 @interface EventsActionsTests() <AJNBusListener, AJNSessionListener, AJNSessionPortListener, AJNAboutDataListener, AJNAboutListener>
 
@@ -319,25 +350,56 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 @synthesize testSupportedLanguage = _testSupportedLanguage;
 @synthesize testUnsupportedLanguage = _testUnsupportedLanguage;
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
 
-    // Set-up code here. Executed before each test case is run.
-    //
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     [self setUpWithBusAttachement: [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES]];
+}
+
+- (void)tearDown
+{
+    self.listenerDidRegisterWithBusCompleted = NO;
+    self.listenerDidUnregisterWithBusCompleted = NO;
+    self.didFindAdvertisedNameCompleted = NO;
+    self.didLoseAdvertisedNameCompleted = NO;
+    self.nameOwnerChangedCompleted = NO;
+    self.busWillStopCompleted = NO;
+    self.busDidDisconnectCompleted = NO;
+
+    self.sessionWasLost = NO;
+    self.didAddMemberNamed = NO;
+    self.didRemoveMemberNamed = NO;
+    self.shouldAcceptSessionJoinerNamed = NO;
+    self.didJoinInSession = NO;
+    self.isTestClient = NO;
+    self.isAsyncTestClientBlock = NO;
+    self.isAsyncTestClientDelegate = NO;
+    self.clientConnectionCompleted = NO;
+    self.isPingAsyncComplete = NO;
+    self.setInvalidData = NO;
+    self.setInvalidLanguage = NO;
+    self.didReceiveAnnounce = NO;
+    announceFlag = NO;
+    self.busNameToConnect = nil;
+    self.sessionPortToConnect = 0;
+    self.testBadAnnounceData = NO;
+    self.testMissingAboutDataField = NO;
+    self.testMissingAnnounceDataField = NO;
+    self.testNonDefaultUTFLanguage = NO;
+    self.testAboutObjectDescription = NO;
+
+    self.testSupportedLanguage = NO;
+    self.testUnsupportedLanguage = NO;
+    self.bus = nil;
+
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
+    [super tearDown];
 }
 
 - (void)setUpWithBusAttachement:(AJNBusAttachment *)busAttachment
@@ -365,7 +427,7 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     self.setInvalidLanguage = NO;
     announceFlag = NO;
     self.busNameToConnect = nil;
-    self.sessionPortToConnect = nil;
+    self.sessionPortToConnect = 0;
     self.testBadAnnounceData = NO;
     self.testMissingAboutDataField = NO;
     self.testMissingAnnounceDataField = NO;
@@ -376,930 +438,6 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     self.testSupportedLanguage = NO;
     self.testUnsupportedLanguage = NO;
 }
-
-- (void)tearDown
-{
-    // Tear-down code here. Executed after each test case is run.
-    //
-    self.listenerDidRegisterWithBusCompleted = NO;
-    self.listenerDidUnregisterWithBusCompleted = NO;
-    self.didFindAdvertisedNameCompleted = NO;
-    self.didLoseAdvertisedNameCompleted = NO;
-    self.nameOwnerChangedCompleted = NO;
-    self.busWillStopCompleted = NO;
-    self.busDidDisconnectCompleted = NO;
-
-    self.sessionWasLost = NO;
-    self.didAddMemberNamed = NO;
-    self.didRemoveMemberNamed = NO;
-    self.shouldAcceptSessionJoinerNamed = NO;
-    self.didJoinInSession = NO;
-    self.isTestClient = NO;
-    self.isAsyncTestClientBlock = NO;
-    self.isAsyncTestClientDelegate = NO;
-    self.clientConnectionCompleted = NO;
-    self.isPingAsyncComplete = NO;
-    self.setInvalidData = NO;
-    self.setInvalidLanguage = NO;
-    self.didReceiveAnnounce = NO;
-    announceFlag = NO;
-    self.busNameToConnect = nil;
-    self.sessionPortToConnect = nil;
-    self.testBadAnnounceData = NO;
-    self.testMissingAboutDataField = NO;
-    self.testMissingAnnounceDataField = NO;
-    self.testNonDefaultUTFLanguage = NO;
-    self.testAboutObjectDescription = NO;
-
-    self.testSupportedLanguage = NO;
-    self.testUnsupportedLanguage = NO;
-    self.bus = nil;
-
-    [super tearDown];
-}
-
-- (void)testWithGlobalTranslatorAndEmptyString
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Set Global level translator
-    [self.bus setDescriptionTranslator:[[GlobalTranslator alloc] init]];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", ""];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if you get all the 5 descriptions
-    NSLog(@"Bus Object");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION].location != NSNotFound, @"Bus Object level description absent");
-    NSLog(@"Interface");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION].location != NSNotFound, @"Interface level description absent");
-    NSLog(@"Action");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION].location != NSNotFound, @"Method level description absent");
-    NSLog(@"Event");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION].location != NSNotFound, @"Signal level description absent");
-    NSLog(@"Property");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION].location != NSNotFound, @"Property level description absent");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-- (void)testWithGlobalTranslatorAndUnsupportedLanguage
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Set Global level translator
-    [self.bus setDescriptionTranslator:[[GlobalTranslator alloc] init]];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", "abc"];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if you get all the 5 descriptions
-    NSLog(@"Bus Object");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION].location != NSNotFound, @"Bus Object level description absent");
-    NSLog(@"Interface");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION].location != NSNotFound, @"Interface level description absent");
-    NSLog(@"Action");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION].location != NSNotFound, @"Method level description absent");
-    NSLog(@"Event");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION].location != NSNotFound, @"Signal level description absent");
-    NSLog(@"Property");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION].location != NSNotFound, @"Property level description absent");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-- (void)testWithGlobalTranslatorAndSupportedLanguage
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Set Global level translator
-    [self.bus setDescriptionTranslator:[[GlobalTranslator alloc] init]];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", "es"];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if you get all the 5 descriptions
-    NSLog(@"Bus Object");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION_ES].location != NSNotFound, @"Bus Object level description absent");
-    NSLog(@"Interface");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION_ES].location != NSNotFound, @"Interface level description absent");
-    NSLog(@"Action");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION_ES].location != NSNotFound, @"Method level description absent");
-    NSLog(@"Event");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION_ES].location != NSNotFound, @"Signal level description absent");
-    NSLog(@"Property");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION_ES].location != NSNotFound, @"Property level description absent");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-
-// Bus Object level translator and Client using empty string to Introspect
-
-- (void)testBusObjectLevelTranslatorWithEmptyString
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    [eaObject setDescriptionTranslator:[[BusObjectLevelTranslator alloc] init]];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", ""];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of mess  age : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if only bus object level description is present in english
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION].location != NSNotFound, @"Bus Object level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION].location == NSNotFound, @"Method level present");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION].location == NSNotFound, @"Method level description present");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION].location == NSNotFound, @"Signal level description present");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION].location == NSNotFound, @"Property level description present");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-// Bus Object level translator and Client using empty string to Introspect
-
-- (void)testBusObjectLevelTranslatorWithSupportedLanguage
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    [eaObject setDescriptionTranslator:[[BusObjectLevelTranslator alloc] init]];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", "es"];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of mess  age : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if only bus object level description is present in english
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION_ES].location != NSNotFound, @"Bus Object level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION_ES].location == NSNotFound, @"Method level present");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION_ES].location == NSNotFound, @"Method level description present");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION_ES].location == NSNotFound, @"Signal level description present");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION_ES].location == NSNotFound, @"Property level description present");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-
-// Interface level translator and Client using empty string to Introspect
-
-- (void)testInterfaceLevelDescriptionWithEmptyString
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    // Set the translator on interface level
-    AJNInterfaceDescription *eaObjectInterface = [self.bus interfaceWithName:@"org.alljoyn.bus.sample"];
-    [eaObjectInterface setDescriptionTranslator:[[InterfaceLevelTranslator alloc] init]];
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", ""];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if interface level and sub elements description is present and bus object level is absent
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION].location != NSNotFound, @"Interface level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION].location != NSNotFound, @"Method level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION].location != NSNotFound, @"Signal level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION].location != NSNotFound, @"Property level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION].location == NSNotFound, @"Bus object level description present");
-
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-// Interface level translator and Client using supported langauge to Introspect
-
-- (void)testInterfaceLevelDescriptionWithSupportedLanguage
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    // Set the translator on interface level
-    AJNInterfaceDescription *eaObjectInterface = [self.bus interfaceWithName:@"org.alljoyn.bus.sample"];
-    [eaObjectInterface setDescriptionTranslator:[[InterfaceLevelTranslator alloc] init]];
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", "es"];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if interface level and sub elements description is present and bus object level is absent
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION_ES].location != NSNotFound, @"Interface level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION_ES].location != NSNotFound, @"Method level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION_ES].location != NSNotFound, @"Signal level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION_ES].location != NSNotFound, @"Property level description absent");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION_ES].location == NSNotFound, @"Bus object level description present");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-- (void)testNoTranslator
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call IntrospectWithDescription
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    AJNMessageArgument *language = [[AJNMessageArgument alloc] init];
-    [language setValue:@"s", "en"];
-    [language stabilize];
-    NSArray *args = [[NSArray alloc] initWithObjects:language, nil];
-    status = [proxyObject callMethodWithName:@"IntrospectWithDescription" onInterfaceWithName:@"org.allseen.Introspectable" withArguments:args methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call IntrospectWithDescription on org.allseen.Introspectable failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if you get any of the 5 descriptions in all supported languages
-    NSLog(@"Bus Object");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION].location == NSNotFound, @"Bus Object level description absent");
-    NSLog(@"Interface");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION].location == NSNotFound, @"Interface level description absent");
-    NSLog(@"Action");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION].location == NSNotFound, @"Method level description absent");
-    NSLog(@"Event");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION].location == NSNotFound, @"Signal level description absent");
-    NSLog(@"Property");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION].location == NSNotFound, @"Property level description absent");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
-
-- (void)testServiceDescriptionClientIntrospectsNoDescription
-{
-    EventsActionsTests *client = [[EventsActionsTests alloc] init];
-    [client setUp];
-
-    client.isTestClient = YES;
-    client.didReceiveAnnounce = NO;
-
-    // Service
-    EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
-    [self.bus registerBusObject:eaObject];
-
-    // Get and mark org.allseen.Introspectable as ANNOUNCED
-    // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
-
-    AJNInterfaceDescription *introspectableIntf = [self.bus interfaceWithName:@"org.allseen.Introspectable"];
-    QStatus status = [eaObject setAnnounceFlagForInterface:introspectableIntf value:ANNOUNCED];
-    XCTAssertTrue(status == ER_OK, @"Could not set ANNOUNCE flag on org.allseen.Introspectable");
-
-    //Service bus
-    status = [self.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
-    status = [self.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    status = [self.bus requestWellKnownName:EVENTS_ACTIONS_SERVICE_NAME withFlags:kAJNBusNameFlagDoNotQueue];
-    XCTAssertTrue(status == ER_OK, @"Request name to bus failed.");
-
-    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-
-    status = [self.bus bindSessionOnPort:eaServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %lu failed.", eaServicePort);
-
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    [aboutObj announceForSessionPort:eaServicePort withAboutDataListener:self];
-
-    // Client
-    [client.bus registerAboutListener:client];
-    status = [client.bus start];
-    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    status = [client.bus connectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
-    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
-    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-
-    XCTAssertTrue([client waitForCompletion:20 onFlag:&announceFlag], @"The about listener should have been notified that the announce signal is received.");
-
-    // Join session with the service
-    AJNSessionId sessionId = 0;
-    if(announceFlag) {
-        sessionId = [client.bus joinSessionWithName:EVENTS_ACTIONS_SERVICE_NAME onPort:eaServicePort withDelegate:self options:sessionOptions];
-        XCTAssertTrue(sessionId != 0, @"Join session failed");
-    }
-
-    // Create a proxy bus object for the events and actions object
-    AJNProxyBusObject *proxyObject = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:EVENTS_ACTIONS_SERVICE_NAME objectPath:eaObjectPath sessionId:sessionId];
-
-    //Introspect
-    status = [proxyObject introspectRemoteObject];
-    XCTAssertTrue(status == ER_OK, @"fail");
-    BOOL test = [proxyObject implementsInterfaceWithName:@"org.allseen.Introspectable"];
-    XCTAssertTrue(test);
-
-    // Call Introspect on org.freedesktop.DBus.Introspectable
-    AJNMessage *methodReply =[[AJNMessage alloc] init];
-    status = [proxyObject callMethodWithName:@"Introspect" onInterfaceWithName:@"org.freedesktop.DBus.Introspectable" withArguments:nil methodReply:&methodReply];
-    XCTAssertTrue(status == ER_OK, @"Method call Introspect on org.freedesktop.Dbus failed %@",[AJNStatus descriptionForStatusCode:status]);
-
-    NSLog(@"Xml representation of message : %@",[methodReply xmlDescription]);
-    NSString *xmlStr = [methodReply xmlDescription];
-
-    // Check if you get any of the 5 descriptions
-    NSLog(@"Bus Object");
-    XCTAssertTrue([xmlStr rangeOfString:BUS_OBJECT_DESCRIPTION].location == NSNotFound, @"Bus Object level description absent");
-    NSLog(@"Interface");
-    XCTAssertTrue([xmlStr rangeOfString:INTERFACE_DESCRIPTION].location == NSNotFound, @"Interface level description absent");
-    NSLog(@"Action");
-    XCTAssertTrue([xmlStr rangeOfString:ACTION_DESCRIPTION].location == NSNotFound, @"Method level description absent");
-    NSLog(@"Event");
-    XCTAssertTrue([xmlStr rangeOfString:EVENT_DESCRIPTION].location == NSNotFound, @"Signal level description absent");
-    NSLog(@"Property");
-    XCTAssertTrue([xmlStr rangeOfString:PROPERTY_DESCRIPTION].location == NSNotFound, @"Property level description absent");
-
-    [self.bus disconnectWithArguments:@"null:"];
-    [self.bus stop];
-
-    [client.bus disconnectWithArguments:@"null:"];
-    [client.bus stop];
-
-    [client.bus unregisterBusListener:self];
-    [client.bus unregisterAllAboutListeners];
-    [client tearDown];
-}
-
 
 // Sessionless flag should be reflected in the Introspection XML
 
@@ -1314,9 +452,6 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     // Service
     EventsActionsObject *eaObject = [[EventsActionsObject alloc] initWithBusAttachment:self.bus onPath:eaObjectPath];
     [self.bus registerBusObject:eaObject];
-
-    // Set Global level translator
-    [self.bus setDescriptionTranslator:[[GlobalTranslator alloc] init]];
 
     // Get and mark org.allseen.Introspectable as ANNOUNCED
     // Note: There is an ordering problem here ASACORE-1893 so do not change the order until problem is fixed
@@ -1384,10 +519,10 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     NSLog(@"Interface");
     XCTAssertTrue([xmlStr rangeOfString:@"sessionless=\"true\""].location != NSNotFound, @"Sessionless flag is absent");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
@@ -1438,220 +573,91 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 
 }
 
-#pragma mark - AJNAboutDataListener delegate methods
-
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary **)aboutData
+- (QStatus)getAboutData:(AJNMessageArgument *__autoreleasing *)msgArg withLanguage:(NSString *)language
 {
-    NSLog(@"Inside getAboutDataForLanguage");
-    QStatus status = ER_OK;
-    *aboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-    gDefaultAboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-
-    AJNMessageArgument *appID = [[AJNMessageArgument alloc] init];
+    AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    [appID setValue:@"ay", sizeof(originalAppId) / sizeof(originalAppId[0]), originalAppId];
-    [appID stabilize];
-    [*aboutData setValue:appID forKey:@"AppId"];
-    [gDefaultAboutData setValue:appID forKey:@"AppId"];
+    [aboutData setAppId:originalAppId];
 
-    AJNMessageArgument *defaultLang = [[AJNMessageArgument alloc] init];
-    [defaultLang setValue:@"s", "en"];
-    [defaultLang stabilize];
-    [*aboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-    [gDefaultAboutData setValue:defaultLang forKey:@"DefaultLanguage"];
+    [aboutData setDefaultLanguage:@"en"];
 
-    AJNMessageArgument *deviceName = [[AJNMessageArgument alloc] init];
     if (self.testBadAnnounceData == YES) {
-        [deviceName setValue:@"s", "foo"];
+        [aboutData setDeviceName:@"foo" andLanguage:@"en"];
     } else {
-        [deviceName setValue:@"s", "Device Name"];
+        [aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
     }
-    [deviceName stabilize];
-    [*aboutData setValue:deviceName forKey:@"DeviceName"];
-    [gDefaultAboutData setValue:deviceName forKey:@"DeviceName"];
 
-    AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
     if (self.testMissingAboutDataField == YES) {
-        [deviceId setValue:@"s", ""];
+        [aboutData setDeviceId:@""];
     } else {
-        [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
+        [aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
     }
 
-    [deviceId stabilize];
-    [*aboutData setValue:deviceId forKey:@"DeviceId"];
-    [gDefaultAboutData setValue:deviceId forKey:@"DeviceId"];
-
-    AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
     if (self.testMissingAnnounceDataField == YES) {
-        [appName setValue:@"s", ""];
+        [aboutData setAppName:@"" andLanguage:@"en"];
     } else {
-        [appName setValue:@"s", "App Name"];
+        [aboutData setAppName:@"App Name" andLanguage:@"en"];
     }
 
-    [appName stabilize];
-    [*aboutData setValue:appName forKey:@"AppName"];
-    [gDefaultAboutData setValue:appName forKey:@"AppName"];
+    [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
 
-    AJNMessageArgument *manufacturer = [[AJNMessageArgument alloc] init];
-    [manufacturer setValue:@"s", "Manufacturer"];
-    [manufacturer stabilize];
-    [*aboutData setValue:manufacturer forKey:@"Manufacturer"];
-    [gDefaultAboutData setValue:manufacturer forKey:@"Manufacturer"];
+    [aboutData setModelNumber:@"ModelNo"];
 
-    AJNMessageArgument *modelNo = [[AJNMessageArgument alloc] init];
-    [modelNo setValue:@"s", "ModelNo"];
-    [modelNo stabilize];
-    [*aboutData setValue:modelNo forKey:@"ModelNumber"];
-    [gDefaultAboutData setValue:modelNo forKey:@"ModelNumber"];
+    [aboutData setSupportedLanguage:@"en"];
+    [aboutData setSupportedLanguage:@"foo"];
 
-    AJNMessageArgument *supportedLang = [[AJNMessageArgument alloc] init];
-    const char *supportedLangs[] = {"en", "foo"};
-    [supportedLang setValue:@"as", 1, supportedLangs];
-    [supportedLang stabilize];
-    [*aboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-    [gDefaultAboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-
-    AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
     if (self.testNonDefaultUTFLanguage == YES) {
-        [description setValue:@"s", "Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método"];
+        [aboutData setDescription:@"Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método" andLanguage:@"as"];
     } else {
-        [description setValue:@"s", "Description"];
+        [aboutData setDescription:@"Description" andLanguage:@"en"];
     }
-    [description stabilize];
-    [*aboutData setValue:description forKey:@"Description"];
-    [gDefaultAboutData setValue:description forKey:@"Description"];
 
-    AJNMessageArgument *dateOfManufacture = [[AJNMessageArgument alloc] init];
-    [dateOfManufacture setValue:@"s", "1-1-2014"];
-    [dateOfManufacture stabilize];
-    [*aboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-    [gDefaultAboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
+    [aboutData setDateOfManufacture:@"1-1-2014"];
 
-    AJNMessageArgument *softwareVersion = [[AJNMessageArgument alloc] init];
-    [softwareVersion setValue:@"s", "1.0"];
-    [softwareVersion stabilize];
-    [*aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-    [gDefaultAboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
+    [aboutData setSoftwareVersion:@"1.0"];
 
-    AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "16.10.00"];
-    [ajSoftwareVersion stabilize];
-    [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-    [gDefaultAboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
+    [aboutData setHardwareVersion:@"00.00.01"];
 
-    AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "16.10.00"];
-    [hwSoftwareVersion stabilize];
-    [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-    [gDefaultAboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
+    [aboutData setSupportUrl:@"some.random.url"];
 
-    AJNMessageArgument *supportURL = [[AJNMessageArgument alloc] init];
-    [supportURL setValue:@"s", "some.random.url"];
-    [supportURL stabilize];
-    [*aboutData setValue:supportURL forKey:@"SupportUrl"];
-    [gDefaultAboutData setValue:supportURL forKey:@"SupportUrl"];
-
-    return status;
+    return [aboutData getAboutData:msgArg withLanguage:language];
 }
 
--(QStatus)getDefaultAnnounceData:(NSMutableDictionary **)aboutData
+- (QStatus)getAnnouncedAboutData:(AJNMessageArgument *__autoreleasing *)msgArg
 {
-    NSLog(@"Inside getDefaultAnnounceData");
-    QStatus status = ER_OK;
-    *aboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-    gDefaultAboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-
-    AJNMessageArgument *appID = [[AJNMessageArgument alloc] init];
+    AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    [appID setValue:@"ay", sizeof(originalAppId) / sizeof(originalAppId[0]), originalAppId];
-    [appID stabilize];
-    [*aboutData setValue:appID forKey:@"AppId"];
-    [gDefaultAboutData setValue:appID forKey:@"AppId"];
+    [aboutData setAppId:originalAppId];
 
-    AJNMessageArgument *defaultLang = [[AJNMessageArgument alloc] init];
-    [defaultLang setValue:@"s", "en"];
-    [defaultLang stabilize];
-    [*aboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-    [gDefaultAboutData setValue:defaultLang forKey:@"DefaultLanguage"];
+    [aboutData setDefaultLanguage:@"en"];
 
-    AJNMessageArgument *deviceName = [[AJNMessageArgument alloc] init];
-    [deviceName setValue:@"s", "Device Name"];
-    [deviceName stabilize];
-    [*aboutData setValue:deviceName forKey:@"DeviceName"];
-    [gDefaultAboutData setValue:deviceName forKey:@"DeviceName"];
+    [aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
 
-    AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
-    [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
-    [deviceId stabilize];
-    [*aboutData setValue:deviceId forKey:@"DeviceId"];
-    [gDefaultAboutData setValue:deviceId forKey:@"DeviceId"];
+    [aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
 
-    AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
-    [appName setValue:@"s", "App Name"];
-    [appName stabilize];
-    [*aboutData setValue:appName forKey:@"AppName"];
-    [gDefaultAboutData setValue:appName forKey:@"AppName"];
+    [aboutData setAppName:@"App Name" andLanguage:@"en"];
 
-    AJNMessageArgument *manufacturer = [[AJNMessageArgument alloc] init];
-    [manufacturer setValue:@"s", "Manufacturer"];
-    [manufacturer stabilize];
-    [*aboutData setValue:manufacturer forKey:@"Manufacturer"];
-    [gDefaultAboutData setValue:manufacturer forKey:@"Manufacturer"];
+    [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
 
-    AJNMessageArgument *modelNo = [[AJNMessageArgument alloc] init];
-    [modelNo setValue:@"s", "ModelNo"];
-    [modelNo stabilize];
-    [*aboutData setValue:modelNo forKey:@"ModelNumber"];
-    [gDefaultAboutData setValue:modelNo forKey:@"ModelNumber"];
+    [aboutData setModelNumber:@"ModelNo"];
 
-    AJNMessageArgument *supportedLang = [[AJNMessageArgument alloc] init];
-    const char *supportedLangs[] = {"en"};
-    [supportedLang setValue:@"as", 1, supportedLangs];
-    [supportedLang stabilize];
-    [*aboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-    [gDefaultAboutData setValue:supportedLang forKey:@"SupportedLanguages"];
+    [aboutData setSupportedLanguage:@"en"];
 
-    AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
     if (self.testNonDefaultUTFLanguage == YES) {
-        [description setValue:@"s", "Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método"];
+        [aboutData setDescription:@"Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método" andLanguage:@"foo"];
     } else {
-        [description setValue:@"s", "Description"];
+        [aboutData setDescription:@"Description" andLanguage:@"en"];
     }
-    [description stabilize];
-    [*aboutData setValue:description forKey:@"Description"];
-    [gDefaultAboutData setValue:description forKey:@"Description"];
 
-    AJNMessageArgument *dateOfManufacture = [[AJNMessageArgument alloc] init];
-    [dateOfManufacture setValue:@"s", "1-1-2014"];
-    [dateOfManufacture stabilize];
-    [*aboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-    [gDefaultAboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
+    [aboutData setDateOfManufacture:@"1-1-2014"];
 
-    AJNMessageArgument *softwareVersion = [[AJNMessageArgument alloc] init];
-    [softwareVersion setValue:@"s", "1.0"];
-    [softwareVersion stabilize];
-    [*aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-    [gDefaultAboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
+    [aboutData setSoftwareVersion:@"1.0"];
 
-    AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "16.10.00"];
-    [ajSoftwareVersion stabilize];
-    [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-    [gDefaultAboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
+    [aboutData setHardwareVersion:@"00.00.01"];
 
-    AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "16.10.00"];
-    [hwSoftwareVersion stabilize];
-    [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-    [gDefaultAboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
+    [aboutData setSupportUrl:@"some.random.url"];
 
-    AJNMessageArgument *supportURL = [[AJNMessageArgument alloc] init];
-    [supportURL setValue:@"s", "some.random.url"];
-    [supportURL stabilize];
-    [*aboutData setValue:supportURL forKey:@"SupportUrl"];
-    [gDefaultAboutData setValue:supportURL forKey:@"SupportUrl"];
-
-    return status;
+    return [aboutData getAnnouncedAboutData:msgArg];
 }
 
 #pragma mark - AJNSessionPortListener implementation

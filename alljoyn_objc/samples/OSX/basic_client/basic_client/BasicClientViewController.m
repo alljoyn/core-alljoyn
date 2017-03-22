@@ -43,7 +43,7 @@
     if (self) {
         // Initialization code here.
     }
-    
+
     return self;
 }
 
@@ -56,7 +56,7 @@
     return self;
 }
 
-- (IBAction)didTapHelloWorldButton:(id)sender 
+- (IBAction)didTapHelloWorldButton:(id)sender
 {
     [BasicClient.sharedInstance sendHelloMessage];
 }
@@ -72,7 +72,7 @@
         [string appendString:message];
         [self.eventTextView setString:string];
         NSLog(@"%@",string);
-    });    
+    });
 }
 
 @end

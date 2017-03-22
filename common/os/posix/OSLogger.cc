@@ -5,7 +5,6 @@
  */
 
 /******************************************************************************
- *
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
  *
@@ -32,7 +31,6 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
- *
  *****************************************************************************/
 
 #include <qcc/platform.h>

@@ -37,29 +37,16 @@ using namespace sample::secure::door;
 using namespace ajn;
 using namespace std;
 
-QStatus UpdateDoorProviderManifest(DoorCommon& common)
-{
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(DOOR_INTERFACE);
-
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("*");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[2].SetMemberName("*");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-
-    rules[0].SetMembers(3, prms);
-
-    PermissionPolicy::Acl manifest;
-    manifest.SetRules(1, rules);
-
-    return common.UpdateManifest(manifest);
-}
+static AJ_PCSTR s_providerManifestTemplateWithSignal =
+    "<manifest>"
+    "<node>"
+    "<interface = \"" DOOR_INTERFACE "\">"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 
 int CDECL_CALL main(int argc, char** argv)
 {
@@ -144,10 +131,8 @@ int CDECL_CALL main(int argc, char** argv)
             switch (cmd) {
             case 'u':
                 printf("Enabling automatic signaling of door events ... ");
-                status = UpdateDoorProviderManifest(common);
+                status = common.UpdateManifestTemplate(s_providerManifestTemplateWithSignal);
                 if (ER_OK != status) {
-                    fprintf(stderr, "Failed to UpdateDoorProviderManifest - status (%s)\n",
-                            QCC_StatusText(status));
                     break;
                 }
                 door.autoSignal = true;

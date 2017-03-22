@@ -173,10 +173,19 @@ TEST_F(ResetTests, RecoveryFromResetSuccess) {
     // reset the application
     ASSERT_EQ(ER_OK, storage->ResetApplication(app));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
-    ASSERT_NE(ER_END_OF_DATA, storage->GetManagedApplication(app));
+    ASSERT_EQ(ER_OK, storage->GetManagedApplication(app));
 
-    // stop the test app
+    // stop agent to make sure update is completed
+    RemoveSecAgent();
+
+    // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
+
+    // make sure storage will succeed on UpdatesCompleted
+    wrappedCA->failOnUpdatesCompleted = false;
+
+    // restart agent
+    InitSecAgent();
 
     // restore connectivity to storage
     wrappedCA->failOnUpdatesCompleted = false;

@@ -455,7 +455,7 @@ class DefaultECDHEAuthListener : public AuthListener {
      * when it is not yet defined) or clears it by providing a NULL array.
      *
      * @param[in] password the pre-shared secret or nullptr.
-     * @param[in] password the size of the password secret.  It must be at
+     * @param[in] passwordSize the size of the password secret.  It must be at
      *                    least 4 characters or 0 to clear the
      *                    current value.
      * @return ER_OK on success

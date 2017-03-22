@@ -38,8 +38,8 @@ using namespace ajn;
 /**
  * Constructor for the AJN signal handler implementation.
  *
- * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
- */    
+ * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
+ */
 AJNCChatObjectSignalHandlerImpl::AJNCChatObjectSignalHandlerImpl(id<AJNSignalHandler> aDelegate) : AJNSignalHandlerImpl(aDelegate), chatSignalMember(NULL)
 {
 }
@@ -53,7 +53,7 @@ void AJNCChatObjectSignalHandlerImpl::RegisterSignalHandler(ajn::BusAttachment &
 {
     if (chatSignalMember == NULL) {
         const ajn::InterfaceDescription* chatIntf = bus.GetInterface([kInterfaceName UTF8String]);
-        
+
         /* Store the Chat signal member away so it can be quickly looked up */
         if (chatIntf) {
             chatSignalMember = chatIntf->GetMember("Chat");
@@ -74,7 +74,7 @@ void AJNCChatObjectSignalHandlerImpl::UnregisterSignalHandler(ajn::BusAttachment
 {
     if (chatSignalMember == NULL) {
         const ajn::InterfaceDescription* chatIntf = bus.GetInterface([kInterfaceName UTF8String]);
-        
+
         /* Store the Chat signal member away so it can be quickly looked up */
         chatSignalMember = chatIntf->GetMember("Chat");
         assert(chatSignalMember);
@@ -95,12 +95,12 @@ void AJNCChatObjectSignalHandlerImpl::ChatSignalHandler(const ajn::InterfaceDesc
         NSString *from = [NSString stringWithCString:msg->GetSender() encoding:NSUTF8StringEncoding];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         ajn:SessionId sessionId = msg->GetSessionId();
-        
+
         NSLog(@"Received signal [%@] from %@ on path %@ for session id %u [%s > %s]", message, from, objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
-        
+
         dispatch_async(dispatch_get_main_queue(), ^{
             [(id<AJNChatReceiver>)m_delegate chatMessageReceived:message from:from onObjectPath:objectPath forSession:sessionId];
         });
-        
+
     }
-}    
+}

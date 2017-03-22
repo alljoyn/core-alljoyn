@@ -80,6 +80,10 @@ void XmlRulesValidator::Shutdown()
 
     delete s_memberTypeMap;
     s_memberTypeMap = nullptr;
+
+    MethodsValidator::Shutdown();
+    SignalsValidator::Shutdown();
+    PropertiesValidator::Shutdown();
 }
 
 XmlRulesValidator* XmlRulesValidator::GetInstance()

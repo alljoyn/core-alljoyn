@@ -91,4 +91,9 @@ public abstract class KeyInfoECC extends KeyInfo {
      * The ECC algorithm
      */
     private byte m_curve;
+
+    @Override
+    public int hashCode() {
+        return super.hashCode() * 31 + m_curve;
+    }
 }
