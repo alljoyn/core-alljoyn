@@ -256,8 +256,10 @@ static void list_claimable_applications(shared_ptr<SecurityAgent>& secAgent)
         for (; it < claimableApps.end(); ++it) {
             const OnlineApplication& info = *it;
             if (ER_OK == secAgent->PingApplication(info)) {
+                stringstream ss;
+                ss << i;
                 tempStr += "  "
-                           + to_string(i)
+                           + ss.str()
                            + ". id: "
                            + toKeyID(info.keyInfo)
                            + " -  bus name: "
