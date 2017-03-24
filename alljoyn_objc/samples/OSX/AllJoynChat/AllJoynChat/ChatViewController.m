@@ -196,10 +196,11 @@
     /* Join the conversation */
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
 
-    AJNSessionId sessionId = [self.busAttachment joinSessionWithName:name onPort:kServicePort withDelegate:self options:sessionOptions];
-    if (sessionId != 0) {
-        self.sessionId = sessionId;
-    }
+    [self.busAttachment joinSessionAsyncWithName:name onPort:kServicePort withDelegate:self options:sessionOptions joinCompletedBlock:^(QStatus status, AJNSessionId sessionId, AJNSessionOptions *opts, void *context) {
+        if (status == ER_OK) {
+            self.sessionId = sessionId;
+        }
+    } context:nil];
 }
 
 - (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
