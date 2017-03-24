@@ -28,12 +28,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AppDelegate.h"
+#import "AJNInit.h"
+
 
 @implementation AppDelegate
 
-- (void)applicationDidFinishLaunching:(NSNotification *)aNotification
-{
-    // Insert code here to initialize your application
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    QStatus status = [AJNInit alljoynInit];
+    if (status == ER_OK) {
+        status = [AJNInit alljoynRouterInit];
+        if (status != ER_OK) {
+            NSLog(@"alljoynRouterInit fails with error: %u", status);
+            [AJNInit alljoynShutdown];
+        }
+    } else {
+        NSLog(@"alljoynInit fails with error: %u", status);
+    }
+}
+
+- (void)applicationWillTerminate:(NSNotification *)aNotification {
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
 }
 
 @end
