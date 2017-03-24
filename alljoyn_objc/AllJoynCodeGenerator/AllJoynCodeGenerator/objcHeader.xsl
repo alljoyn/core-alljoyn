@@ -158,7 +158,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 @interface AJN<xsl:value-of select="./annotation[@name='org.alljoyn.lang.objc']/@value" /> : AJNBusObject&lt;<xsl:apply-templates select="./interface" mode="objc-interface-list"/>&gt;
-
+{
+@protected
+<xsl:apply-templates select="./interface/property" mode="objc-declaration-protected"/>
+}
 // properties
 //
 <xsl:apply-templates select="./interface/property" mode="objc-declaration"/>
@@ -183,7 +186,7 @@
 
 // properties
 //
-<xsl:apply-templates select=".//property" mode="objc-declaration"/>
+<xsl:apply-templates select=".//property" mode="objc-declaration-proxy"/>
 // methods
 //
 <xsl:apply-templates select=".//method" mode="objc-declaration-proxy"/>
@@ -198,24 +201,15 @@
 </xsl:template>
 
 <xsl:template match="method" mode="objc-declaration">
-    <xsl:text>- (</xsl:text>
+    <xsl:text>- (QStatus)</xsl:text>
     <xsl:choose>
-        <xsl:when test="count(./arg[@direction='out']) > 1 or count(./arg[@direction='out']) = 0">
-            <xsl:text>void</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-argType"/>
-        </xsl:otherwise>
-    </xsl:choose>
-    <xsl:text>)</xsl:text>
-    <xsl:choose>
-        <xsl:when test="count(./arg) = 0 or (count(./arg) = 1 and count(./arg[@direction='out']) = 1)">
+        <xsl:when test="count(./arg) = 0">
             <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
             <xsl:text>:(AJNMessage *)methodCallMessage</xsl:text>
         </xsl:when>
-        <xsl:when test="count(./arg[@direction='out']) > 1">
+        <xsl:when test="count(./arg[@direction='out']) > 0">
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
-            <xsl:if test="count(./arg[@direction='out']) > 1">
+            <xsl:if test="count(./arg[@direction='out']) > 0">
                 <xsl:text>&#32;</xsl:text>
             </xsl:if>
             <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
@@ -229,24 +223,16 @@
     <xsl:text>;&#10;</xsl:text>
 </xsl:template>
 
+
 <xsl:template match="method" mode="objc-declaration-proxy">
-    <xsl:text>- (</xsl:text>
+    <xsl:text>- (QStatus)</xsl:text>
     <xsl:choose>
-        <xsl:when test="count(./arg[@direction='out']) > 1 or count(./arg[@direction='out']) = 0">
-            <xsl:text>void</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-argType"/>
-        </xsl:otherwise>
-    </xsl:choose>
-    <xsl:text>)</xsl:text>
-    <xsl:choose>
-        <xsl:when test="count(./arg) = 0 or (count(./arg) = 1 and count(./arg[@direction='out']) = 1)">
+        <xsl:when test="count(./arg) = 0">
             <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
         </xsl:when>
-        <xsl:when test="count(./arg[@direction='out']) > 1">
+        <xsl:when test="count(./arg[@direction='out']) > 0">
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
-            <xsl:if test="count(./arg[@direction='out']) > 1">
+            <xsl:if test="count(./arg[@direction='out']) > 0">
                 <xsl:text>&#32;</xsl:text>
             </xsl:if>
             <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
@@ -256,10 +242,36 @@
         </xsl:otherwise>
     </xsl:choose>
     <xsl:text>;&#10;</xsl:text>
+    <xsl:text>- (QStatus)</xsl:text>
+    <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
+            <xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>
+        </xsl:when>
+        <xsl:when test="count(./arg[@direction='out']) > 0">
+            <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
+            <xsl:if test="count(./arg[@direction='out']) > 0">
+                <xsl:text>&#32;</xsl:text>
+            </xsl:if>
+            <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
+        </xsl:otherwise>
+    </xsl:choose>
+    <xsl:choose>
+        <xsl:when test="count(./arg) = 0">
+            <xsl:text>:(AJNMessage **) replyMessage</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+            <xsl:text> replyMessage:(AJNMessage **) replyMessage</xsl:text>
+        </xsl:otherwise>
+    </xsl:choose>
+    <xsl:text>;&#10;</xsl:text>
+    <xsl:text>&#10;</xsl:text>
 </xsl:template>
 
 <xsl:template match="signal" mode="objc-declaration">
-    <xsl:text>- (void)send</xsl:text>
+    <xsl:text>- (QStatus)send</xsl:text>
     <xsl:choose>
         <xsl:when test="count(./arg) > 0">
             <xsl:apply-templates select="./arg" mode="objc-messageParam"/>
@@ -307,11 +319,37 @@
     <xsl:text>;&#10;</xsl:text>
 </xsl:template>
 
+<xsl:template match="property" mode="objc-declaration-protected">
+<xsl:text>&#32;&#32;&#32;&#32;</xsl:text>
+    <xsl:call-template name="objcArgType"/>
+    <xsl:text>_</xsl:text>
+    <xsl:value-of select="@name"/>
+    <xsl:text>;&#10;</xsl:text>
+</xsl:template>
+
+<xsl:template match="property" mode="objc-declaration-proxy">
+    <xsl:if test="@access='read' or @access='readwrite'">
+        <xsl:text>- (QStatus)get</xsl:text>
+        <xsl:call-template name="capitalizeFirstLetterOfNameAttr"/>
+        <xsl:text>:(</xsl:text>
+        <xsl:call-template name="objcArgType"/>
+        <xsl:text>*)prop;&#10;</xsl:text>
+    </xsl:if>
+    <xsl:if test="@access='write' or @access='readwrite'">
+        <xsl:text>- (QStatus)set</xsl:text>
+        <xsl:call-template name="capitalizeFirstLetterOfNameAttr"/>
+        <xsl:text>:(</xsl:text>
+        <xsl:call-template name="objcArgType"/>
+        <xsl:text>)prop;&#10;</xsl:text>
+    </xsl:if>
+    <xsl:text>&#10;</xsl:text>
+</xsl:template>
+
 <xsl:template match="arg" mode="objc-messageParam">
     <xsl:if test="position() > 1">
         <xsl:text>&#32;</xsl:text>
     </xsl:if>
-    <xsl:value-of select="./annotation[@name='org.alljoyn.lang.objc']/@value" />
+        <xsl:value-of select="./annotation[@name='org.alljoyn.lang.objc']/@value" />
     <xsl:text>(</xsl:text>
         <xsl:apply-templates select="." mode="objc-argType"/>
         <xsl:if test="@direction='out'">
@@ -331,7 +369,7 @@
             <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='b'">
-            <xsl:text>BOOL</xsl:text>
+            <xsl:text>BOOL </xsl:text>
         </xsl:when>
         <xsl:when test="@type='n'">
             <xsl:text>NSNumber *</xsl:text>
