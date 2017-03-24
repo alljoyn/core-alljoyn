@@ -7,22 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7D68081C1A9807310000F28D /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D68081B1A9807310000F28D /* AJNInit.mm */; };
-		7DCBEE7C1A254DF200A53A83 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE6A1A254DF200A53A83 /* AJNAboutObjectDescription.mm */; };
-		7DCBEE7D1A254DF200A53A83 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE6C1A254DF200A53A83 /* AJNAboutObject.mm */; };
-		7DCBEE7E1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE6F1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm */; };
-		7DCBEE7F1A254DF200A53A83 /* AJNAboutIcon.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE711A254DF200A53A83 /* AJNAboutIcon.mm */; };
-		7DCBEE801A254DF200A53A83 /* AJNAboutIconObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE731A254DF200A53A83 /* AJNAboutIconObject.mm */; };
-		7DCBEE811A254DF200A53A83 /* AJNAboutIconProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE751A254DF200A53A83 /* AJNAboutIconProxy.mm */; };
-		7DCBEE821A254DF200A53A83 /* AJNAboutListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE781A254DF200A53A83 /* AJNAboutListenerImpl.mm */; };
-		7DCBEE831A254DF200A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE7B1A254DF200A53A83 /* AJNAboutProxy.mm */; };
-		7DCBEE861A254E0400A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE851A254E0400A53A83 /* AJNPasswordManager.mm */; };
-		83F6DFC8193B13FD001D1B69 /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83F6DFC7193B13FD001D1B69 /* AJNTranslatorImpl.mm */; };
-		9A47F38C1DC8B94700B45423 /* AJNCertificateX509.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3831DC8B94700B45423 /* AJNCertificateX509.mm */; };
-		9A47F38D1DC8B94700B45423 /* AJNCryptoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3851DC8B94700B45423 /* AJNCryptoECC.mm */; };
-		9A47F38E1DC8B94700B45423 /* AJNKeyInfoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3871DC8B94700B45423 /* AJNKeyInfoECC.mm */; };
-		9A47F38F1DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3891DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.mm */; };
-		9A47F3901DC8B94700B45423 /* AJNPermissionConfigurator.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F38B1DC8B94700B45423 /* AJNPermissionConfigurator.mm */; };
 		AC0C81C516B05D9A00B60EE3 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC0C81C416B05D9A00B60EE3 /* UIKit.framework */; };
 		AC0C81C716B05D9A00B60EE3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC0C81C616B05D9A00B60EE3 /* Foundation.framework */; };
 		AC0C81C916B05D9A00B60EE3 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC0C81C816B05D9A00B60EE3 /* CoreGraphics.framework */; };
@@ -39,72 +23,12 @@
 		AC0C820516B1AF5600B60EE3 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC0C820416B1AF5600B60EE3 /* SystemConfiguration.framework */; };
 		AC0C820E16B1B02000B60EE3 /* AJNPerformanceObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C820B16B1B02000B60EE3 /* AJNPerformanceObject.mm */; };
 		AC0C820F16B1B02000B60EE3 /* PerformanceObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C820D16B1B02000B60EE3 /* PerformanceObject.m */; };
-		AC0C824D16B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C821316B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.mm */; };
-		AC0C824E16B1B0A600B60EE3 /* AJNBus.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C821516B1B0A600B60EE3 /* AJNBus.m */; };
-		AC0C824F16B1B0A600B60EE3 /* AJNBusAttachment.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C821716B1B0A600B60EE3 /* AJNBusAttachment.mm */; };
-		AC0C825016B1B0A600B60EE3 /* AJNBusListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C821C16B1B0A600B60EE3 /* AJNBusListenerImpl.mm */; };
-		AC0C825116B1B0A600B60EE3 /* AJNBusObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C821E16B1B0A600B60EE3 /* AJNBusObject.mm */; };
-		AC0C825216B1B0A600B60EE3 /* AJNBusObjectImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822016B1B0A600B60EE3 /* AJNBusObjectImpl.mm */; };
-		AC0C825316B1B0A600B60EE3 /* AJNClientController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822216B1B0A600B60EE3 /* AJNClientController.m */; };
-		AC0C825416B1B0A600B60EE3 /* AJNInterfaceDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822516B1B0A600B60EE3 /* AJNInterfaceDescription.mm */; };
-		AC0C825516B1B0A600B60EE3 /* AJNInterfaceMember.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822716B1B0A600B60EE3 /* AJNInterfaceMember.mm */; };
-		AC0C825616B1B0A600B60EE3 /* AJNInterfaceProperty.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822916B1B0A600B60EE3 /* AJNInterfaceProperty.mm */; };
-		AC0C825716B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822C16B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.mm */; };
-		AC0C825816B1B0A600B60EE3 /* AJNMessage.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C822E16B1B0A600B60EE3 /* AJNMessage.mm */; };
-		AC0C825916B1B0A600B60EE3 /* AJNMessageArgument.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823016B1B0A600B60EE3 /* AJNMessageArgument.mm */; };
-		AC0C825A16B1B0A600B60EE3 /* AJNMessageHeaderFields.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823216B1B0A600B60EE3 /* AJNMessageHeaderFields.mm */; };
-		AC0C825B16B1B0A600B60EE3 /* AJNObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823416B1B0A600B60EE3 /* AJNObject.m */; };
-		AC0C825C16B1B0A600B60EE3 /* AJNProxyBusObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823616B1B0A600B60EE3 /* AJNProxyBusObject.mm */; };
-		AC0C825D16B1B0A600B60EE3 /* AJNSecurityCredentials.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823816B1B0A600B60EE3 /* AJNSecurityCredentials.mm */; };
-		AC0C825E16B1B0A600B60EE3 /* AJNServiceController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823A16B1B0A600B60EE3 /* AJNServiceController.m */; };
-		AC0C825F16B1B0A600B60EE3 /* AJNSessionListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823D16B1B0A600B60EE3 /* AJNSessionListenerImpl.mm */; };
-		AC0C826016B1B0A600B60EE3 /* AJNSessionOptions.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C823F16B1B0A600B60EE3 /* AJNSessionOptions.mm */; };
-		AC0C826116B1B0A600B60EE3 /* AJNSessionPortListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C824216B1B0A600B60EE3 /* AJNSessionPortListenerImpl.mm */; };
-		AC0C826216B1B0A600B60EE3 /* AJNSignalHandlerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C824516B1B0A600B60EE3 /* AJNSignalHandlerImpl.mm */; };
-		AC0C826316B1B0A600B60EE3 /* AJNStatus.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C824716B1B0A600B60EE3 /* AJNStatus.m */; };
-		AC0C826416B1B0A600B60EE3 /* AJNTransportMask.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C824916B1B0A600B60EE3 /* AJNTransportMask.m */; };
-		AC0C826516B1B0A600B60EE3 /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC0C824C16B1B0A600B60EE3 /* AJNVersion.mm */; };
 		AC0C826816B1B43700B60EE3 /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C826716B1B43700B60EE3 /* Constants.m */; };
 		AC0C827E16B1FB6200B60EE3 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0C827D16B1FB6100B60EE3 /* ViewController.m */; };
 		AC9D296C16BAF3AC005C79F9 /* PerformanceStatistics.m in Sources */ = {isa = PBXBuildFile; fileRef = AC9D296B16BAF3AB005C79F9 /* PerformanceStatistics.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		7D68081A1A9807310000F28D /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
-		7D68081B1A9807310000F28D /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
-		7DCBEE6A1A254DF200A53A83 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
-		7DCBEE6B1A254DF200A53A83 /* AJNAboutObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.h; sourceTree = "<group>"; };
-		7DCBEE6C1A254DF200A53A83 /* AJNAboutObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.mm; sourceTree = "<group>"; };
-		7DCBEE6D1A254DF200A53A83 /* AJNAboutDataListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutDataListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutDataListener.h; sourceTree = "<group>"; };
-		7DCBEE6E1A254DF200A53A83 /* AJNAboutDataListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutDataListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutDataListenerImpl.h; sourceTree = "<group>"; };
-		7DCBEE6F1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutDataListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutDataListenerImpl.mm; sourceTree = "<group>"; };
-		7DCBEE701A254DF200A53A83 /* AJNAboutIcon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutIcon.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutIcon.h; sourceTree = "<group>"; };
-		7DCBEE711A254DF200A53A83 /* AJNAboutIcon.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutIcon.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutIcon.mm; sourceTree = "<group>"; };
-		7DCBEE721A254DF200A53A83 /* AJNAboutIconObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutIconObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutIconObject.h; sourceTree = "<group>"; };
-		7DCBEE731A254DF200A53A83 /* AJNAboutIconObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutIconObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutIconObject.mm; sourceTree = "<group>"; };
-		7DCBEE741A254DF200A53A83 /* AJNAboutIconProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutIconProxy.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutIconProxy.h; sourceTree = "<group>"; };
-		7DCBEE751A254DF200A53A83 /* AJNAboutIconProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutIconProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutIconProxy.mm; sourceTree = "<group>"; };
-		7DCBEE761A254DF200A53A83 /* AJNAboutListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutListener.h; sourceTree = "<group>"; };
-		7DCBEE771A254DF200A53A83 /* AJNAboutListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutListenerImpl.h; sourceTree = "<group>"; };
-		7DCBEE781A254DF200A53A83 /* AJNAboutListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutListenerImpl.mm; sourceTree = "<group>"; };
-		7DCBEE791A254DF200A53A83 /* AJNAboutObjectDescription.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObjectDescription.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.h; sourceTree = "<group>"; };
-		7DCBEE7A1A254DF200A53A83 /* AJNAboutProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutProxy.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.h; sourceTree = "<group>"; };
-		7DCBEE7B1A254DF200A53A83 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
-		7DCBEE841A254E0400A53A83 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
-		7DCBEE851A254E0400A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
-		83F6DFC5193B13FD001D1B69 /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
-		83F6DFC6193B13FD001D1B69 /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
-		83F6DFC7193B13FD001D1B69 /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
-		9A47F3821DC8B94700B45423 /* AJNCertificateX509.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNCertificateX509.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCertificateX509.h; sourceTree = "<group>"; };
-		9A47F3831DC8B94700B45423 /* AJNCertificateX509.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCertificateX509.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCertificateX509.mm; sourceTree = "<group>"; };
-		9A47F3841DC8B94700B45423 /* AJNCryptoECC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNCryptoECC.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCryptoECC.h; sourceTree = "<group>"; };
-		9A47F3851DC8B94700B45423 /* AJNCryptoECC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCryptoECC.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCryptoECC.mm; sourceTree = "<group>"; };
-		9A47F3861DC8B94700B45423 /* AJNKeyInfoECC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNKeyInfoECC.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.h; sourceTree = "<group>"; };
-		9A47F3871DC8B94700B45423 /* AJNKeyInfoECC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNKeyInfoECC.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.mm; sourceTree = "<group>"; };
-		9A47F3881DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPermissionConfigurationListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurationListenerImpl.h; sourceTree = "<group>"; };
-		9A47F3891DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPermissionConfigurationListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurationListenerImpl.mm; sourceTree = "<group>"; };
-		9A47F38A1DC8B94700B45423 /* AJNPermissionConfigurator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPermissionConfigurator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurator.h; sourceTree = "<group>"; };
-		9A47F38B1DC8B94700B45423 /* AJNPermissionConfigurator.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPermissionConfigurator.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurator.mm; sourceTree = "<group>"; };
 		AC0C81C016B05D9A00B60EE3 /* AllJoynPerfTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AllJoynPerfTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC0C81C416B05D9A00B60EE3 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		AC0C81C616B05D9A00B60EE3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -127,66 +51,6 @@
 		AC0C820B16B1B02000B60EE3 /* AJNPerformanceObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNPerformanceObject.mm; sourceTree = "<group>"; };
 		AC0C820C16B1B02000B60EE3 /* PerformanceObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PerformanceObject.h; sourceTree = "<group>"; };
 		AC0C820D16B1B02000B60EE3 /* PerformanceObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PerformanceObject.m; sourceTree = "<group>"; };
-		AC0C821116B1B0A600B60EE3 /* AJNAuthenticationListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAuthenticationListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListener.h; sourceTree = "<group>"; };
-		AC0C821216B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAuthenticationListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListenerImpl.h; sourceTree = "<group>"; };
-		AC0C821316B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAuthenticationListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListenerImpl.mm; sourceTree = "<group>"; };
-		AC0C821416B1B0A600B60EE3 /* AJNBus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBus.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBus.h; sourceTree = "<group>"; };
-		AC0C821516B1B0A600B60EE3 /* AJNBus.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AJNBus.m; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBus.m; sourceTree = "<group>"; };
-		AC0C821616B1B0A600B60EE3 /* AJNBusAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusAttachment.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusAttachment.h; sourceTree = "<group>"; };
-		AC0C821716B1B0A600B60EE3 /* AJNBusAttachment.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBusAttachment.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusAttachment.mm; sourceTree = "<group>"; };
-		AC0C821816B1B0A600B60EE3 /* AJNBusController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusController.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusController.h; sourceTree = "<group>"; };
-		AC0C821916B1B0A600B60EE3 /* AJNBusInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusInterface.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusInterface.h; sourceTree = "<group>"; };
-		AC0C821A16B1B0A600B60EE3 /* AJNBusListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusListener.h; sourceTree = "<group>"; };
-		AC0C821B16B1B0A600B60EE3 /* AJNBusListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusListenerImpl.h; sourceTree = "<group>"; };
-		AC0C821C16B1B0A600B60EE3 /* AJNBusListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBusListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusListenerImpl.mm; sourceTree = "<group>"; };
-		AC0C821D16B1B0A600B60EE3 /* AJNBusObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusObject.h; sourceTree = "<group>"; };
-		AC0C821E16B1B0A600B60EE3 /* AJNBusObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBusObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusObject.mm; sourceTree = "<group>"; };
-		AC0C821F16B1B0A600B60EE3 /* AJNBusObjectImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBusObjectImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusObjectImpl.h; sourceTree = "<group>"; };
-		AC0C822016B1B0A600B60EE3 /* AJNBusObjectImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBusObjectImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNBusObjectImpl.mm; sourceTree = "<group>"; };
-		AC0C822116B1B0A600B60EE3 /* AJNClientController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNClientController.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNClientController.h; sourceTree = "<group>"; };
-		AC0C822216B1B0A600B60EE3 /* AJNClientController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AJNClientController.m; path = ../../../../AllJoynFramework/AllJoynFramework/AJNClientController.m; sourceTree = "<group>"; };
-		AC0C822316B1B0A600B60EE3 /* AJNHandle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNHandle.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNHandle.h; sourceTree = "<group>"; };
-		AC0C822416B1B0A600B60EE3 /* AJNInterfaceDescription.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInterfaceDescription.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInterfaceDescription.h; sourceTree = "<group>"; };
-		AC0C822516B1B0A600B60EE3 /* AJNInterfaceDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInterfaceDescription.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInterfaceDescription.mm; sourceTree = "<group>"; };
-		AC0C822616B1B0A600B60EE3 /* AJNInterfaceMember.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInterfaceMember.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInterfaceMember.h; sourceTree = "<group>"; };
-		AC0C822716B1B0A600B60EE3 /* AJNInterfaceMember.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInterfaceMember.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInterfaceMember.mm; sourceTree = "<group>"; };
-		AC0C822816B1B0A600B60EE3 /* AJNInterfaceProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInterfaceProperty.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInterfaceProperty.h; sourceTree = "<group>"; };
-		AC0C822916B1B0A600B60EE3 /* AJNInterfaceProperty.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInterfaceProperty.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInterfaceProperty.mm; sourceTree = "<group>"; };
-		AC0C822A16B1B0A600B60EE3 /* AJNKeyStoreListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNKeyStoreListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyStoreListener.h; sourceTree = "<group>"; };
-		AC0C822B16B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNKeyStoreListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyStoreListenerImpl.h; sourceTree = "<group>"; };
-		AC0C822C16B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNKeyStoreListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyStoreListenerImpl.mm; sourceTree = "<group>"; };
-		AC0C822D16B1B0A600B60EE3 /* AJNMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNMessage.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNMessage.h; sourceTree = "<group>"; };
-		AC0C822E16B1B0A600B60EE3 /* AJNMessage.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNMessage.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNMessage.mm; sourceTree = "<group>"; };
-		AC0C822F16B1B0A600B60EE3 /* AJNMessageArgument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNMessageArgument.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNMessageArgument.h; sourceTree = "<group>"; };
-		AC0C823016B1B0A600B60EE3 /* AJNMessageArgument.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNMessageArgument.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNMessageArgument.mm; sourceTree = "<group>"; };
-		AC0C823116B1B0A600B60EE3 /* AJNMessageHeaderFields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNMessageHeaderFields.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNMessageHeaderFields.h; sourceTree = "<group>"; };
-		AC0C823216B1B0A600B60EE3 /* AJNMessageHeaderFields.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNMessageHeaderFields.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNMessageHeaderFields.mm; sourceTree = "<group>"; };
-		AC0C823316B1B0A600B60EE3 /* AJNObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNObject.h; sourceTree = "<group>"; };
-		AC0C823416B1B0A600B60EE3 /* AJNObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AJNObject.m; path = ../../../../AllJoynFramework/AllJoynFramework/AJNObject.m; sourceTree = "<group>"; };
-		AC0C823516B1B0A600B60EE3 /* AJNProxyBusObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNProxyBusObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNProxyBusObject.h; sourceTree = "<group>"; };
-		AC0C823616B1B0A600B60EE3 /* AJNProxyBusObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNProxyBusObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNProxyBusObject.mm; sourceTree = "<group>"; };
-		AC0C823716B1B0A600B60EE3 /* AJNSecurityCredentials.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSecurityCredentials.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSecurityCredentials.h; sourceTree = "<group>"; };
-		AC0C823816B1B0A600B60EE3 /* AJNSecurityCredentials.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSecurityCredentials.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSecurityCredentials.mm; sourceTree = "<group>"; };
-		AC0C823916B1B0A600B60EE3 /* AJNServiceController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNServiceController.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNServiceController.h; sourceTree = "<group>"; };
-		AC0C823A16B1B0A600B60EE3 /* AJNServiceController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AJNServiceController.m; path = ../../../../AllJoynFramework/AllJoynFramework/AJNServiceController.m; sourceTree = "<group>"; };
-		AC0C823B16B1B0A600B60EE3 /* AJNSessionListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSessionListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionListener.h; sourceTree = "<group>"; };
-		AC0C823C16B1B0A600B60EE3 /* AJNSessionListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSessionListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionListenerImpl.h; sourceTree = "<group>"; };
-		AC0C823D16B1B0A600B60EE3 /* AJNSessionListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSessionListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionListenerImpl.mm; sourceTree = "<group>"; };
-		AC0C823E16B1B0A600B60EE3 /* AJNSessionOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSessionOptions.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionOptions.h; sourceTree = "<group>"; };
-		AC0C823F16B1B0A600B60EE3 /* AJNSessionOptions.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSessionOptions.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionOptions.mm; sourceTree = "<group>"; };
-		AC0C824016B1B0A600B60EE3 /* AJNSessionPortListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSessionPortListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionPortListener.h; sourceTree = "<group>"; };
-		AC0C824116B1B0A600B60EE3 /* AJNSessionPortListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSessionPortListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionPortListenerImpl.h; sourceTree = "<group>"; };
-		AC0C824216B1B0A600B60EE3 /* AJNSessionPortListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSessionPortListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSessionPortListenerImpl.mm; sourceTree = "<group>"; };
-		AC0C824316B1B0A600B60EE3 /* AJNSignalHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSignalHandler.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSignalHandler.h; sourceTree = "<group>"; };
-		AC0C824416B1B0A600B60EE3 /* AJNSignalHandlerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSignalHandlerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSignalHandlerImpl.h; sourceTree = "<group>"; };
-		AC0C824516B1B0A600B60EE3 /* AJNSignalHandlerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSignalHandlerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNSignalHandlerImpl.mm; sourceTree = "<group>"; };
-		AC0C824616B1B0A600B60EE3 /* AJNStatus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNStatus.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNStatus.h; sourceTree = "<group>"; };
-		AC0C824716B1B0A600B60EE3 /* AJNStatus.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AJNStatus.m; path = ../../../../AllJoynFramework/AllJoynFramework/AJNStatus.m; sourceTree = "<group>"; };
-		AC0C824816B1B0A600B60EE3 /* AJNTransportMask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTransportMask.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTransportMask.h; sourceTree = "<group>"; };
-		AC0C824916B1B0A600B60EE3 /* AJNTransportMask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AJNTransportMask.m; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTransportMask.m; sourceTree = "<group>"; };
-		AC0C824A16B1B0A600B60EE3 /* AJNType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNType.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNType.h; sourceTree = "<group>"; };
-		AC0C824B16B1B0A600B60EE3 /* AJNVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNVersion.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNVersion.h; sourceTree = "<group>"; };
-		AC0C824C16B1B0A600B60EE3 /* AJNVersion.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNVersion.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNVersion.mm; sourceTree = "<group>"; };
 		AC0C826616B1B43700B60EE3 /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
 		AC0C826716B1B43700B60EE3 /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
 		AC0C827C16B1FB6100B60EE3 /* ViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
@@ -243,7 +107,6 @@
 		AC0C81CA16B05D9A00B60EE3 /* AllJoynPerfTest */ = {
 			isa = PBXGroup;
 			children = (
-				AC0C821016B1B09100B60EE3 /* AllJoyn Framework */,
 				AC0C820A16B1B02000B60EE3 /* AJNPerformanceObject.h */,
 				AC0C820B16B1B02000B60EE3 /* AJNPerformanceObject.mm */,
 				AC0C820C16B1B02000B60EE3 /* PerformanceObject.h */,
@@ -276,108 +139,6 @@
 				AC0C81DA16B05D9A00B60EE3 /* Default-568h@2x.png */,
 			);
 			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		AC0C821016B1B09100B60EE3 /* AllJoyn Framework */ = {
-			isa = PBXGroup;
-			children = (
-				9A47F3821DC8B94700B45423 /* AJNCertificateX509.h */,
-				9A47F3831DC8B94700B45423 /* AJNCertificateX509.mm */,
-				9A47F3841DC8B94700B45423 /* AJNCryptoECC.h */,
-				9A47F3851DC8B94700B45423 /* AJNCryptoECC.mm */,
-				9A47F3861DC8B94700B45423 /* AJNKeyInfoECC.h */,
-				9A47F3871DC8B94700B45423 /* AJNKeyInfoECC.mm */,
-				9A47F3881DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.h */,
-				9A47F3891DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.mm */,
-				9A47F38A1DC8B94700B45423 /* AJNPermissionConfigurator.h */,
-				9A47F38B1DC8B94700B45423 /* AJNPermissionConfigurator.mm */,
-				7D68081A1A9807310000F28D /* AJNInit.h */,
-				7D68081B1A9807310000F28D /* AJNInit.mm */,
-				7DCBEE841A254E0400A53A83 /* AJNPasswordManager.h */,
-				7DCBEE851A254E0400A53A83 /* AJNPasswordManager.mm */,
-				7DCBEE6A1A254DF200A53A83 /* AJNAboutObjectDescription.mm */,
-				7DCBEE6B1A254DF200A53A83 /* AJNAboutObject.h */,
-				7DCBEE6C1A254DF200A53A83 /* AJNAboutObject.mm */,
-				7DCBEE6D1A254DF200A53A83 /* AJNAboutDataListener.h */,
-				7DCBEE6E1A254DF200A53A83 /* AJNAboutDataListenerImpl.h */,
-				7DCBEE6F1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm */,
-				7DCBEE701A254DF200A53A83 /* AJNAboutIcon.h */,
-				7DCBEE711A254DF200A53A83 /* AJNAboutIcon.mm */,
-				7DCBEE721A254DF200A53A83 /* AJNAboutIconObject.h */,
-				7DCBEE731A254DF200A53A83 /* AJNAboutIconObject.mm */,
-				7DCBEE741A254DF200A53A83 /* AJNAboutIconProxy.h */,
-				7DCBEE751A254DF200A53A83 /* AJNAboutIconProxy.mm */,
-				7DCBEE761A254DF200A53A83 /* AJNAboutListener.h */,
-				7DCBEE771A254DF200A53A83 /* AJNAboutListenerImpl.h */,
-				7DCBEE781A254DF200A53A83 /* AJNAboutListenerImpl.mm */,
-				7DCBEE791A254DF200A53A83 /* AJNAboutObjectDescription.h */,
-				7DCBEE7A1A254DF200A53A83 /* AJNAboutProxy.h */,
-				7DCBEE7B1A254DF200A53A83 /* AJNAboutProxy.mm */,
-				AC0C821116B1B0A600B60EE3 /* AJNAuthenticationListener.h */,
-				AC0C821216B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.h */,
-				AC0C821316B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.mm */,
-				AC0C821416B1B0A600B60EE3 /* AJNBus.h */,
-				AC0C821516B1B0A600B60EE3 /* AJNBus.m */,
-				AC0C821616B1B0A600B60EE3 /* AJNBusAttachment.h */,
-				AC0C821716B1B0A600B60EE3 /* AJNBusAttachment.mm */,
-				AC0C821816B1B0A600B60EE3 /* AJNBusController.h */,
-				AC0C821916B1B0A600B60EE3 /* AJNBusInterface.h */,
-				AC0C821A16B1B0A600B60EE3 /* AJNBusListener.h */,
-				AC0C821B16B1B0A600B60EE3 /* AJNBusListenerImpl.h */,
-				AC0C821C16B1B0A600B60EE3 /* AJNBusListenerImpl.mm */,
-				AC0C821D16B1B0A600B60EE3 /* AJNBusObject.h */,
-				AC0C821E16B1B0A600B60EE3 /* AJNBusObject.mm */,
-				AC0C821F16B1B0A600B60EE3 /* AJNBusObjectImpl.h */,
-				AC0C822016B1B0A600B60EE3 /* AJNBusObjectImpl.mm */,
-				AC0C822116B1B0A600B60EE3 /* AJNClientController.h */,
-				AC0C822216B1B0A600B60EE3 /* AJNClientController.m */,
-				AC0C822316B1B0A600B60EE3 /* AJNHandle.h */,
-				AC0C822416B1B0A600B60EE3 /* AJNInterfaceDescription.h */,
-				AC0C822516B1B0A600B60EE3 /* AJNInterfaceDescription.mm */,
-				AC0C822616B1B0A600B60EE3 /* AJNInterfaceMember.h */,
-				AC0C822716B1B0A600B60EE3 /* AJNInterfaceMember.mm */,
-				AC0C822816B1B0A600B60EE3 /* AJNInterfaceProperty.h */,
-				AC0C822916B1B0A600B60EE3 /* AJNInterfaceProperty.mm */,
-				AC0C822A16B1B0A600B60EE3 /* AJNKeyStoreListener.h */,
-				AC0C822B16B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.h */,
-				AC0C822C16B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.mm */,
-				AC0C822D16B1B0A600B60EE3 /* AJNMessage.h */,
-				AC0C822E16B1B0A600B60EE3 /* AJNMessage.mm */,
-				AC0C822F16B1B0A600B60EE3 /* AJNMessageArgument.h */,
-				AC0C823016B1B0A600B60EE3 /* AJNMessageArgument.mm */,
-				AC0C823116B1B0A600B60EE3 /* AJNMessageHeaderFields.h */,
-				AC0C823216B1B0A600B60EE3 /* AJNMessageHeaderFields.mm */,
-				AC0C823316B1B0A600B60EE3 /* AJNObject.h */,
-				AC0C823416B1B0A600B60EE3 /* AJNObject.m */,
-				AC0C823516B1B0A600B60EE3 /* AJNProxyBusObject.h */,
-				AC0C823616B1B0A600B60EE3 /* AJNProxyBusObject.mm */,
-				AC0C823716B1B0A600B60EE3 /* AJNSecurityCredentials.h */,
-				AC0C823816B1B0A600B60EE3 /* AJNSecurityCredentials.mm */,
-				AC0C823916B1B0A600B60EE3 /* AJNServiceController.h */,
-				AC0C823A16B1B0A600B60EE3 /* AJNServiceController.m */,
-				AC0C823B16B1B0A600B60EE3 /* AJNSessionListener.h */,
-				AC0C823C16B1B0A600B60EE3 /* AJNSessionListenerImpl.h */,
-				AC0C823D16B1B0A600B60EE3 /* AJNSessionListenerImpl.mm */,
-				AC0C823E16B1B0A600B60EE3 /* AJNSessionOptions.h */,
-				AC0C823F16B1B0A600B60EE3 /* AJNSessionOptions.mm */,
-				AC0C824016B1B0A600B60EE3 /* AJNSessionPortListener.h */,
-				AC0C824116B1B0A600B60EE3 /* AJNSessionPortListenerImpl.h */,
-				AC0C824216B1B0A600B60EE3 /* AJNSessionPortListenerImpl.mm */,
-				AC0C824316B1B0A600B60EE3 /* AJNSignalHandler.h */,
-				AC0C824416B1B0A600B60EE3 /* AJNSignalHandlerImpl.h */,
-				AC0C824516B1B0A600B60EE3 /* AJNSignalHandlerImpl.mm */,
-				AC0C824616B1B0A600B60EE3 /* AJNStatus.h */,
-				AC0C824716B1B0A600B60EE3 /* AJNStatus.m */,
-				83F6DFC5193B13FD001D1B69 /* AJNTranslator.h */,
-				83F6DFC6193B13FD001D1B69 /* AJNTranslatorImpl.h */,
-				83F6DFC7193B13FD001D1B69 /* AJNTranslatorImpl.mm */,
-				AC0C824816B1B0A600B60EE3 /* AJNTransportMask.h */,
-				AC0C824916B1B0A600B60EE3 /* AJNTransportMask.m */,
-				AC0C824A16B1B0A600B60EE3 /* AJNType.h */,
-				AC0C824B16B1B0A600B60EE3 /* AJNVersion.h */,
-				AC0C824C16B1B0A600B60EE3 /* AJNVersion.mm */,
-			);
-			name = "AllJoyn Framework";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -423,7 +184,7 @@
 		AC0C81B716B05D9A00B60EE3 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0460;
+				LastUpgradeCheck = 0810;
 				ORGANIZATIONNAME = "AllSeen Alliance.";
 			};
 			buildConfigurationList = AC0C81BA16B05D9A00B60EE3 /* Build configuration list for PBXProject "AllJoynPerfTest" */;
@@ -467,50 +228,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC0C81D116B05D9A00B60EE3 /* main.m in Sources */,
-				7D68081C1A9807310000F28D /* AJNInit.mm in Sources */,
-				7DCBEE7E1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm in Sources */,
-				9A47F38C1DC8B94700B45423 /* AJNCertificateX509.mm in Sources */,
 				AC0C81D516B05D9A00B60EE3 /* AppDelegate.m in Sources */,
-				7DCBEE821A254DF200A53A83 /* AJNAboutListenerImpl.mm in Sources */,
 				AC0C820E16B1B02000B60EE3 /* AJNPerformanceObject.mm in Sources */,
-				9A47F38D1DC8B94700B45423 /* AJNCryptoECC.mm in Sources */,
 				AC0C820F16B1B02000B60EE3 /* PerformanceObject.m in Sources */,
-				7DCBEE861A254E0400A53A83 /* AJNPasswordManager.mm in Sources */,
-				AC0C824D16B1B0A600B60EE3 /* AJNAuthenticationListenerImpl.mm in Sources */,
-				7DCBEE831A254DF200A53A83 /* AJNAboutProxy.mm in Sources */,
-				AC0C824E16B1B0A600B60EE3 /* AJNBus.m in Sources */,
-				7DCBEE801A254DF200A53A83 /* AJNAboutIconObject.mm in Sources */,
-				AC0C824F16B1B0A600B60EE3 /* AJNBusAttachment.mm in Sources */,
-				AC0C825016B1B0A600B60EE3 /* AJNBusListenerImpl.mm in Sources */,
-				7DCBEE7F1A254DF200A53A83 /* AJNAboutIcon.mm in Sources */,
-				AC0C825116B1B0A600B60EE3 /* AJNBusObject.mm in Sources */,
-				AC0C825216B1B0A600B60EE3 /* AJNBusObjectImpl.mm in Sources */,
-				AC0C825316B1B0A600B60EE3 /* AJNClientController.m in Sources */,
-				AC0C825416B1B0A600B60EE3 /* AJNInterfaceDescription.mm in Sources */,
-				AC0C825516B1B0A600B60EE3 /* AJNInterfaceMember.mm in Sources */,
-				AC0C825616B1B0A600B60EE3 /* AJNInterfaceProperty.mm in Sources */,
-				9A47F38E1DC8B94700B45423 /* AJNKeyInfoECC.mm in Sources */,
-				AC0C825716B1B0A600B60EE3 /* AJNKeyStoreListenerImpl.mm in Sources */,
-				7DCBEE7D1A254DF200A53A83 /* AJNAboutObject.mm in Sources */,
-				7DCBEE7C1A254DF200A53A83 /* AJNAboutObjectDescription.mm in Sources */,
-				AC0C825816B1B0A600B60EE3 /* AJNMessage.mm in Sources */,
-				AC0C825916B1B0A600B60EE3 /* AJNMessageArgument.mm in Sources */,
-				AC0C825A16B1B0A600B60EE3 /* AJNMessageHeaderFields.mm in Sources */,
-				9A47F38F1DC8B94700B45423 /* AJNPermissionConfigurationListenerImpl.mm in Sources */,
-				AC0C825B16B1B0A600B60EE3 /* AJNObject.m in Sources */,
-				AC0C825C16B1B0A600B60EE3 /* AJNProxyBusObject.mm in Sources */,
-				AC0C825D16B1B0A600B60EE3 /* AJNSecurityCredentials.mm in Sources */,
-				7DCBEE811A254DF200A53A83 /* AJNAboutIconProxy.mm in Sources */,
-				AC0C825E16B1B0A600B60EE3 /* AJNServiceController.m in Sources */,
-				AC0C825F16B1B0A600B60EE3 /* AJNSessionListenerImpl.mm in Sources */,
-				AC0C826016B1B0A600B60EE3 /* AJNSessionOptions.mm in Sources */,
-				AC0C826116B1B0A600B60EE3 /* AJNSessionPortListenerImpl.mm in Sources */,
-				AC0C826216B1B0A600B60EE3 /* AJNSignalHandlerImpl.mm in Sources */,
-				AC0C826316B1B0A600B60EE3 /* AJNStatus.m in Sources */,
-				9A47F3901DC8B94700B45423 /* AJNPermissionConfigurator.mm in Sources */,
-				83F6DFC8193B13FD001D1B69 /* AJNTranslatorImpl.mm in Sources */,
-				AC0C826416B1B0A600B60EE3 /* AJNTransportMask.m in Sources */,
-				AC0C826516B1B0A600B60EE3 /* AJNVersion.mm in Sources */,
 				AC0C826816B1B43700B60EE3 /* Constants.m in Sources */,
 				AC0C827E16B1FB6200B60EE3 /* ViewController.m in Sources */,
 				AC9D296C16BAF3AC005C79F9 /* PerformanceStatistics.m in Sources */,
@@ -554,23 +274,45 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/include\"";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/$(CONFIGURATION)/\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-lAllJoynFramework_iOS",
+					"-lajrouter",
+					"-lalljoyn",
+				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -583,16 +325,37 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/include\"";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/$(CONFIGURATION)/\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-lAllJoynFramework_iOS",
+					"-lajrouter",
+					"-lalljoyn",
+				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -602,7 +365,6 @@
 		AC0C81E816B05D9A00B60EE3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "compiler-default";
 				ENABLE_BITCODE = NO;
@@ -610,28 +372,12 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynPerfTest/AllJoynPerfTest-Prefix.pch";
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-				);
 				INFOPLIST_FILE = "AllJoynPerfTest/AllJoynPerfTest-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
-				);
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
 				);
-				OTHER_LDFLAGS = (
-					"-lalljoyn",
-					"-lajrouter",
-				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALID_ARCHS = "arm64 armv7";
 				WRAPPER_EXTENSION = app;
@@ -641,7 +387,6 @@
 		AC0C81E916B05D9A00B60EE3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "compiler-default";
 				ENABLE_BITCODE = NO;
@@ -649,29 +394,13 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynPerfTest/AllJoynPerfTest-Prefix.pch";
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/inc/\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/inc/\"",
-					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/inc/\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/inc/\"",
-				);
 				INFOPLIST_FILE = "AllJoynPerfTest/AllJoynPerfTest-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
-				);
 				OTHER_CFLAGS = (
 					"-DNS_BLOCK_ASSERTIONS=1",
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
 				);
-				OTHER_LDFLAGS = (
-					"-lalljoyn",
-					"-lajrouter",
-				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALID_ARCHS = "arm64 armv7";
 				WRAPPER_EXTENSION = app;
@@ -681,7 +410,6 @@
 		AC0C820816B1AF8500B60EE3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -699,7 +427,6 @@
 		AC0C820916B1AF8500B60EE3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
