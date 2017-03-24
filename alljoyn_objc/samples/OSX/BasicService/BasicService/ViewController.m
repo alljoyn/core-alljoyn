@@ -28,11 +28,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "ViewController.h"
-#import "BasicClient.h"
+#import "BasicService.h"
 
-@interface ViewController () <BasicClientDelegate>
+@interface ViewController () <BasicServiceDelegate>
 
-@property (nonatomic, strong) BasicClient *basicClient;
+@property (nonatomic, strong) BasicService *basicService;
 
 @end
 
@@ -40,26 +40,32 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.basicClient = [[BasicClient alloc] init];
-    self.basicClient.delegate = self;
+    _basicService = [[BasicService alloc] init];
+    _basicService.delegate = self;
+    [_basicService printVersionInformation];
 }
 
-- (IBAction)didTouchCallServiceButton:(id)sender {
-    [self.basicClient sendHelloMessage];
+
+- (IBAction)didTouchServiceButton:(id)sender {
+    if (_basicService.isActive) {
+        [_basicService stopAsync];
+        [_serviceButton setTitle:@"Start Service"];
+    } else {
+        [_basicService startAsync];
+        [_serviceButton setTitle:@"Stop Service"];
+    }
 }
 
-- (void)didReceiveStatusUpdateMessage:(NSString *)message {
-
+- (void)didReceiveStatusUpdateMessage:(NSString *)message
+{
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSMutableString *string = self.eventsTextView.text.length ? [self.eventsTextView.text mutableCopy] : [[NSMutableString alloc] init];
+        NSMutableString *string = self.eventsTextView.string.length ? [self.eventsTextView.string mutableCopy] : [[NSMutableString alloc] init];
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
         [formatter setTimeStyle:NSDateFormatterMediumStyle];
         [formatter setDateStyle:NSDateFormatterShortStyle];
-
         [string appendFormat:@"[%@] ",[formatter stringFromDate:[NSDate date]]];
         [string appendString:message];
-
-        [self.eventsTextView setText:string];
+        [self.eventsTextView setString:string];
         NSLog(@"%@", string);
     });
 }
