@@ -31,19 +31,8 @@
 #import "AJNCConstants.h"
 #import "AJNCMessage.h"
 
-@interface AJNCConversation()
-
-
-@end
 
 @implementation AJNCConversation
-
-@synthesize name = _name;
-@synthesize identifier = _identifier;
-@synthesize chatObject = _chatObject;
-@synthesize messages = _messages;
-@synthesize type = _type;
-@synthesize totalParticipants = _totalParticipants;
 
 - (NSMutableArray*)messages
 {
