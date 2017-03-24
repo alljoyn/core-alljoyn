@@ -239,6 +239,7 @@ typedef enum AJNAnnounceFlag {
  *                       being received twice.
  *
  * @param msg          [OUT] If non-null, the sent signal message is returned to the caller.
+ *                           This should be NULL when using SESSION_ID_ALL_HOSTED, otherwise the call will error.
  * @return
  *      - ER_OK if successful
  *      - ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
