@@ -174,7 +174,7 @@
  * @param invalidated   Properties whose values have been invalidated, signature "as".
  * @param context       Caller provided context passed in to RegisterPropertiesChangedListener
  */
-- (void)didPropertiesChanged:(AJNProxyBusObject *)obj inteface:(NSString *)ifaceName changedMsg:(AJNMessage*)changed invalidatedMsg:(AJNMessage *)invalidated context:(AJNHandle *)context;
+- (void)didPropertiesChanged:(AJNProxyBusObject *)obj inteface:(NSString *)ifaceName changedMsgArg:(AJNMessageArgument *)changed invalidatedMsgArg:(AJNMessageArgument *)invalidated context:(AJNHandle)context;
 
 @end
 
@@ -916,7 +916,7 @@
  *      - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
  *      - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-- (QStatus)registerPropertiesChangedListener:(NSString *)iface properties:(NSArray *)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle *)context;
+- (QStatus)registerPropertiesChangedListener:(NSString *)iface properties:(NSArray *)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle)context;
 
 /**
  * Function to unregister a handler for property change events.
