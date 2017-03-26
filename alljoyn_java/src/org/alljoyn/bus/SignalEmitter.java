@@ -162,9 +162,9 @@ public class SignalEmitter {
         InterfaceDef interfaceDef = new InterfaceDef(interfaceName);
 
         SignalDef signalDef = new SignalDef("PropertiesChanged", "sa{sv}as", interfaceName);
-        signalDef.addArg( new ArgDef("iface", "s") );
-        signalDef.addArg( new ArgDef("changedProps", "a{sv}") );
-        signalDef.addArg( new ArgDef("invalidatedProps", "as") );
+        signalDef.addArg( new ArgDef("iface", "s", ArgDef.DIRECTION_OUT) );
+        signalDef.addArg( new ArgDef("changedProps", "a{sv}", ArgDef.DIRECTION_OUT) );
+        signalDef.addArg( new ArgDef("invalidatedProps", "as", ArgDef.DIRECTION_OUT) );
 
         interfaceDef.addSignal( signalDef );
         return interfaceDef;
