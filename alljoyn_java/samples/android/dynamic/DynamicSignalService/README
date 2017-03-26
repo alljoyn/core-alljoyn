@@ -1,0 +1,12 @@
+This is an Android Studio project. In order to run this project,
+the AllJoyn 'jar' and 'so' files must be added (AllJoyn release 16.10a or later).
+
+Add the following jar files in the app/libs/ folder:
+   alljoyn.jar
+   alljoyn_about.jar
+
+Add the following shared object files to the app/src/main/jniLibs/armeabi/ folder:
+   liballjoyn_java.so
+
+
+This Dynamic Signal Service app is used in conjunction with the Dynamic Signal Client app.

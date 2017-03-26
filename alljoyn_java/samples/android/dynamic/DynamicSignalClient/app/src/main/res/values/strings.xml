@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dynamic Signal Client</string>
+    <string name="app_short_name">D Signal Client</string>
+    <string name="enter_message_hint">Enter message</string>
+</resources>
