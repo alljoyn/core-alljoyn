@@ -166,8 +166,8 @@ public class InterfaceDefTest extends TestCase {
         assertEquals(1, args.size());
 
         ArgDef arg = signalDef.getArg("message");
-        assertTrue(arg.isInArg());
-        assertEquals(ArgDef.DIRECTION_IN, arg.getDirection());
+        assertTrue(arg.isOutArg());
+        assertEquals(ArgDef.DIRECTION_OUT, arg.getDirection());
         assertEquals("s", arg.getType());
 
         Map<String,String> annotations = signalDef.getAnnotationList();
