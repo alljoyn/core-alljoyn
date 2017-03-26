@@ -268,7 +268,7 @@ public class ProxyBusObjectTest extends TestCase {
         String ifaceName = "org.alljoyn.bus.SimpleInterface";
         InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
         MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
-        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("inStr", "s", ArgDef.DIRECTION_IN) );
         methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
         interfaceDef.addMethod(methodDef);
 
