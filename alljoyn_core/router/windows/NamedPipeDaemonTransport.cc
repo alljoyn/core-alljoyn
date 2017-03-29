@@ -330,7 +330,7 @@ void _NamedPipeDaemonEndpoint::AuthenticationWorker(_Inout_ PTP_CALLBACK_INSTANC
             QCC_LogError(status, ("Worker: GetTokenInformation - TokenIsAppContainer failed, error %u", ::GetLastError()));
         }
 
-        SECURITY_IMPERSONATION_LEVEL securityLevel;
+        SECURITY_IMPERSONATION_LEVEL securityLevel = SecurityAnonymous;
         length = sizeof(securityLevel);
         if ((status == ER_OK) && !GetTokenInformation(hClientToken, TokenImpersonationLevel, &securityLevel, length, &length)) {
             status = ER_OS_ERROR;
