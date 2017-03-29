@@ -72,7 +72,7 @@ const NSInteger kDoorServicePort = 42;
     [self.aboutData setDescription:@"A poetic description of this application" andLanguage:@"en"];
     [self.aboutData setDateOfManufacture:@"DateOfManufacture"];
     [self.aboutData setSoftwareVersion:@"1.0"];
-    [self.aboutData setHardwareVersion:@"16.10.00"];
+    [self.aboutData setHardwareVersion:@"16.10.00a"];
     [self.aboutData setSupportUrl:@"some.random.url"];
 
     self.aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
