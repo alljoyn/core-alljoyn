@@ -39,7 +39,7 @@
 #include <ctype.h>
 #include <stdio.h>
 /* due to a change in gcc6, cmath must be included now */
-#if __GNUC__ >= 6
+#if defined(__GNUC__) && (__GNUC__ >= 6)
  #include <cmath>
 #else
  #include <math.h>
