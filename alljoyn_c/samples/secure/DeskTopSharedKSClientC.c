@@ -51,13 +51,13 @@
 #include <Status.h>
 
 /** Static top level message bus object */
-static alljoyn_busattachment g_msgBus = NULL;
+static alljoyn_busattachment s_msgBus = NULL;
 
 /** Static bus listener */
-static alljoyn_buslistener g_busListener;
+static alljoyn_buslistener s_busListener = NULL;
 
 /** Static auth listener */
-static alljoyn_authlistener g_authListener;
+static alljoyn_authlistener s_authListener = NULL;
 
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.bus.samples.secure.SecureInterface";
@@ -65,6 +65,7 @@ static const char* OBJECT_NAME = "org.alljoyn.bus.samples.secure";
 static const char* OBJECT_PATH = "/SecureService";
 static const alljoyn_sessionport SERVICE_PORT = 42;
 
+static QCC_BOOL s_joinInitiated = QCC_FALSE;
 static QCC_BOOL s_joinComplete = QCC_FALSE;
 static alljoyn_sessionid s_sessionId = 0;
 
@@ -103,27 +104,40 @@ char*get_line(char*str, size_t num, FILE*fp)
     return p;
 }
 
+void AJ_CALL my_joinsessioncb(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context)
+{
+    QCC_UNUSED(opts);
+    QCC_UNUSED(context);
+    if (ER_OK == status) {
+        printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+        s_sessionId = sessionId;
+        s_joinComplete = QCC_TRUE;
+    } else {
+        printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+    }
+}
+
 /* FoundAdvertisedName callback */
 void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     QCC_UNUSED(context);
-    QCC_UNUSED(transport);
-    printf("found_advertised_name(name=%s, prefix=%s)\n", name, namePrefix);
-    if (0 == strcmp(name, OBJECT_NAME)) {
-        QStatus status;
+    printf("found_advertised_name(name=%s, prefix=%s, transport=0x%x)\n", name, namePrefix, (unsigned int)transport);
+    if ((QCC_FALSE == s_joinInitiated) && (0 == strcmp(name, OBJECT_NAME))) {
         /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
         alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
-        alljoyn_busattachment_enableconcurrentcallbacks(g_msgBus);
-        status = alljoyn_busattachment_joinsession(g_msgBus, name, SERVICE_PORT, NULL, &s_sessionId, opts);
+        if (NULL != opts) {
+            QStatus status;
+            s_joinInitiated = QCC_TRUE;
 
-        if (ER_OK != status) {
-            printf("alljoyn_busattachment_joinsession failed (status=%s)\n", QCC_StatusText(status));
-        } else {
-            printf("alljoyn_busattachment_joinsession SUCCESS (Session id=%d)\n", s_sessionId);
+            printf("calling alljoyn_busattachment_joinsessionasync...\n");
+            status = alljoyn_busattachment_joinsessionasync(s_msgBus, name, SERVICE_PORT, NULL, opts, &my_joinsessioncb, NULL);
+
+            if (ER_OK != status) {
+                printf("alljoyn_busattachment_joinsessionasync failed (status=%s)\n", QCC_StatusText(status));
+            }
+            alljoyn_sessionopts_destroy(opts);
         }
-        alljoyn_sessionopts_destroy(opts);
     }
-    s_joinComplete = QCC_TRUE;
 }
 
 /* NameOwnerChanged callback */
@@ -215,10 +229,10 @@ int CDECL_CALL main(void)
     signal(SIGINT, SigIntHandler);
 
     /* Create message bus */
-    g_msgBus = alljoyn_busattachment_create("SRPSecurityClientC", QCC_TRUE);
+    s_msgBus = alljoyn_busattachment_create("SRPSecurityClientC", QCC_TRUE);
 
     /* Add org.alljoyn.bus.samples.secure.SecureInterface interface */
-    status = alljoyn_busattachment_createinterface_secure(g_msgBus, INTERFACE_NAME, &testIntf, AJ_IFC_SECURITY_REQUIRED);
+    status = alljoyn_busattachment_createinterface_secure(s_msgBus, INTERFACE_NAME, &testIntf, AJ_IFC_SECURITY_REQUIRED);
     if (status == ER_OK) {
         alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "Ping", "s",  "s", "inStr1,outStr", 0);
         alljoyn_interfacedescription_activate(testIntf);
@@ -228,7 +242,7 @@ int CDECL_CALL main(void)
 
     /* Start the msg bus */
     if (ER_OK == status) {
-        status = alljoyn_busattachment_start(g_msgBus);
+        status = alljoyn_busattachment_start(s_msgBus);
         if (ER_OK != status) {
             printf("alljoyn_busattachment_start failed\n");
         } else {
@@ -249,7 +263,7 @@ int CDECL_CALL main(void)
             NULL,
             authentication_complete
         };
-        g_authListener = alljoyn_authlistener_create(&callbacks, NULL);
+        s_authListener = alljoyn_authlistener_create(&callbacks, NULL);
 
         /*
          * alljoyn_busattachment_enablepeersecurity function is called by
@@ -262,7 +276,7 @@ int CDECL_CALL main(void)
          * the isShared parameter is being set to QCC_TRUE. The resulting
          * keystore file can be used by multiple applications.
          */
-        status = alljoyn_busattachment_enablepeersecurity(g_msgBus, "ALLJOYN_SRP_KEYX", g_authListener,
+        status = alljoyn_busattachment_enablepeersecurity(s_msgBus, "ALLJOYN_SRP_KEYX", s_authListener,
                                                           "/.alljoyn_keystore/central.ks", QCC_TRUE);
         if (ER_OK != status) {
             printf("alljoyn_busattachment_enablepeersecurity failed (%s)\n", QCC_StatusText(status));
@@ -273,35 +287,35 @@ int CDECL_CALL main(void)
 
     /* Connect to the bus */
     if (ER_OK == status) {
-        status = alljoyn_busattachment_connect(g_msgBus, NULL);
+        status = alljoyn_busattachment_connect(s_msgBus, NULL);
         if (ER_OK != status) {
             printf("alljoyn_busattachment_connect() failed with status: 0x%04x\n", status);
         } else {
-            printf("alljoyn_busattachment connected to \"%s\"\n", alljoyn_busattachment_getconnectspec(g_msgBus));
+            printf("alljoyn_busattachment connected to \"%s\"\n", alljoyn_busattachment_getconnectspec(s_msgBus));
         }
     }
 
     /* Create a bus listener */
-    g_busListener = alljoyn_buslistener_create(&callbacks, NULL);
+    s_busListener = alljoyn_buslistener_create(&callbacks, NULL);
 
     /* Register a bus listener in order to get discovery indications */
     if (ER_OK == status) {
-        alljoyn_busattachment_registerbuslistener(g_msgBus, g_busListener);
+        alljoyn_busattachment_registerbuslistener(s_msgBus, s_busListener);
         printf("alljoyn_buslistener Registered.\n");
     }
 
     /* Begin discovery on the well-known name of the service to be called */
     if (ER_OK == status) {
-        status = alljoyn_busattachment_findadvertisedname(g_msgBus, OBJECT_NAME);
+        status = alljoyn_busattachment_findadvertisedname(s_msgBus, OBJECT_NAME);
         if (status != ER_OK) {
             printf("alljoyn_busattachment_findadvertisedname failed (%s))\n", QCC_StatusText(status));
         }
     }
 
     /* Wait for join session to complete */
-    while (!s_joinComplete && !g_interrupt) {
+    while ((status == ER_OK) && (s_joinComplete == QCC_FALSE) && (g_interrupt == QCC_FALSE)) {
         if (0 == (count++ % 10)) {
-            printf("Waited %u seconds for alljoyn_busattachment_joinsession completion.\n", count / 10);
+            printf("Waited %u seconds for session to join.\n", count / 10);
         }
 #ifdef _WIN32
         Sleep(100);
@@ -310,13 +324,13 @@ int CDECL_CALL main(void)
 #endif
     }
 
-    if (status == ER_OK && g_interrupt == QCC_FALSE) {
+    if ((status == ER_OK) && (g_interrupt == QCC_FALSE)) {
         alljoyn_message reply;
         alljoyn_msgarg inputs;
         size_t numArgs;
 
-        alljoyn_proxybusobject remoteObj = alljoyn_proxybusobject_create(g_msgBus, OBJECT_NAME, OBJECT_PATH, s_sessionId);
-        const alljoyn_interfacedescription alljoynTestIntf = alljoyn_busattachment_getinterface(g_msgBus, INTERFACE_NAME);
+        alljoyn_proxybusobject remoteObj = alljoyn_proxybusobject_create(s_msgBus, OBJECT_NAME, OBJECT_PATH, s_sessionId);
+        const alljoyn_interfacedescription alljoynTestIntf = alljoyn_busattachment_getinterface(s_msgBus, INTERFACE_NAME);
         QCC_ASSERT(alljoynTestIntf);
         alljoyn_proxybusobject_addinterface(remoteObj, alljoynTestIntf);
 
@@ -333,7 +347,7 @@ int CDECL_CALL main(void)
          */
         status = alljoyn_proxybusobject_secureconnection(remoteObj, QCC_TRUE);
         if (ER_OK == status) {
-            reply = alljoyn_message_create(g_msgBus);
+            reply = alljoyn_message_create(s_msgBus);
             inputs = alljoyn_msgarg_array_create(1);
             numArgs = 1;
             status = alljoyn_msgarg_array_set(inputs, &numArgs, "s", "ClientC says Hello AllJoyn!");
@@ -354,17 +368,17 @@ int CDECL_CALL main(void)
     }
 
     /* Deallocate bus */
-    if (g_msgBus) {
-        alljoyn_busattachment deleteMe = g_msgBus;
-        g_msgBus = NULL;
+    if (s_msgBus != NULL) {
+        alljoyn_busattachment deleteMe = s_msgBus;
+        s_msgBus = NULL;
         alljoyn_busattachment_destroy(deleteMe);
     }
 
     /* Deallocate bus listener */
-    alljoyn_buslistener_destroy(g_busListener);
+    alljoyn_buslistener_destroy(s_busListener);
 
     /* Deallocate auth listener */
-    alljoyn_authlistener_destroy(g_authListener);
+    alljoyn_authlistener_destroy(s_authListener);
 
     printf("exiting with status %d (%s)\n", status, QCC_StatusText(status));
 
