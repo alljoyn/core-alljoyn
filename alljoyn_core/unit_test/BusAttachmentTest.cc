@@ -78,12 +78,10 @@ class BusAttachmentTest : public testing::Test {
     BusAttachment bus;
     TestECDHEAuthListener* authListener;
     TestApplicationStateListener testListener;
-    TestApplicationStateListener* nullListener;
 
     BusAttachmentTest() :
         bus("BusAttachmentTest", false),
-        authListener(nullptr),
-        nullListener(nullptr)
+        authListener(nullptr)
     {
         EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("BusAttachmentTest"));
     };
@@ -106,25 +104,8 @@ class BusAttachmentTest : public testing::Test {
 
 };
 
-TEST_F(BusAttachmentTest, shouldReturnErrorWhenRegisteringNullApplicationStateListener)
-{
-    EXPECT_EQ(ER_INVALID_ADDRESS, bus.RegisterApplicationStateListener(*nullListener));
-}
-
-TEST_F(BusAttachmentTest, shouldReturnErrorWhenUnregisteringNullApplicationStateListener)
-{
-    EXPECT_EQ(ER_INVALID_ADDRESS, bus.UnregisterApplicationStateListener(*nullListener));
-}
-
 TEST_F(BusAttachmentTest, shouldNotHaveMatchRuleWithoutRegisteredListener)
 {
-    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
-}
-
-TEST_F(BusAttachmentTest, shouldNotAddMatchRuleWhenFailedToRegisterListener)
-{
-    ASSERT_EQ(ER_INVALID_ADDRESS, bus.RegisterApplicationStateListener(*nullListener));
-
     EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
 }
 
@@ -165,14 +146,6 @@ TEST_F(BusAttachmentTest, shouldRemoveMatchRuleAfterUnregisteringListener)
     ASSERT_EQ(ER_OK, bus.UnregisterApplicationStateListener(testListener));
 
     EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
-}
-
-TEST_F(BusAttachmentTest, shouldNotRemoveMatchRuleWhenFailedToUnregisterListener)
-{
-    ASSERT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
-    ASSERT_EQ(ER_INVALID_ADDRESS, bus.UnregisterApplicationStateListener(*nullListener));
-
-    EXPECT_EQ(ER_OK, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
 }
 
 TEST_F(BusAttachmentTest, IsConnected)

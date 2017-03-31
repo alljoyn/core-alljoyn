@@ -629,12 +629,21 @@ const alljoyn_permissionconfigurator AJ_CALL alljoyn_busattachment_getpermission
 QStatus AJ_CALL alljoyn_busattachment_registerapplicationstatelistener(alljoyn_busattachment bus, alljoyn_applicationstatelistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    if (listener == NULL) {
+        QCC_DbgPrintf(("NULL parameter passed to %s", __FUNCTION__));
+        return ER_INVALID_ADDRESS;
+    }
+
     return ((ajn::BusAttachmentC*)bus)->RegisterApplicationStateListener((*(ajn::ApplicationStateListener*)listener));
 }
 
 QStatus AJ_CALL alljoyn_busattachment_unregisterapplicationstatelistener(alljoyn_busattachment bus, alljoyn_applicationstatelistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    if (listener == NULL) {
+        QCC_DbgPrintf(("NULL parameter passed to %s", __FUNCTION__));
+        return ER_INVALID_ADDRESS;
+    }
     return ((ajn::BusAttachmentC*)bus)->UnregisterApplicationStateListener((*(ajn::ApplicationStateListener*)listener));
 }
 
