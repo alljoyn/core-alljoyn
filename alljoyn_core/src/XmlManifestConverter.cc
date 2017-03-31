@@ -51,8 +51,14 @@ namespace ajn {
 QStatus XmlManifestConverter::XmlToManifest(AJ_PCSTR manifestXml, Manifest& manifest)
 {
     QCC_ASSERT(nullptr != manifestXml);
+#if defined(__GNUC__) && (__GNUC__ >= 6)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress"
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
     QCC_ASSERT(nullptr != &manifest);
-
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
+#endif
     QCC_DbgHLPrintf(("%s: Converting signed manifest XML into a Manifest object: %s",
                      __FUNCTION__, manifestXml));
 

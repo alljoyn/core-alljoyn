@@ -74,8 +74,14 @@ void XmlPoliciesConverter::Shutdown()
 QStatus XmlPoliciesConverter::FromXml(AJ_PCSTR policyXml, ajn::PermissionPolicy& policy)
 {
     QCC_ASSERT(nullptr != policyXml);
+#if defined(__GNUC__) && (__GNUC__ >= 6)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress"
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
     QCC_ASSERT(nullptr != &policy);
-
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
+#endif
     XmlElement* root = nullptr;
     QStatus status = XmlElement::GetRoot(policyXml, &root);
 

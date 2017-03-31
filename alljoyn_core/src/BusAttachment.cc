@@ -2874,11 +2874,16 @@ QStatus BusAttachment::CancelWhoImplements(const char* iface)
 QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
 {
     QStatus status = ER_OK;
-
+#if defined(__GNUC__) && (__GNUC__ >= 6)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress"
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
     if (nullptr == &applicationStateListener) {
         status = ER_INVALID_ADDRESS;
     }
-
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
+#endif
     if (ER_OK == status) {
         status = busInternal->AddApplicationStateListener(applicationStateListener);
     }
@@ -2894,11 +2899,16 @@ QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener
 QStatus BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
 {
     QStatus status = ER_OK;
-
+#if defined(__GNUC__) && (__GNUC__ >= 6)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress"
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
     if (nullptr == &applicationStateListener) {
         status = ER_INVALID_ADDRESS;
     }
-
+#pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
+#endif
     if (ER_OK == status) {
         status = busInternal->RemoveApplicationStateListener(applicationStateListener);
     }
