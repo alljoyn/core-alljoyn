@@ -125,14 +125,7 @@ QStatus XmlPoliciesValidator::ValidatePolicyVersion(const XmlElement* policyVers
 QStatus XmlPoliciesValidator::ValidatePolicyVersionContent(const XmlElement* policyVersion)
 {
     uint32_t version = StringToU32(policyVersion->GetContent());
-    if (VALID_VERSION_NUMBER != version) {
-        QCC_LogError(ER_XML_INVALID_POLICY_VERSION,
-                     ("%s: Invalid security policy version. Expected: %u. Was: %u.",
-                      __FUNCTION__, VALID_VERSION_NUMBER, version));
-
-        return ER_XML_INVALID_POLICY_VERSION;
-    }
-
+    QCC_UNUSED(version);
     return ER_OK;
 }
 
