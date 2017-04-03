@@ -94,6 +94,16 @@ env.Append(CXXFLAGS=['-fno-exceptions'])
 env.Append(CPPDEFINES=['QCC_OS_LINUX'])
 env.Append(LIBS=['m'])  # STL needs libm on OpenWrt
 
+env.Append(CFLAGS = ['-Wall',
+                     '-Werror',
+                     '-Wuninitialized',
+                     '-Wunused-parameter'])
+
+env.Append(CXXFLAGS = ['-Wall',
+                       '-Werror',
+                       '-Wuninitialized',
+                       '-Wunused-parameter'])
+
 env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
 if env['CRYPTO'] == 'openssl':
     env.AppendUnique(LIBS =['crypto', 'ssl'])
