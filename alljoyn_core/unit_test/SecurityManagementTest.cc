@@ -257,10 +257,10 @@ class SecurityManagementPolicyTest : public testing::Test {
         peer2AuthListener = new DefaultECDHEAuthListener();
         peer3AuthListener = new DefaultECDHEAuthListener();
 
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
-        EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer3AuthListener, nullptr, false, &peer3ConfigurationListener));
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, true, &peer1ConfigurationListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, true, &peer2ConfigurationListener));
+        EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer3AuthListener, nullptr, true, &peer3ConfigurationListener));
 
         SecurityTestHelper::GetGUID(managerBus, managerGuid);
         SetManifestTemplate(managerBus);
@@ -426,9 +426,9 @@ class SecurityManagementPolicyTest : public testing::Test {
         ASSERT_EQ(ER_OK, sapWithPeer2.EndManagement());
 
         // Switch to ECDHE_ECDSA-only
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, true, &peer1ConfigurationListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, true, &peer2ConfigurationListener));
     }
 
     virtual void TearDown() {
@@ -462,7 +462,7 @@ class SecurityManagementPolicyTest : public testing::Test {
 
         ASSERT_EQ(ER_OK, securityApplicationProxy.StartManagement());
         ASSERT_EQ(ER_OK, securityApplicationProxy.Reset());
-        ASSERT_EQ(ER_OK, peer.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", authListener, nullptr, false, pcl));
+        ASSERT_EQ(ER_OK, peer.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", authListener, nullptr, true, pcl));
     }
 
     void ClaimPeer(AJ_PCSTR peerUniqueBusName)
@@ -470,7 +470,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         ECCPublicKey peerPublicKey;
         SecurityApplicationProxy securityApplicationProxy = ConnectToPeer(peerUniqueBusName);
 
-        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
         ASSERT_EQ(ER_OK, securityApplicationProxy.GetEccPublicKey(peerPublicKey));
 
         IdentityCertificate identityCertChain[1];
@@ -497,7 +497,7 @@ class SecurityManagementPolicyTest : public testing::Test {
                       identityCertChain, ArraySize(identityCertChain),
                       manifests, ArraySize(manifests)));
 
-        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
     }
 
     void InstallMembershipOnManager() {
@@ -1015,8 +1015,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, true, &peer1ConfigurationListener));
 
     EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
@@ -1100,8 +1100,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, true, &peer1ConfigurationListener));
 
     EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
@@ -1184,8 +1184,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, true, &peer2ConfigurationListener));
 
     EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
@@ -2979,8 +2979,8 @@ TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_met
     EXPECT_EQ(ER_OK, nonASGBus.RegisterKeyStoreListener(keyStoreListener));
 
     DefaultECDHEAuthListener authListener;
-    EXPECT_EQ(ER_OK, nonASGBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+    EXPECT_EQ(ER_OK, nonASGBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener, nullptr, true, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", peer2AuthListener, nullptr, true, &peer2ConfigurationListener));
 
     SessionOpts opts;
     uint32_t sessionId;
@@ -3066,8 +3066,8 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
     delete peer2AuthListener;
     managerAuthListener = new DefaultECDHEAuthListener();
     peer2AuthListener = new DefaultECDHEAuthListener();
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, true, &peer2ConfigurationListener));
 
     SetManifestTemplate(peer2Bus);
 
@@ -3116,9 +3116,9 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
     ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer2BusUniqueName]);
 
     // Switch to ECDHE_ECDSA-only
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, true, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, true, &peer1ConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, true, &peer2ConfigurationListener));
 
     // Create post-Reset & Claim management session
     EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2BusUniqueName.c_str(), peer2SessionPort, NULL, sessionId, opts));
@@ -3205,8 +3205,8 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
     SecurityManagementTestConfigurationListener bus1ConfigurationListener;
     SecurityManagementTestConfigurationListener bus2ConfigurationListener;
 
-    EXPECT_EQ(ER_OK, peer1.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus1AuthListener, nullptr, false, &bus1ConfigurationListener));
-    EXPECT_EQ(ER_OK, peer2.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus2AuthListener, nullptr, false, &bus2ConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus1AuthListener, nullptr, true, &bus1ConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus2AuthListener, nullptr, true, &bus2ConfigurationListener));
 
     SessionOpts opts;
     SessionPort sessionPort = 42;

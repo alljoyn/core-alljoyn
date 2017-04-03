@@ -190,13 +190,13 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, nullptr, true);
     delete serviceKeyListener;
     serviceKeyListener = GenAuthListener(keyExchange);
-    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, nullptr, false, &testPCL);
+    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, nullptr, true, &testPCL);
     delete consumerKeyListener;
     consumerKeyListener = GenAuthListener(keyExchange);
-    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, nullptr, false, &testPCL);
+    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, nullptr, true, &testPCL);
     delete remoteControlKeyListener;
     remoteControlKeyListener = GenAuthListener(keyExchange);
-    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, nullptr, false, &testPCL);
+    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, nullptr, true, &testPCL);
     authMechanisms = keyExchange;
 }
 
