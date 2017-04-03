@@ -42,6 +42,8 @@ env.Append(CFLAGS=['-Wall',
                    '-pipe',
                    '-std=c99',
                    '-fno-strict-aliasing',
+                   '-Wuninitialized',
+                   '-Wmaybe-uninitialized',
                    '-Wno-long-long'])
 
 env.Append(CXXFLAGS=['-Wall',
@@ -49,6 +51,8 @@ env.Append(CXXFLAGS=['-Wall',
                      '-pipe',
                      '-fno-exceptions',
                      '-fno-strict-aliasing',
+                     '-Wuninitialized',
+                     '-Wmaybe-uninitialized',
                      '-Wno-deprecated'])
 
 # Debug/Release Variants

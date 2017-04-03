@@ -229,6 +229,8 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
                        '-Wno-long-long',
                        '-Wno-deprecated',
                        '-Wno-unknown-pragmas',
+                       '-Wuninitialized',
+                       '-Wmaybe-uninitialized',
                        '-pie',
                        '-fPIE'])
    env.Append(CXXFLAGS = ['-Wall',
@@ -236,6 +238,8 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
                        '-Wno-long-long',
                        '-Wno-deprecated',
                        '-Wno-unknown-pragmas',
+                       '-Wuninitialized',
+                       '-Wmaybe-uninitialized',
                        '-pie',
                        '-fPIE'])
 
