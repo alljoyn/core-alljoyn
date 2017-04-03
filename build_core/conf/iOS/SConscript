@@ -98,6 +98,7 @@ env.Append(CFLAGS=[
             '-Wreturn-type',
             '-Wparentheses',
             '-Wswitch',
+            '-Wuninitialized',
             '-Wno-unused-parameter',
             '-Wunused-variable',
             '-Wunused-value'])
@@ -107,14 +108,8 @@ env.Append(CXXFLAGS=['-Wall',
                      '-pipe',
                      '-fno-exceptions',
                      '-fno-strict-aliasing',
-                     '-Wno-deprecated'])
-
-env.Append(CXXFLAGS=['-Wall',
-                     '-Werror=non-virtual-dtor',
-                     '-pipe',
-                     '-fno-exceptions',
-                     '-fno-strict-aliasing',
                      '-Wno-deprecated',
+                     '-Wuninitialized',
                      '-Wc++11-extensions'])
 
 if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
