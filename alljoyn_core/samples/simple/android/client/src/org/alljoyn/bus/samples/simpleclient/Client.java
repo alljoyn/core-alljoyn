@@ -66,7 +66,9 @@ public class Client extends Activity {
             Log.e("SimpleClient", String.format("handleMessage(arg1=%d, busName=%s", msg.arg1, item.getBusName()));
             switch (msg.arg1) {
             case BUSNAMEITEM_FOUND:
-                busNameItemAdapter.add(item);
+                if (busNameItemAdapter.getPosition(item) == -1) {
+                    busNameItemAdapter.add(item);
+                }
                 break;
             case BUSNAMEITEM_LOST:
                 busNameItemAdapter.remove(item);
@@ -126,7 +128,6 @@ public class Client extends Activity {
         listView.setAdapter(busNameItemAdapter);
 
         editText = (EditText) findViewById(R.id.EditText);
-
         listView.requestFocus();
 
 
