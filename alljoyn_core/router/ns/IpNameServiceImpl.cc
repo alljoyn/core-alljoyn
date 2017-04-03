@@ -3179,14 +3179,25 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
                 if (temp->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
 
                     if ((completeTransportMask & temp->GetTransportMask()) == completeTransportMask) {
-                        MDNSResourceRecord* tmpSearchRecord;
-                        temp->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpSearchRecord);
+                        MDNSResourceRecord* tmpSearchRecord = nullptr;
+                        if ((!temp->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpSearchRecord)) || (nullptr == tmpSearchRecord)) {
+                            QCC_LogError(ER_WARNING, ("IpNameServiceImpl::Query: MDNSPacket Failed to GetAdditionalRecord"));
+#ifndef NDEBUG
+                            temp->Dump();
+#endif
+                            continue;
+                        }
                         MDNSSearchRData* tmpSearchRData = static_cast<MDNSSearchRData*>(tmpSearchRecord->GetRData());
 
-                        MDNSResourceRecord* searchRecord;
-                        mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
+                        MDNSResourceRecord* searchRecord = nullptr;
+                        if ((!mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord)) || (nullptr == searchRecord)) {
+                            QCC_LogError(ER_WARNING, ("IpNameServiceImpl::Query: MDNSPacket Failed to GetAdditionalRecord"));
+#ifndef NDEBUG
+                            mdnsPacket->Dump();
+#endif
+                            continue;
+                        }
                         MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
-
                         if (tmpSearchRData->GetNumSearchCriteria() == 1) {
                             if (searchRData->GetSearchCriterion(0) == tmpSearchRData->GetSearchCriterion(0)) {
                                 m_burstQueue.erase(it++);
@@ -3303,9 +3314,9 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         if (mdnsPacket->DestinationSet()) {
             QueueProtocolMessage(Packet::cast(mdnsPacket));
         } else {
-            MDNSResourceRecord* advRecord;
+            MDNSResourceRecord* advRecord = nullptr;
 
-            if (mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) {
+            if ((mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) && (nullptr != advRecord)) {
                 MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
                 m_mutex.Lock(MUTEX_CONTEXT);
@@ -3322,8 +3333,8 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
                         if (temp->GetHeader().GetQRType() == MDNSHeader::MDNS_RESPONSE) {
 
                             if (completeTransportMask == temp->GetTransportMask()) {
-                                MDNSResourceRecord* tmpAdvRecord;
-                                if (temp->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpAdvRecord)) {
+                                MDNSResourceRecord* tmpAdvRecord = nullptr;
+                                if ((temp->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpAdvRecord)) && (nullptr != tmpAdvRecord)) {
                                     MDNSAdvertiseRData* tmpAdvRData = static_cast<MDNSAdvertiseRData*>(tmpAdvRecord->GetRData());
                                     if ((tmpAdvRData->GetNumTransports() == 1) && (advRData->GetNumNames(completeTransportMask) == tmpAdvRData->GetNumNames(completeTransportMask))) {
                                         bool matching = true;
@@ -3804,7 +3815,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
     // previously added.
     //
     NSPacket nsPacket;
-    MDNSPacket mdnspacket;
+    MDNSPacket mdnsPacket;
     switch (msgVersion) {
     case 0:
         QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific(): Answer gets version zero"));
@@ -3912,10 +3923,16 @@ void IpNameServiceImpl::RewriteVersionSpecific(
     case 2:
         {
             //Need to rewrite ipv4Address into A record,ipv6address, unicast NS response ports into reference record.
-            mdnspacket  = MDNSPacket::cast(packet);
-            MDNSHeader mdnsheader = mdnspacket->GetHeader();
-            MDNSResourceRecord* refRecord;
-            mdnspacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord);
+            mdnsPacket  = MDNSPacket::cast(packet);
+            MDNSHeader mdnsheader = mdnsPacket->GetHeader();
+            MDNSResourceRecord* refRecord = nullptr;
+            if ((!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) || (nullptr == refRecord)) {
+                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::RewriteVersionSpecific: MDNSPacket Failed to GetAdditionalRecord"));
+#ifndef NDEBUG
+                mdnsPacket->Dump();
+#endif
+                break;
+            }
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             if (mdnsheader.GetQRType() == MDNSHeader::MDNS_QUERY) {
                 if (haveIPv4address && (unicastIpv4Port != 0)) {
@@ -3935,15 +3952,21 @@ void IpNameServiceImpl::RewriteVersionSpecific(
             } else {
 
                 //Response packet
-                for (int i = 0; i < mdnspacket->GetNumAnswers(); i++) {
-
-                    MDNSResourceRecord* answerRecord;
-                    mdnspacket->GetAnswerAt(i, &answerRecord);
-                    MDNSResourceRecord* resourceRecord;
-                    MDNSARData* addrRData;
-                    MDNSAAAARData* addrAAAARData;
-                    MDNSTextRData* txtRData;
-                    MDNSSrvRData* srvRData;
+                for (int i = 0; i < mdnsPacket->GetNumAnswers(); i++) {
+                    MDNSResourceRecord* answerRecord = nullptr;
+                    if ((!mdnsPacket->GetAnswerAt(i, &answerRecord)) || (nullptr == answerRecord)) {
+                        QCC_ASSERT(false && "IpNameServiceImpl::RewriteVersionSpecific(): GetAnswerAt out of range");
+                        QCC_LogError(ER_WARNING, ("IpNameServiceImpl::RewriteVersionSpecific: MDNSPacket Failed to GetAnswer"));
+#ifndef NDEBUG
+                        mdnsPacket->Dump();
+#endif
+                        continue;
+                    }
+                    MDNSResourceRecord* resourceRecord = nullptr;
+                    MDNSARData* addrRData = nullptr;
+                    MDNSAAAARData* addrAAAARData = nullptr;
+                    MDNSTextRData* txtRData = nullptr;
+                    MDNSSrvRData* srvRData = nullptr;
 
                     switch (answerRecord->GetRRType()) {
                     case MDNSResourceRecord::SRV:
@@ -3953,15 +3976,15 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                             srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
 
                             if (haveIPv4address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
+                                if ((!mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) || (nullptr == resourceRecord)) {
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
-                                    mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
-                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
+                                    mdnsPacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
+                                    mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                     delete addrRData;
                                 }
                                 addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
-                                if (addrRData) {
+                                if (nullptr != addrRData) {
                                     addrRData->SetAddr(ipv4address.ToString());
                                     refRData->SetIPV4ResponsePort(unicastIpv4Port);
                                     if (reliableTransportPort) {
@@ -3969,16 +3992,16 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     }
                                 }
                             } else {
-                                mdnspacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::A);
+                                mdnsPacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::A);
                                 refRData->RemoveEntry("ipv4");
                                 refRData->RemoveEntry("upcv4");
                             }
                             if (haveIPv6address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
+                                if ((!mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) || (nullptr == resourceRecord)) {
                                     // Add an IPv6 address record
                                     addrAAAARData = new MDNSAAAARData();
-                                    mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, addrAAAARData));
-                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
+                                    mdnsPacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, addrAAAARData));
+                                    mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                     delete addrAAAARData;
                                 }
                                 addrAAAARData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
@@ -3990,7 +4013,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     }
                                 }
                             } else {
-                                mdnspacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::AAAA);
+                                mdnsPacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::AAAA);
                                 refRData->RemoveEntry("ipv6");
                                 refRData->RemoveEntry("upcv6");
                             }
@@ -3998,12 +4021,12 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                         } else if (answerRecord->GetDomainName().find("._udp.") != String::npos) {
                             srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
                             if (haveIPv4address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
+                                if ((!mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) || (nullptr == resourceRecord)) {
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
-                                    mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
+                                    mdnsPacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
                                     delete addrRData;
-                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
+                                    mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
                                 addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
                                 if (addrRData) {
@@ -4016,17 +4039,17 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     }
                                 }
                             }  else {
-                                mdnspacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::A);
+                                mdnsPacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::A);
                                 refRData->RemoveEntry("ipv4");
                                 refRData->RemoveEntry("upcv4");
                             }
                             if (haveIPv6address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
+                                if ((!mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) || (nullptr == resourceRecord)) {
                                     // Add an IPv6 address record
                                     addrAAAARData = new MDNSAAAARData();
-                                    mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, addrAAAARData));
+                                    mdnsPacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, addrAAAARData));
                                     delete addrAAAARData;
-                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
+                                    mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                 }
                                 addrAAAARData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
                                 if (addrAAAARData) {
@@ -4039,7 +4062,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     }
                                 }
                             }  else {
-                                mdnspacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::AAAA);
+                                mdnsPacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::AAAA);
                                 refRData->RemoveEntry("ipv6");
                                 refRData->RemoveEntry("upcv6");
                             }
@@ -4730,12 +4753,12 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         } else {
             //version two
 
-            MDNSPacket mdnspacket = MDNSPacket::cast(packet);
-            MDNSResourceRecord* answer;
+            MDNSPacket mdnsPacket = MDNSPacket::cast(packet);
+            MDNSResourceRecord* answer = nullptr;
 
-            if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
+            if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
                 MDNSQuestion* question;
-                if (mdnspacket->GetQuestion("_alljoyn._tcp.local.", &question)) {
+                if (mdnsPacket->GetQuestion("_alljoyn._tcp.local.", &question)) {
 
                     //
                     // If this interface is requested as an outbound interface for this
@@ -4746,7 +4769,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                     }
 
                 }
-                if (mdnspacket->GetQuestion("_alljoyn._udp.local.", &question)) {
+                if (mdnsPacket->GetQuestion("_alljoyn._udp.local.", &question)) {
 
                     //
                     // If this interface is requested as an outbound interface for this
@@ -4758,7 +4781,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
 
                 }
             } else {
-                if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer)) {
+                if ((mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer)) && (nullptr != answer)) {
 
                     //
                     // If this interface is requested as an outbound interface for this
@@ -4769,7 +4792,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                     }
 
                 }
-                if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &answer)) {
+                if ((mdnsPacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &answer)) && (nullptr != answer)) {
 
                     //
                     // If this interface is requested as an outbound interface for this
@@ -5731,12 +5754,24 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                 }
             }
 
-            MDNSResourceRecord* advRecord;
-            pilotPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord);
+            MDNSResourceRecord* advRecord = nullptr;
+            if ((!pilotPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) || (nullptr == advRecord)) {
+                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAnswer"));
+#ifndef NDEBUG
+                pilotPacket->Dump();
+#endif
+                continue;
+            }
             MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
-            MDNSResourceRecord* refRecord1;
-            pilotPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord1);
+            MDNSResourceRecord* refRecord1 = nullptr;
+            if ((!pilotPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord1)) || (nullptr == refRecord1)) {
+                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAnswer"));
+#ifndef NDEBUG
+                pilotPacket->Dump();
+#endif
+                continue;
+            }
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
 
             refRData->SetSearchID(id);
@@ -6770,14 +6805,12 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         mdnsPacket->AddAdditionalRecord(refRecord);
         mdnsPacket->AddAdditionalRecord(aRecord);
         mdnsPacket->SetVersion(2, 2);
-        MDNSResourceRecord* advRecord;
+        MDNSResourceRecord* advRecord = nullptr;
         mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord);
-
         advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
-        MDNSResourceRecord* refRecord1;
+        MDNSResourceRecord* refRecord1 = nullptr;
         mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord1);
-
         refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
 
         TransportMask transportMaskArr[3] = { TRANSPORT_TCP, TRANSPORT_UDP, TRANSPORT_TCP | TRANSPORT_UDP };
@@ -7787,8 +7820,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
         QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse Ignoring Non-AllJoyn related response"));
         return;
     }
-    MDNSResourceRecord* refRecord;
-    if (!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) {
+    MDNSResourceRecord* refRecord = nullptr;
+    if ((!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) || (nullptr == refRecord)) {
         QCC_DbgPrintf(("Ignoring response without sender-info"));
         return;
     }
@@ -7836,8 +7869,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
             }
             r6.port = StringToU32(txtRDataTcp->GetValue("r6port"));
         }
-        MDNSResourceRecord* aRecord;
-        if (mdnsPacket->GetAdditionalRecord(srvRDataTcp->GetTarget(), MDNSResourceRecord::A, &aRecord)) {
+        MDNSResourceRecord* aRecord = nullptr;
+        if ((mdnsPacket->GetAdditionalRecord(srvRDataTcp->GetTarget(), MDNSResourceRecord::A, &aRecord)) && (nullptr != aRecord)) {
             MDNSARData* aRData = static_cast<MDNSARData*>(aRecord->GetRData());
             if (!aRData) {
                 QCC_DbgPrintf(("Ignoring response with invalid ipv4 address"));
@@ -7846,8 +7879,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
             r4.addr = aRData->GetAddr();
             ns.addr = aRData->GetAddr();
         }
-        MDNSResourceRecord* aaaaRecord;
-        if (mdnsPacket->GetAdditionalRecord(srvRDataTcp->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) {
+        MDNSResourceRecord* aaaaRecord = nullptr;
+        if ((mdnsPacket->GetAdditionalRecord(srvRDataTcp->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) && (nullptr != aaaaRecord)) {
             MDNSAAAARData* aaaaRData = static_cast<MDNSAAAARData*>(aaaaRecord->GetRData());
             if (!aaaaRData) {
                 QCC_DbgPrintf(("Ignoring response with invalid ipv6 address"));
@@ -7864,8 +7897,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
             return;
         }
 
-        MDNSResourceRecord* srvAnswerUdp;
-        if (!mdnsPacket->GetAnswer(ptrRDataUdp->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswerUdp)) {
+        MDNSResourceRecord* srvAnswerUdp = nullptr;
+        if ((!mdnsPacket->GetAnswer(ptrRDataUdp->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswerUdp)) || (nullptr == srvAnswerUdp)) {
             QCC_DbgPrintf(("Ignoring response without srv"));
             return;
         }
@@ -7875,8 +7908,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
             return;
         }
         u4.port = srvRDataUdp->GetPort();
-        MDNSResourceRecord* txtAnswerUdp;
-        if (mdnsPacket->GetAnswer(ptrRDataUdp->GetPtrDName(), MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &txtAnswerUdp)) {
+        MDNSResourceRecord* txtAnswerUdp = nullptr;
+        if ((mdnsPacket->GetAnswer(ptrRDataUdp->GetPtrDName(), MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &txtAnswerUdp)) && (nullptr != txtAnswerUdp)) {
             MDNSTextRData* txtRDataUdp = static_cast<MDNSTextRData*>(txtAnswerUdp->GetRData());
             if (!txtRDataUdp) {
                 QCC_DbgPrintf(("Ignoring response with invalid txt"));
@@ -7889,8 +7922,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
                 u6.port = srvRDataUdp->GetPort();
             }
         }
-        MDNSResourceRecord* aRecord;
-        if (mdnsPacket->GetAdditionalRecord(srvRDataUdp->GetTarget(), MDNSResourceRecord::A, &aRecord)) {
+        MDNSResourceRecord* aRecord = nullptr;
+        if ((mdnsPacket->GetAdditionalRecord(srvRDataUdp->GetTarget(), MDNSResourceRecord::A, &aRecord)) && (nullptr != aRecord)) {
             MDNSARData* aRData = static_cast<MDNSARData*>(aRecord->GetRData());
             if (!aRData) {
                 QCC_DbgPrintf(("Ignoring response with invalid ipv4 address"));
@@ -7899,8 +7932,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
             u4.addr = aRData->GetAddr();
             ns.addr = aRData->GetAddr();
         }
-        MDNSResourceRecord* aaaaRecord;
-        if (mdnsPacket->GetAdditionalRecord(srvRDataUdp->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) {
+        MDNSResourceRecord* aaaaRecord = nullptr;
+        if ((mdnsPacket->GetAdditionalRecord(srvRDataUdp->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) && (nullptr != aaaaRecord)) {
             MDNSAAAARData* aaaaRData = static_cast<MDNSAAAARData*>(aaaaRecord->GetRData());
             if (!aaaaRData) {
                 QCC_DbgPrintf(("Ignoring response with invalid ipv6 address"));
@@ -7973,8 +8006,8 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket,
 {
     uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
     for (uint32_t match = 0; match < numMatches; match++) {
-        MDNSResourceRecord* advRecord;
-        if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
+        MDNSResourceRecord* advRecord = nullptr;
+        if ((!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) || (nullptr == advRecord)) {
             return false;
         }
 
@@ -8120,8 +8153,8 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
         QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery Ignoring Non-AllJoyn related query"));
         return;
     }
-    MDNSResourceRecord* refRecord;
-    if (!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) {
+    MDNSResourceRecord* refRecord = nullptr;
+    if ((!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) || (nullptr == refRecord)) {
         QCC_DbgPrintf(("Ignoring query without sender info"));
 #ifndef NDEBUG
         mdnsPacket->Dump();
@@ -8188,8 +8221,8 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
     QCC_UNUSED(guid);
 
     QCC_DbgPrintf(("IpNameServiceImpl::HandleSearchQuery, src = %s, dst = %s", src.GetAddress().ToString().c_str(), dst.GetAddress().ToString().c_str()));
-    MDNSResourceRecord* searchRecord;
-    if (!mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord)) {
+    MDNSResourceRecord* searchRecord = nullptr;
+    if ((!mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord)) || (nullptr == searchRecord)) {
         return false;
     }
 
@@ -8495,17 +8528,23 @@ set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask
 
 }
 
-bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid)
+bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnsPacket, bool updateSid)
 {
-    bool isUnicast = mdnspacket->DestinationSet();
-    MDNSResourceRecord* refRecord;
-    mdnspacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord);
-    MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-    if (updateSid) {
-        int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
-        refRData->SetSearchID(id);
+    bool isUnicast = mdnsPacket->DestinationSet();
+    MDNSResourceRecord* refRecord = nullptr;
+    if ((mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) && (nullptr != refRecord)) {
+        MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
+        if (updateSid) {
+            int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
+            refRData->SetSearchID(id);
+        }
+    } else {
+        QCC_LogError(ER_WARNING, ("IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAnswer"));
+#ifndef NDEBUG
+        mdnsPacket->Dump();
+#endif
     }
-    if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
+    if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
         ScopedMutexLock lock(m_mutex);
         if (isUnicast) {
             /* Do not purge unicast queries(RefreshCache and Ping),
@@ -8513,10 +8552,15 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
              */
             return true;
         }
-        MDNSResourceRecord* searchRecord;
-        mdnspacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
+        MDNSResourceRecord* searchRecord = nullptr;
+        if ((!mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord)) || (nullptr == searchRecord)) {
+            QCC_LogError(ER_WARNING, ("IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAnswer"));
+#ifndef NDEBUG
+            mdnsPacket->Dump();
+#endif
+            return false;
+        }
         MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
-
         set<String> set_union_tcp_udp;
         set_union(m_v2_queries[TRANSPORT_INDEX_TCP].begin(), m_v2_queries[TRANSPORT_INDEX_TCP].end(), m_v2_queries[TRANSPORT_INDEX_UDP].begin(), m_v2_queries[TRANSPORT_INDEX_UDP].end(), std::inserter(set_union_tcp_udp, set_union_tcp_udp.end()));
         uint32_t numSearch = searchRData->GetNumSearchCriteria();
@@ -8534,31 +8578,31 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
         if (m_v2_queries[TRANSPORT_INDEX_TCP].size() == 0) {
             //Remove TCP PTR/SRV/TXT records
             MDNSResourceRecord* ptrRecord;
-            if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+            if (mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
                 MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
                 String name = ptrRData->GetPtrDName();
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnsPacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
             }
         }
         if (m_v2_queries[TRANSPORT_INDEX_UDP].size() == 0) {
             //Remove UDP PTR/SRV/TXT records
             MDNSResourceRecord* ptrRecord;
-            if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+            if (mdnsPacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
                 MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
                 String name = ptrRData->GetPtrDName();
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnsPacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
             }
 
         }
         return (numSearch > 0);
     } else {
         /* If the packet is isUnicast, then we need to check the quietly advertised names too. */
-        MDNSResourceRecord* advRecord;
-        if (!mdnspacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord) || (advRecord == NULL)) {
+        MDNSResourceRecord* advRecord = nullptr;
+        if ((!mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) || (nullptr == advRecord)) {
             /* Ping response packets do not contain an advertise record and must be always sent. */
             return true;
         }
@@ -8621,24 +8665,24 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
 
         if (numNames[0] == 0 && numNames[2] == 0) {
             //Remove TCP PTR/SRV/TXT records
-            MDNSResourceRecord* ptrRecord;
-            if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+            MDNSResourceRecord* ptrRecord = nullptr;
+            if ((mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) && (nullptr != ptrRecord)) {
                 MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
                 String name = ptrRData->GetPtrDName();
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnsPacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
             }
         }
         if (numNames[1] == 0 && numNames[2] == 0) {
             //Remove UDP PTR/SRV/TXT records
-            MDNSResourceRecord* ptrRecord;
-            if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+            MDNSResourceRecord* ptrRecord = nullptr;
+            if ((mdnsPacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) && (nullptr != ptrRecord)) {
                 MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
                 String name = ptrRData->GetPtrDName();
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnsPacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
             }
 
         }
@@ -8833,10 +8877,10 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                 uint32_t msgVersion;
                 (*it).packet->GetVersion(nsVersion, msgVersion);
                 if (msgVersion == 2) {
-                    MDNSPacket mdnspacket = MDNSPacket::cast((*it).packet);
+                    MDNSPacket mdnsPacket = MDNSPacket::cast((*it).packet);
                     //PurgeAndUpdatePacket will remove any names that have changed - not being advertised/discovered
                     // and also update the burst ID in the packet.
-                    if (!m_impl.PurgeAndUpdatePacket(mdnspacket, (*it).scheduleCount != 0)) {
+                    if (!m_impl.PurgeAndUpdatePacket(mdnsPacket, (*it).scheduleCount != 0)) {
                         //No names found, remove this packet
                         m_impl.m_burstQueue.erase(it++);
                         continue;
