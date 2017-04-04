@@ -352,7 +352,7 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
         }
     }
 
-    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK " " KEYX_ECDHE_SPEKE, authListener, nullptr, false, pcl);
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK " " KEYX_ECDHE_SPEKE, authListener, nullptr, true, pcl);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to EnablePeerSecurity - status (%s)\n", QCC_StatusText(status));
         return status;
@@ -417,7 +417,7 @@ QStatus DoorCommon::SetSecurityForClaimedMode()
         return status;
     }
 
-    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA, authListener, nullptr, false, pcl);
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA, authListener, nullptr, true, pcl);
     if (ER_OK != status) {
         fprintf(stderr, "SetSecurityForClaimedMode: Could not reset peer security - status (%s)\n", QCC_StatusText(status));
         return status;

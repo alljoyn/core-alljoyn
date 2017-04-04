@@ -339,7 +339,7 @@ TEST_F(ObjectSecurityTest, insecure_interface_secure_object) {
 
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -356,7 +356,7 @@ TEST_F(ObjectSecurityTest, insecure_interface_secure_object) {
 
     alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -407,7 +407,7 @@ TEST_F(ObjectSecurityTest, interface_security_off_secure_object) {
 
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -424,7 +424,7 @@ TEST_F(ObjectSecurityTest, interface_security_off_secure_object) {
 
     alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -505,7 +505,7 @@ TEST_F(ObjectSecurityTest, factory_reset) {
 
     alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     /* Clear the key store between runs. */

@@ -600,7 +600,7 @@ void AuthListenerTest::RunAuthSucceedsTest(AJ_PCSTR mechanism, AJ_PCSTR context_
     };
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -616,7 +616,7 @@ void AuthListenerTest::RunAuthSucceedsTest(AJ_PCSTR mechanism, AJ_PCSTR context_
     };
     alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -664,7 +664,7 @@ void AuthListenerTest::RunAsyncAuthSucceedsTest(AJ_PCSTR mechanism, AJ_PCSTR con
     };
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_service, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -680,7 +680,7 @@ void AuthListenerTest::RunAsyncAuthSucceedsTest(AJ_PCSTR mechanism, AJ_PCSTR con
     };
     alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_client, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -728,7 +728,7 @@ void AuthListenerTest::RunAuthFailsTest(AJ_PCSTR mechanism)
     };
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)"context test string");
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -744,7 +744,7 @@ void AuthListenerTest::RunAuthFailsTest(AJ_PCSTR mechanism)
     };
     alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)"context test string");
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -797,7 +797,7 @@ void AuthListenerTest::RunAsyncAuthFailsTest(AJ_PCSTR mechanism)
     };
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_service, (void*)"context test string");
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -813,7 +813,7 @@ void AuthListenerTest::RunAsyncAuthFailsTest(AJ_PCSTR mechanism)
     };
     alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_client, (void*)"context test string");
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -866,7 +866,7 @@ void AuthListenerTest::RunSecureConnectionTest(AJ_PCSTR mechanism, AJ_PCSTR cont
     };
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -882,7 +882,7 @@ void AuthListenerTest::RunSecureConnectionTest(AJ_PCSTR mechanism, AJ_PCSTR cont
     };
     alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -964,7 +964,7 @@ void AuthListenerTest::RunAsyncSecureConnectionTest(AJ_PCSTR mechanism, AJ_PCSTR
     };
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_service, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -980,7 +980,7 @@ void AuthListenerTest::RunAsyncSecureConnectionTest(AJ_PCSTR mechanism, AJ_PCSTR
     };
     alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_client, (void*)context_string);
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
