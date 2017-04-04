@@ -3185,6 +3185,7 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
 #ifndef NDEBUG
                             temp->Dump();
 #endif
+                            QCC_ASSERT(false && "IpNameServiceImpl::Query: MDNSPacket Failed to GetAdditionalRecord");
                             continue;
                         }
                         MDNSSearchRData* tmpSearchRData = static_cast<MDNSSearchRData*>(tmpSearchRecord->GetRData());
@@ -3195,6 +3196,7 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
 #ifndef NDEBUG
                             mdnsPacket->Dump();
 #endif
+                            QCC_ASSERT(false && "IpNameServiceImpl::Query: MDNSPacket Failed to GetAdditionalRecord");
                             continue;
                         }
                         MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
@@ -3931,6 +3933,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
 #ifndef NDEBUG
                 mdnsPacket->Dump();
 #endif
+                QCC_ASSERT(false && "IpNameServiceImpl::RewriteVersionSpecific: MDNSPacket Failed to GetAdditionalRecord");
                 break;
             }
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
@@ -3955,11 +3958,11 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                 for (int i = 0; i < mdnsPacket->GetNumAnswers(); i++) {
                     MDNSResourceRecord* answerRecord = nullptr;
                     if ((!mdnsPacket->GetAnswerAt(i, &answerRecord)) || (nullptr == answerRecord)) {
-                        QCC_ASSERT(false && "IpNameServiceImpl::RewriteVersionSpecific(): GetAnswerAt out of range");
                         QCC_LogError(ER_WARNING, ("IpNameServiceImpl::RewriteVersionSpecific: MDNSPacket Failed to GetAnswer"));
 #ifndef NDEBUG
                         mdnsPacket->Dump();
 #endif
+                        QCC_ASSERT(false && "IpNameServiceImpl::RewriteVersionSpecific(): GetAnswerAt out of range");
                         continue;
                     }
                     MDNSResourceRecord* resourceRecord = nullptr;
@@ -5756,20 +5759,22 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 
             MDNSResourceRecord* advRecord = nullptr;
             if ((!pilotPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) || (nullptr == advRecord)) {
-                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAnswer"));
+                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAdditionalRecord"));
 #ifndef NDEBUG
                 pilotPacket->Dump();
 #endif
+                QCC_ASSERT(false && "IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAdditionalRecord");
                 continue;
             }
             MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
             MDNSResourceRecord* refRecord1 = nullptr;
             if ((!pilotPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord1)) || (nullptr == refRecord1)) {
-                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAnswer"));
+                QCC_LogError(ER_WARNING, ("IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAdditionalRecord"));
 #ifndef NDEBUG
                 pilotPacket->Dump();
 #endif
+                QCC_ASSERT(false && "IpNameServiceImpl::GetResponsePackets: MDNSPacket Failed to GetAdditionalRecord");
                 continue;
             }
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
@@ -8539,10 +8544,11 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnsPacket, bool updateS
             refRData->SetSearchID(id);
         }
     } else {
-        QCC_LogError(ER_WARNING, ("IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAnswer"));
+        QCC_LogError(ER_WARNING, ("IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAdditionalRecord"));
 #ifndef NDEBUG
         mdnsPacket->Dump();
 #endif
+        QCC_ASSERT(false && "IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAdditionalRecord");
     }
     if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
         ScopedMutexLock lock(m_mutex);
@@ -8554,10 +8560,11 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnsPacket, bool updateS
         }
         MDNSResourceRecord* searchRecord = nullptr;
         if ((!mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord)) || (nullptr == searchRecord)) {
-            QCC_LogError(ER_WARNING, ("IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAnswer"));
+            QCC_LogError(ER_WARNING, ("IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetdditionalRecord"));
 #ifndef NDEBUG
             mdnsPacket->Dump();
 #endif
+            QCC_ASSERT(false && "IpNameServiceImpl::PurgeAndUpdatePacket: MDNSPacket Failed to GetAdditionalRecord");
             return false;
         }
         MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
