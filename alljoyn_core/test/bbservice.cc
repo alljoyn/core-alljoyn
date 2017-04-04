@@ -993,7 +993,7 @@ int CDECL_CALL main(int argc, char** argv)
     g_msgBus->RegisterBusObject(*testObj, objSecure);
 
     g_myAuthListener = new MyAuthListener();
-    g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL", g_myAuthListener, keyStore, keyStore != NULL);
+    g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL", g_myAuthListener, keyStore);
     /*
      * Pre-compute logon entry for user sleepy
      */
