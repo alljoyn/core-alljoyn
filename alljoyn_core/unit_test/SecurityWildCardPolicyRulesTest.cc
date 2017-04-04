@@ -615,7 +615,7 @@ void SecurityWildCardPolicyRulesTest::SetUp()
                                                               managerGuid,
                                                               peer1MembershipCertificate[0]
                                                               ));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
 
     qcc::MembershipCertificate peer2MembershipCertificate[1];
@@ -626,7 +626,7 @@ void SecurityWildCardPolicyRulesTest::SetUp()
                                                               managerGuid,
                                                               peer2MembershipCertificate[0]
                                                               ));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL));
     EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
 
     // Permission policy that will be installed on peer2

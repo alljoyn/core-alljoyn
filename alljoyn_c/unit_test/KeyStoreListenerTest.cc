@@ -371,7 +371,7 @@ TEST_F(KeyStoreListenerTest, register_keystore) {
 
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistener_cb_service, (void*)"context test string");
 
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -388,7 +388,7 @@ TEST_F(KeyStoreListenerTest, register_keystore) {
 
     alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistener_cb_client, (void*)"context test string");
 
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_TRUE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);

@@ -260,7 +260,9 @@ int CDECL_CALL main(void)
          * In most situations a per-application keystore file is generated.
          * However, this code specifies the location of the keystore file and
          * the isShared parameter is being set to QCC_TRUE. The resulting
-         * keystore file can be used by multiple applications.
+         * keystore file can be used by multiple applications. After Security2.0
+         * keystore is always in shared mode, and QCC_TRUE should always be used.
+         *
          */
         status = alljoyn_busattachment_enablepeersecurity(g_msgBus, "ALLJOYN_SRP_KEYX", g_authListener,
                                                           "/.alljoyn_keystore/central.ks", QCC_TRUE);
