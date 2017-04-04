@@ -250,7 +250,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
                                                                                                      NULL_AND_ECDSA_AUTH_MECHANISM,
                                                                                                      m_defaultEcdheAuthListener,
                                                                                                      nullptr,
-                                                                                                     QCC_FALSE,
+                                                                                                     QCC_TRUE,
                                                                                                      configurationListener));
         SetUpManifest(*bus, manifestTemplate);
     }
