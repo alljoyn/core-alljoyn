@@ -345,7 +345,7 @@ QStatus EnableSecurity()
     QCC_SetDebugLevel("ALLJOYN_AUTH", 3);
     QCC_SetDebugLevel("CRYPTO", 3);
     QCC_SetDebugLevel("AUTH_KEY_EXCHANGER", 3);
-    QStatus status = g_msgBus->EnablePeerSecurity(ECDHE_KEYX, new ECDHEKeyXListener(), "/.alljoyn_keystore/s_ecdhe.ks", false);
+    QStatus status = g_msgBus->EnablePeerSecurity(ECDHE_KEYX, new ECDHEKeyXListener(), "/.alljoyn_keystore/s_ecdhe.ks");
 
     if (ER_OK == status) {
         printf("BusAttachment::EnablePeerSecurity successful.\n");
