@@ -127,10 +127,10 @@ class SecurityOfflineManagementTest : public testing::Test {
         peer2AuthListener = new DefaultECDHEAuthListener();
         peer3AuthListener = new DefaultECDHEAuthListener();
 
-        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false));
-        ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false));
-        ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false));
-        ASSERT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener, nullptr, false));
+        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr));
+        ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr));
+        ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr));
+        ASSERT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener, nullptr));
 
         SecurityTestHelper::GetGUID(managerBus, managerGuid);
         SetManifestTemplate(managerBus);
