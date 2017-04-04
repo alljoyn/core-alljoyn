@@ -396,7 +396,7 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                                   managerGuid,
                                                                   peer1MembershipCertificate[0]
                                                                   ));
-        ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
+        ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL));
         ASSERT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
 
         qcc::MembershipCertificate peer2MembershipCertificate[1];
@@ -407,7 +407,7 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                                   managerGuid,
                                                                   peer2MembershipCertificate[0]
                                                                   ));
-        ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
+        ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL));
         ASSERT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
     }
 
@@ -3530,8 +3530,8 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     /* We should be using a ECDHE_NULL based session */
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -3722,8 +3722,8 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     /* We should be using a ECDHE_NULL based session */
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;

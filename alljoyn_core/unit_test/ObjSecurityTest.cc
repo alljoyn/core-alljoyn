@@ -180,14 +180,14 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
         EXPECT_EQ(ER_OK, status);
         status = clientbus.Connect(ajn::getConnectArg().c_str());
         ASSERT_EQ(ER_OK, status);
-        clientbus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", this, NULL, false);
+        clientbus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", this, NULL);
         clientbus.ClearKeyStore();
 
         status = servicebus.Start();
         EXPECT_EQ(ER_OK, status);
         status = servicebus.Connect(ajn::getConnectArg().c_str());
         ASSERT_EQ(ER_OK, status);
-        servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", this, NULL, false);
+        servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", this, NULL);
         servicebus.ClearKeyStore();
     }
 
