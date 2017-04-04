@@ -120,6 +120,7 @@ static QStatus SetUpConsumerSecurity(CommonDoorData* doorData)
     alljoyn_authlistener_callbacks emptyCallbacks = { 0 };
     doorData->authListener = alljoyn_authlistener_create(&emptyCallbacks, nullptr);
 
+    // isShared should always be set to true with Security2.0
     status = alljoyn_busattachment_enablepeersecuritywithpermissionconfigurationlistener(doorData->bus,
                                                                                          KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL,
                                                                                          doorData->authListener,

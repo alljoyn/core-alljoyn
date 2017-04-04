@@ -581,7 +581,8 @@ int CDECL_CALL main(int argc, char** argv)
         if (encryptIfc) {
             authListener = alljoyn_authlistener_create(&authcbs, userId);
 
-            status = alljoyn_busattachment_enablepeersecurity(g_msgBus, authMechs, authListener, keyStore, keyStore != NULL);
+            /* isShared should always be set to true with Security2.0 */
+            status = alljoyn_busattachment_enablepeersecurity(g_msgBus, authMechs, authListener, keyStore, QCC_TRUE);
             if (ER_OK != status) {
                 printf("enablePeerSecurity failed (%s)\n", QCC_StatusText(status));
                 return status;

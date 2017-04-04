@@ -120,7 +120,7 @@ class BusAttachmentSecurity20Test : public testing::Test {
                                                                   "ALLJOYN_ECDHE_NULL",
                                                                   nullptr,
                                                                   nullptr,
-                                                                  QCC_FALSE));
+                                                                  QCC_TRUE));
         SetManifestTemplate(m_managedApp);
     }
 
@@ -164,7 +164,7 @@ class BusAttachmentSecurity20Test : public testing::Test {
                                                                   "ALLJOYN_ECDHE_NULL",
                                                                   nullptr,
                                                                   nullptr,
-                                                                  QCC_FALSE));
+                                                                  QCC_TRUE));
     }
 
     void BasicBusSetup(alljoyn_busattachment* bus, AJ_PCSTR busName, InMemoryKeyStoreListener* keyStoreListener)
@@ -728,8 +728,8 @@ TEST(BusAttachmentTest, BasicSecureConnection)
     cbs.verify_credentials = NULL;
     al = alljoyn_authlistener_create(&cbs, NULL);
 
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(bus, "ALLJOYN_ECDHE_NULL", al, "myKeyStore", false));
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(otherbus, "ALLJOYN_ECDHE_NULL", al, "myOtherKeyStore", false));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(bus, "ALLJOYN_ECDHE_NULL", al, "myKeyStore", true));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(otherbus, "ALLJOYN_ECDHE_NULL", al, "myOtherKeyStore", true));
     EXPECT_EQ(ER_OK, alljoyn_busattachment_secureconnection(bus, alljoyn_busattachment_getuniquename(otherbus), false));
 
     status = alljoyn_busattachment_stop(otherbus);
@@ -781,8 +781,8 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
     int authCompleteCount = 0;
     al = alljoyn_authlistener_create(&cbs, &authCompleteCount);
 
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(bus, "ALLJOYN_ECDHE_NULL", al, "myKeyStore", false));
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(otherbus, "ALLJOYN_ECDHE_NULL", al, "myOtherKeyStore", false));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(bus, "ALLJOYN_ECDHE_NULL", al, "myKeyStore", true));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(otherbus, "ALLJOYN_ECDHE_NULL", al, "myOtherKeyStore", true));
     EXPECT_EQ(ER_OK, alljoyn_busattachment_secureconnectionasync(bus, alljoyn_busattachment_getuniquename(otherbus), false));
 
     int ticks = 0;

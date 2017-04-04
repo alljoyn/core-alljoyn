@@ -175,7 +175,7 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
                                                                   NULL_AUTH_MECHANISM,
                                                                   nullptr,
                                                                   nullptr,
-                                                                  QCC_FALSE));
+                                                                  QCC_TRUE));
 
         m_configuratorUnderTest = alljoyn_busattachment_getpermissionconfigurator(m_appUnderTest);
     }
@@ -189,7 +189,7 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
                                                                                                      NULL_AUTH_MECHANISM,
                                                                                                      nullptr,
                                                                                                      nullptr,
-                                                                                                     QCC_FALSE,
+                                                                                                     QCC_TRUE,
                                                                                                      listener));
         FlushUnwantedCallback(policyChanged);
     }
@@ -333,7 +333,7 @@ class PermissionConfiguratorPreClaimTest : public PermissionConfiguratorTestWith
                                                                   NULL_AUTH_MECHANISM,
                                                                   nullptr,
                                                                   nullptr,
-                                                                  QCC_FALSE));
+                                                                  QCC_TRUE));
         SecurityApplicationProxyTestHelper::CreateIdentityCert(differentApp, differentApp, &m_altIdentityCertificate);
         BasicBusTearDown(differentApp);
     }
@@ -451,7 +451,7 @@ class PermissionConfiguratorApplicationStateTest : public testing::TestWithParam
                                                                   NULL_AUTH_MECHANISM,
                                                                   nullptr,
                                                                   nullptr,
-                                                                  QCC_FALSE));
+                                                                  QCC_TRUE));
         m_configuratorUnderTest = alljoyn_busattachment_getpermissionconfigurator(m_managedAppUnderTest);
     }
 
