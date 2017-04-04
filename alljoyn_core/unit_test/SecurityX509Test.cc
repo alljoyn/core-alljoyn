@@ -330,9 +330,9 @@ TEST_F(SecurityX509Test, Test1) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, clientecdsaCertChainX509PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
@@ -414,9 +414,9 @@ TEST_F(SecurityX509Test, Test2) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, clientecdsaCertChainX509PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
 
@@ -484,9 +484,9 @@ TEST_F(SecurityX509Test, Test3) {
     ECDSAAuthListener ecdsaAuthListenerForClient(spkiclientecdsaPrivateKeyPEM, spkiclientecdsaCertChainType1PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
 
@@ -570,9 +570,9 @@ TEST_F(SecurityX509Test, Test4) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, clientecdsaCertChainX509PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
 
@@ -657,9 +657,9 @@ TEST_F(SecurityX509Test, Test5) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientrsaPrivateKeyPEM, clientrsaCertChainType1PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
@@ -704,9 +704,9 @@ TEST_F(SecurityX509Test, Test6) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, clientecdsaCertChainX509PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
@@ -753,9 +753,9 @@ TEST_F(SecurityX509Test, Test7) {
     ECDSAAuthListener ecdsaAuthListenerForClient("", "", true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
@@ -809,9 +809,9 @@ TEST_F(SecurityX509Test, Test8) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, clientecdsaCertChainX509PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
 
@@ -867,9 +867,9 @@ TEST_F(SecurityX509Test, Test9) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, "", true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
@@ -992,9 +992,9 @@ TEST_F(SecurityX509Test, Test10) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM.c_str(), clientecdsaCertChainX509PEM.c_str(), true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
@@ -1305,9 +1305,9 @@ TEST_F(SecurityX509Test, Test11) {
     ECDSAAuthListener ecdsaAuthListenerForClient(clientecdsaPrivateKeyPEM, clientecdsaCertChainX509PEM, true, true);
     g_ecdsaAuthListenerForService = ecdsaAuthListenerForService;
     g_ecdsaAuthListenerForClient = ecdsaAuthListenerForClient;
-    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL, false);
+    status = servicebus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForService, NULL);
     EXPECT_EQ(ER_OK, status);
-    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL, false);
+    status = clientbus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &g_ecdsaAuthListenerForClient, NULL);
     EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
