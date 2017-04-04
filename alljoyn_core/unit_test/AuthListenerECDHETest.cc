@@ -536,9 +536,9 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
     QStatus EnableSecurity(bool server, const char* keyExchange)
     {
         if (server) {
-            return serverBus.EnablePeerSecurity(keyExchange, &serverAuthListener, NULL, false);
+            return serverBus.EnablePeerSecurity(keyExchange, &serverAuthListener, NULL);
         } else {
-            return clientBus.EnablePeerSecurity(keyExchange, &clientAuthListener, NULL, false);
+            return clientBus.EnablePeerSecurity(keyExchange, &clientAuthListener, NULL);
         }
     }
 
@@ -1202,7 +1202,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_TestExpiredSessionKey)
     /* Use a different bus attachment but use the same client key store. We need a different bus attachment
      * because the default one considers the server peer already secure.
      */
-    EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &clientAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &clientAuthListener, NULL));
 
     EXPECT_EQ(ER_OK, ExerciseOn(true)); /* `true' parameter will use secondClientBus. */
     EXPECT_TRUE(clientAuthListener.authComplete);
@@ -1248,7 +1248,7 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
     ECDHEKeyXListener secondClientAuthListener(false);
     EXPECT_EQ(ER_OK, secondClientBus.UnregisterKeyStoreListener());
     EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(secondClientKeyStoreListener));
-    EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity(mechanism, &secondClientAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity(mechanism, &secondClientAuthListener, NULL));
 
     String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
     PeerThread thread1(name, clientBus, serverBus, GetPath());
@@ -1336,9 +1336,9 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_2Threads_SRP)
 {
     const char* mechanism = "ALLJOYN_SRP_KEYX";
     SRPKeyXListener serverListener;
-    EXPECT_EQ(ER_OK, serverBus.EnablePeerSecurity(mechanism, &serverListener, NULL, false));
+    EXPECT_EQ(ER_OK, serverBus.EnablePeerSecurity(mechanism, &serverListener, NULL));
     SRPKeyXListener clientListener;
-    EXPECT_EQ(ER_OK, clientBus.EnablePeerSecurity(mechanism, &clientListener, NULL, false));
+    EXPECT_EQ(ER_OK, clientBus.EnablePeerSecurity(mechanism, &clientListener, NULL));
 
     String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
     PeerThread thread1(name, clientBus, serverBus, GetPath());

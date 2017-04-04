@@ -3161,14 +3161,14 @@ TEST_F(PermissionMgmtUseCaseTest, DisconnectAndReenableSecurity)
     /* restart the bus */
     SetupBus(consumerBus);
     DefaultECDHEAuthListener cpConsumerAuthListener;
-    EXPECT_EQ(ER_OK, consumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL, false)) << "adminBus.EnablePeerSecurity failed.";
+    EXPECT_EQ(ER_OK, consumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL)) << "adminBus.EnablePeerSecurity failed.";
 
     BusAttachment cpAdminBus("CopyPermissionMgmtTestAdmin", false);
     InMemoryKeyStoreListener cpAdminKSListener = adminKeyStoreListener;
     SetupBus(cpAdminBus);
     EXPECT_EQ(ER_OK, cpAdminBus.RegisterKeyStoreListener(cpAdminKSListener)) << " RegisterKeyStoreListener failed";
     DefaultECDHEAuthListener cpAdminAuthListener;
-    EXPECT_EQ(ER_OK, cpAdminBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpAdminAuthListener, NULL, false)) << "cpAdminBus.EnablePeerSecurity failed.";
+    EXPECT_EQ(ER_OK, cpAdminBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpAdminAuthListener, NULL)) << "cpAdminBus.EnablePeerSecurity failed.";
 
     SessionId sessionId;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -3500,7 +3500,7 @@ TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)
     SetupBus(cpConsumerBus);
     EXPECT_EQ(ER_OK, cpConsumerBus.RegisterKeyStoreListener(cpConsumerListener)) << " RegisterKeyStoreListener failed.";
     DefaultECDHEAuthListener cpConsumerAuthListener;
-    EXPECT_EQ(ER_OK, cpConsumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL, false)) << "cpConsumerBus.EnablePeerSecurity failed.";
+    EXPECT_EQ(ER_OK, cpConsumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL)) << "cpConsumerBus.EnablePeerSecurity failed.";
 
     PermissionConfigurator& pc = cpConsumerBus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pc.GetApplicationState(applicationState)) << "  GetApplicationState failed.";
