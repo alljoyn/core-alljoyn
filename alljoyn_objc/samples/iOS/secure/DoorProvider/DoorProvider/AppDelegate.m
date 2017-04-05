@@ -28,8 +28,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AppDelegate.h"
+#import "ViewController.h"
+
+
+static NSString* kApplicationName = @"DoorProvider";
 
 @interface AppDelegate ()
+
+@property (strong, nonatomic) DoorProviderAllJoynService *doorProviderService;
 
 @end
 
@@ -37,7 +43,11 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    ViewController *viewController = (ViewController *) self.window.rootViewController;
+    _doorProviderService = [[DoorProviderAllJoynService alloc] initWithMessageListener: viewController];
+    if ([self startProvider] == ER_OK) {
+        [viewController didReceiveAllJoynStatusMessage:@"DoorProvider has been started successfully\n"];
+    }
     return YES;
 }
 
@@ -60,7 +70,29 @@
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
-    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+    if ([self stopProvider] == ER_OK) {
+        NSLog(@"DoorProvider has been stopped successfully");
+    }
+}
+
+- (DoorProviderAllJoynService*)doorProviderAllJoynService {
+    return _doorProviderService;
+}
+
+- (QStatus)startProvider {
+    QStatus status = ER_OK;
+    @synchronized (self) {
+        status = [_doorProviderService startWithName:kApplicationName];
+    }
+    return status;
+}
+
+- (QStatus)stopProvider {
+    QStatus status = ER_OK;
+    @synchronized (self) {
+        status = [_doorProviderService stop];
+    }
+    return status;
 }
 
 @end

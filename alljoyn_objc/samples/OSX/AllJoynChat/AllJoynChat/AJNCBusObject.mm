@@ -43,9 +43,6 @@
 
 @implementation AJNCBusObject
 
-@synthesize session = _session;
-@synthesize sessionType = _sessionType;
-@synthesize delegate = _delegate;
 
 - (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onServicePath:(NSString *)path
 {

@@ -102,6 +102,7 @@
 - (void)close:(AJNMessage *)methodCallMessage
 {
     if(self.IsOpen) {
+        NSLog(@"%s", __PRETTY_FUNCTION__);
         self.IsOpen = NO;
     }
 }

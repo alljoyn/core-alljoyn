@@ -31,9 +31,6 @@
 
 @implementation AJNCMessage
 
-@synthesize senderName = _senderName;
-@synthesize dateTime = _dateTime;
-@synthesize text = _text;
 
 - (id)initWithText:(NSString*)text fromSender:(NSString*)senderName atDateTime:(NSString*)dateTime
 {

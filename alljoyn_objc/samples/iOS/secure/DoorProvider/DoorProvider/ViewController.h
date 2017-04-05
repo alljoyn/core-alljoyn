@@ -28,21 +28,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <UIKit/UIKit.h>
+#import "AppDelegate.h"
 
-@interface ViewController : UIViewController
+@interface ViewController : UIViewController <AllJoynStatusMessageListener>
 
-@property (weak, nonatomic) IBOutlet UIButton *startButton;
 @property (weak, nonatomic) IBOutlet UIButton *signalButton;
-@property (weak, nonatomic) IBOutlet UITextField *appNameField;
 @property (weak, nonatomic) IBOutlet UITextView *textView;
 @property (weak, nonatomic) IBOutlet UISwitch *autoSignalSwitch;
 
-- (IBAction)didTouchStartButton:(id)sender;
-
 - (IBAction)didTouchSignalButton:(id)sender;
-
 - (IBAction)didToggleAutoSignal:(id)sender;
 
-- (void)didReceiveStatusUpdateMessage:(NSString *)message;
+- (void)didReceiveAllJoynStatusMessage:(NSString *)message;
 
 @end
