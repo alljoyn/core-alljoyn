@@ -100,6 +100,7 @@ public:
 	void MethodWithNoReturnAndNoArgs(const InterfaceDescription::Member* member, Message& msg);
 	void MethodWithReturnAndNoInArgs(const InterfaceDescription::Member* member, Message& msg);
 	void MethodWithComplexTypesForArgs(const InterfaceDescription::Member* member, Message& msg);
+	void MethodWithBoolInAndReturnArg(const InterfaceDescription::Member* member, Message& msg);
 
 
     // signals
@@ -175,6 +176,10 @@ QStatus BasicObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
 
 		{
 			interfaceDescription->GetMember("MethodWithComplexTypesForArgs"), static_cast<MessageReceiver::MethodHandler>(&BasicObjectImpl::MethodWithComplexTypesForArgs)
+		},
+
+		{
+			interfaceDescription->GetMember("MethodWithBoolInAndReturnArg"), static_cast<MessageReceiver::MethodHandler>(&BasicObjectImpl::MethodWithBoolInAndReturnArg)
 		}
 
     };
@@ -239,6 +244,20 @@ QStatus BasicObjectImpl::Get(const char* ifcName, const char* propName, MsgArg& 
 
         }
 
+        if (strcmp(propName, "testBoolProperty") == 0)
+        {
+
+            status = val.Set( "b", ((id<BasicStringsDelegate>)delegate).testBoolProperty  );
+
+        }
+
+        if (strcmp(propName, "testStringOnlyReadProperty") == 0)
+        {
+
+            status = val.Set( "s", [((id<BasicStringsDelegate>)delegate).testStringOnlyReadProperty UTF8String] );
+
+        }
+
     }
     else if (strcmp(ifcName, "org.alljoyn.bus.samples.chat") == 0)
     {
@@ -284,6 +303,22 @@ QStatus BasicObjectImpl::Set(const char* ifcName, const char* propName, MsgArg& 
 
         }
 
+        if (strcmp(propName, "testBoolProperty") == 0)
+        {
+        bool propValue;
+            status = val.Get("b", &propValue);
+            ((id<BasicStringsDelegate>)delegate).testBoolProperty = propValue;
+
+        }
+
+        if (strcmp(propName, "testStringOnlyWriteProperty") == 0)
+        {
+        char * propValue;
+            status = val.Get("s", &propValue);
+            ((id<BasicStringsDelegate>)delegate).testStringOnlyWriteProperty = [NSString stringWithCString:propValue encoding:NSUTF8StringEncoding];
+
+        }
+
     }
 
 
@@ -314,7 +349,7 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
     // call the Objective-C delegate method
     //
 
-	outArg0 = [(id<BasicStringsDelegate>)delegate concatenateString:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] withString:[NSString stringWithCString:inArg1.c_str() encoding:NSUTF8StringEncoding] message:[[AJNMessage alloc] initWithHandle:&msg]];
+	[(id<BasicStringsDelegate>)delegate concatenateString:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] withString:[NSString stringWithCString:inArg1.c_str() encoding:NSUTF8StringEncoding] outString:&outArg0  message:[[AJNMessage alloc] initWithHandle:&msg]];
 
 
     // formulate the reply
@@ -425,13 +460,13 @@ void BasicObjectImpl::MethodWithOnlyOutArgs(const InterfaceDescription::Member *
     //
 
 	NSString * outArg0;
-	NSString * outArg1;
+	BOOL outArg1;
 
 
     // call the Objective-C delegate method
     //
 
-	[(id<BasicStringsDelegate>)delegate methodWithOnlyOutString:&outArg0 outString2:&outArg1  message:[[AJNMessage alloc] initWithHandle:&msg]];
+	[(id<BasicStringsDelegate>)delegate methodWithOnlyOutString:&outArg0 outBool:&outArg1  message:[[AJNMessage alloc] initWithHandle:&msg]];
 
 
     // formulate the reply
@@ -440,7 +475,7 @@ void BasicObjectImpl::MethodWithOnlyOutArgs(const InterfaceDescription::Member *
 
     outArgs[0].Set("s", [outArg0 UTF8String]);
 
-    outArgs[1].Set("s", [outArg1 UTF8String]);
+    outArgs[1].Set("b", outArg1 );
 
     QStatus status = MethodReply(msg, outArgs, 2);
     if (ER_OK != status) {
@@ -488,7 +523,7 @@ void BasicObjectImpl::MethodWithReturnAndNoInArgs(const InterfaceDescription::Me
     // call the Objective-C delegate method
     //
 
-	outArg0 = [(id<BasicStringsDelegate>)delegate methodWithReturnAndNoInArgs:[[AJNMessage alloc] initWithHandle:&msg]];
+	[(id<BasicStringsDelegate>)delegate methodWithReturnAndNoInArgs:&outArg0  message:[[AJNMessage alloc] initWithHandle:&msg]];
 
 
     // formulate the reply
@@ -528,7 +563,7 @@ void BasicObjectImpl::MethodWithComplexTypesForArgs(const InterfaceDescription::
     // call the Objective-C delegate method
     //
 
-	outArg0 = [(id<BasicStringsDelegate>)delegate methodWithStringArray:inArg0 structWithStringAndInt:inArg1 message:[[AJNMessage alloc] initWithHandle:&msg]];
+	[(id<BasicStringsDelegate>)delegate methodWithStringArray:inArg0 structWithStringAndInt:inArg1 outStr:&outArg0  message:[[AJNMessage alloc] initWithHandle:&msg]];
 
 
     // formulate the reply
@@ -540,6 +575,44 @@ void BasicObjectImpl::MethodWithComplexTypesForArgs(const InterfaceDescription::
     QStatus status = MethodReply(msg, outArgs, 1);
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred when attempting to send a method reply for MethodWithComplexTypesForArgs. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+
+
+    } //autoreleasepool
+}
+
+void BasicObjectImpl::MethodWithBoolInAndReturnArg(const InterfaceDescription::Member *member, Message& msg)
+{
+    @autoreleasepool {
+
+
+
+    // get all input arguments
+    //
+
+    bool inArg0 = msg->GetArg(0)->v_bool;
+
+    // declare the output arguments
+    //
+
+	NSString * outArg0;
+
+
+    // call the Objective-C delegate method
+    //
+
+	[(id<BasicStringsDelegate>)delegate methodWithBoolIn:(inArg0 ? YES : NO) outStr:&outArg0  message:[[AJNMessage alloc] initWithHandle:&msg]];
+
+
+    // formulate the reply
+    //
+    MsgArg outArgs[1];
+
+    outArgs[0].Set("s", [outArg0 UTF8String]);
+
+    QStatus status = MethodReply(msg, outArgs, 1);
+    if (ER_OK != status) {
+        NSLog(@"ERROR: An error occurred when attempting to send a method reply for MethodWithBoolInAndReturnArg. %@", [AJNStatus descriptionForStatusCode:status]);
     }
 
 
@@ -731,6 +804,9 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 
 @synthesize testArrayProperty = _testArrayProperty;
 @synthesize testStringProperty = _testStringProperty;
+@synthesize testBoolProperty = _testBoolProperty;
+@synthesize testStringOnlyReadProperty = _testStringOnlyReadProperty;
+@synthesize testStringOnlyWriteProperty = _testStringOnlyWriteProperty;
 @synthesize name = _name;
 
 
@@ -759,8 +835,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     //
     // create an interface description, or if that fails, get the interface as it was already created
     //
-    interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample.strings" enableSecurity:YES];
-
+    interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample.strings" enableSecurity:NO];
 
     // add the properties to the interface description
     //
@@ -775,6 +850,24 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface: testStringProperty" userInfo:nil];
+    }
+
+    status = [interfaceDescription addPropertyWithName:@"testBoolProperty" signature:@"b" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
+
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface: testBoolProperty" userInfo:nil];
+    }
+
+    status = [interfaceDescription addPropertyWithName:@"testStringOnlyReadProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadFlag];
+
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface: testStringOnlyReadProperty" userInfo:nil];
+    }
+
+    status = [interfaceDescription addPropertyWithName:@"testStringOnlyWriteProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessWriteFlag];
+
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface: testStringOnlyWriteProperty" userInfo:nil];
     }
 
     // add the methods to the interface description
@@ -798,7 +891,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithMultipleOutArgs" userInfo:nil];
     }
 
-    status = [interfaceDescription addMethodWithName:@"MethodWithOnlyOutArgs" inputSignature:@"" outputSignature:@"ss" argumentNames:[NSArray arrayWithObjects:@"outStr1", @"outStr2", nil]];
+    status = [interfaceDescription addMethodWithName:@"MethodWithOnlyOutArgs" inputSignature:@"" outputSignature:@"sb" argumentNames:[NSArray arrayWithObjects:@"outStr", @"outBool", nil]];
 
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithOnlyOutArgs" userInfo:nil];
@@ -820,6 +913,12 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithComplexTypesForArgs" userInfo:nil];
+    }
+
+    status = [interfaceDescription addMethodWithName:@"MethodWithBoolInAndReturnArg" inputSignature:@"b" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"inBool", @"outStr", nil]];
+
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithBoolInAndReturnArg" userInfo:nil];
     }
 
     // add the signals to the interface description
@@ -852,7 +951,6 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     // create an interface description, or if that fails, get the interface as it was already created
     //
     interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.chat" enableSecurity:NO];
-
 
     // add the properties to the interface description
     //
@@ -918,7 +1016,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 }
 
 
-- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -927,7 +1026,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -936,7 +1036,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -945,7 +1046,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL*)outBool message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -954,7 +1056,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-- (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -963,7 +1066,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -972,7 +1076,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
 
-- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -980,32 +1085,42 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     // Create a category or subclass in separate .h/.m files
     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
 }
-- (void)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
+
+- (QStatus)methodWithBoolIn:(BOOL)inBool outStr:(NSString **)outStr message:(AJNMessage *)methodCallMessage;
+
+{
+    //
+    // GENERATED CODE - DO NOT EDIT
+    //
+    // Create a category or subclass in separate .h/.m files
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must override this method in a subclass" userInfo:nil]);
+}
+- (QStatus)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
 
 {
 
-    self.busObject->SendTestStringPropertyChanged([oldString UTF8String], [newString UTF8String], [destinationPath UTF8String], sessionId);
+    return self.busObject->SendTestStringPropertyChanged([oldString UTF8String], [newString UTF8String], [destinationPath UTF8String], sessionId);
 
 }
-- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
+- (QStatus)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
 
 {
 
-    self.busObject->SendTestSignalWithComplexArgs([oldString msgArg], [destinationPath UTF8String], sessionId);
+    return self.busObject->SendTestSignalWithComplexArgs([oldString msgArg], [destinationPath UTF8String], sessionId);
 
 }
-- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
+- (QStatus)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
 
 {
 
-    self.busObject->SendTestSignalWithNoArgs([destinationPath UTF8String], sessionId);
+    return self.busObject->SendTestSignalWithNoArgs([destinationPath UTF8String], sessionId);
 
 }
-- (void)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
+- (QStatus)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath
 
 {
 
-    self.busObject->SendChat([message UTF8String], [destinationPath UTF8String], sessionId);
+    return self.busObject->SendChat([message UTF8String], [destinationPath UTF8String], sessionId);
 
 }
 
@@ -1030,7 +1145,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 
 @implementation BasicObjectProxy
 
-- (AJNMessageArgument *)testArrayProperty
+- (QStatus)getTestArrayProperty:(AJNMessageArgument **)prop
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1041,25 +1156,25 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property testArrayProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
-
-        return nil;
+        *prop = nil;
+    } else {
+        *prop = [[AJNMessageArgument alloc] initWithHandle:propValue shouldDeleteHandleOnDealloc:YES];
     }
-
-    return [[AJNMessageArgument alloc] initWithHandle:propValue shouldDeleteHandleOnDealloc:YES];
+    return status;
 
 }
 
-- (void)setTestArrayProperty:(AJNMessageArgument *)propertyValue
+- (QStatus)setTestArrayProperty:(AJNMessageArgument *)propertyValue
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
+    QStatus status;
 
+    status = self.proxyBusObject->SetProperty("org.alljoyn.bus.sample.strings", "testArrayProperty", *(MsgArg*)(propertyValue.handle));
 
-    self.proxyBusObject->SetProperty("org.alljoyn.bus.sample.strings", "testArrayProperty", *(MsgArg*)(propertyValue.handle));
-
-
+    return status;
 }
 
-- (NSString *)testStringProperty
+- (QStatus)getTestStringProperty:(NSString **)prop
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1071,33 +1186,118 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property testStringProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return nil;
+        *prop = nil;
+
+    } else {
+
+    *prop = [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
 
     }
-
-
-    return [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
+    return status;
 
 }
 
-- (void)setTestStringProperty:(NSString *)propertyValue
+- (QStatus)setTestStringProperty:(NSString *)propertyValue
+{
+    [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
+    QStatus status;
+
+    MsgArg arg;
+
+    status = arg.Set("s", [propertyValue UTF8String]);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: Failed to set property testStringProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
+        return status;
+    }
+
+    status = self.proxyBusObject->SetProperty("org.alljoyn.bus.sample.strings", "testStringProperty", arg);
+
+    return status;
+}
+
+- (QStatus)getTestBoolProperty:(BOOL*)prop
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
 
-    MsgArg arg;
+    MsgArg propValue;
 
-    QStatus status = arg.Set("s", [propertyValue UTF8String]);
+    QStatus status = self.proxyBusObject->GetProperty("org.alljoyn.bus.sample.strings", "testBoolProperty", propValue);
+
     if (status != ER_OK) {
-        NSLog(@"ERROR: Failed to set property testStringProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
+        NSLog(@"ERROR: Failed to get property testBoolProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
+
+        *prop = NO;
+
+    } else {
+
+    *prop = propValue.v_variant.val->v_bool;
+
     }
-
-    self.proxyBusObject->SetProperty("org.alljoyn.bus.sample.strings", "testStringProperty", arg);
-
+    return status;
 
 }
 
-- (NSString *)name
+- (QStatus)setTestBoolProperty:(BOOL)propertyValue
+{
+    [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
+    QStatus status;
+
+    MsgArg arg;
+
+    status = arg.Set("b", propertyValue);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: Failed to set property testBoolProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
+        return status;
+    }
+
+    status = self.proxyBusObject->SetProperty("org.alljoyn.bus.sample.strings", "testBoolProperty", arg);
+
+    return status;
+}
+
+- (QStatus)getTestStringOnlyReadProperty:(NSString **)prop
+{
+    [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
+
+
+    MsgArg propValue;
+
+    QStatus status = self.proxyBusObject->GetProperty("org.alljoyn.bus.sample.strings", "testStringOnlyReadProperty", propValue);
+
+    if (status != ER_OK) {
+        NSLog(@"ERROR: Failed to get property testStringOnlyReadProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
+
+        *prop = nil;
+
+    } else {
+
+    *prop = [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
+
+    }
+    return status;
+
+}
+
+- (QStatus)setTestStringOnlyWriteProperty:(NSString *)propertyValue
+{
+    [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
+    QStatus status;
+
+    MsgArg arg;
+
+    status = arg.Set("s", [propertyValue UTF8String]);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: Failed to set property testStringOnlyWriteProperty on interface org.alljoyn.bus.sample.strings. %@", [AJNStatus descriptionForStatusCode:status]);
+        return status;
+    }
+
+    status = self.proxyBusObject->SetProperty("org.alljoyn.bus.sample.strings", "testStringOnlyWriteProperty", arg);
+
+    return status;
+}
+
+- (QStatus)getName:(NSString **)prop
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.samples.chat"];
 
@@ -1109,16 +1309,27 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property name on interface org.alljoyn.bus.samples.chat. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return nil;
+        *prop = nil;
+
+    } else {
+
+    *prop = [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
 
     }
-
-
-    return [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
+    return status;
 
 }
 
-- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr
+
+{
+    QStatus status;
+    status = [self concatenateString:str1 withString:str2 outString:outStr replyMessage:nil];
+    return status;
+}
+
+- (QStatus)concatenateString:(NSString *)str1 withString:(NSString *)str2 outString:(NSString **)outStr replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1140,21 +1351,35 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return nil;
+        // pass nil as output arguments in case of an error
+        //
+        *outStr = nil;
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
 
     }
 
-
-    // pass the output arguments back to the caller
-    //
-
-
-    return [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
-- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2
+
+{
+    QStatus status;
+    status = [self methodWithInString:str outString1:outStr1 outString2:outStr2 replyMessage:nil];
+    return status;
+}
+
+- (QStatus)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1174,23 +1399,38 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return;
+        // pass nil as output arguments in case of an error
+        //
+        *outStr1 = nil;
+        *outStr2 = nil;
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
+
+        *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
 
     }
 
-
-    // pass the output arguments back to the caller
-    //
-
-
-    *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
-
-    *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
-- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2
+
+{
+    QStatus status;
+    status = [self methodWithOutString:str1 inString2:str2 outString1:outStr1 outString2:outStr2 replyMessage:nil];
+    return status;
+}
+
+- (QStatus)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1212,23 +1452,38 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return;
+        // pass nil as output arguments in case of an error
+        //
+        *outStr1 = nil;
+        *outStr2 = nil;
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
+
+        *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
 
     }
 
-
-    // pass the output arguments back to the caller
-    //
-
-
-    *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
-
-    *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
-- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL*)outBool
+
+{
+    QStatus status;
+    status = [self  methodWithOnlyOutString:outStr outBool:outBool replyMessage:nil];
+    return status;
+}
+
+- (QStatus) methodWithOnlyOutString:(NSString **)outStr outBool:(BOOL*)outBool replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1246,23 +1501,38 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return;
+        // pass nil as output arguments in case of an error
+        //
+        *outStr = nil;
+
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
+
+        *outBool = reply->GetArg(1)->v_bool;
 
     }
 
-
-    // pass the output arguments back to the caller
-    //
-
-
-    *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
-
-    *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
-- (void)methodWithNoReturnAndNoArgs
+- (QStatus)methodWithNoReturnAndNoArgs
+
+{
+    QStatus status;
+    status = [self methodWithNoReturnAndNoArgs:nil];
+    return status;
+}
+
+- (QStatus)methodWithNoReturnAndNoArgs:(AJNMessage **) replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1280,15 +1550,26 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return;
+    } else {
 
     }
 
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
-- (NSString *)methodWithReturnAndNoInArgs
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr
+
+{
+    QStatus status;
+    status = [self  methodWithReturnAndNoInArgs:outStr replyMessage:nil];
+    return status;
+}
+
+- (QStatus) methodWithReturnAndNoInArgs:(NSString **)outStr replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1306,21 +1587,35 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return nil;
+        // pass nil as output arguments in case of an error
+        //
+        *outStr = nil;
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
 
     }
 
-
-    // pass the output arguments back to the caller
-    //
-
-
-    return [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
-- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr
+
+{
+    QStatus status;
+    status = [self methodWithStringArray:stringArray structWithStringAndInt:aStruct outStr:outStr replyMessage:nil];
+    return status;
+}
+
+- (QStatus)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct outStr:(NSString **)outStr replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
 
@@ -1342,18 +1637,71 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return nil;
+        // pass nil as output arguments in case of an error
+        //
+        *outStr = nil;
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
 
     }
 
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
+}
 
-    // pass the output arguments back to the caller
+- (QStatus)methodWithBoolIn:(BOOL)inBool outStr:(NSString **)outStr
+
+{
+    QStatus status;
+    status = [self methodWithBoolIn:inBool outStr:outStr replyMessage:nil];
+    return status;
+}
+
+- (QStatus)methodWithBoolIn:(BOOL)inBool outStr:(NSString **)outStr replyMessage:(AJNMessage **)replyMessage
+
+{
+    [self addInterfaceNamed:@"org.alljoyn.bus.sample.strings"];
+
+    // prepare the input arguments
     //
 
+    Message reply(*((BusAttachment*)self.bus.handle));
+    MsgArg inArgs[1];
 
-    return [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
+    inArgs[0].Set("b", inBool);
 
 
+    // make the function call using the C++ proxy object
+    //
+
+    QStatus status = self.proxyBusObject->MethodCall("org.alljoyn.bus.sample.strings", "MethodWithBoolInAndReturnArg", inArgs, 1, reply, 5000);
+    if (ER_OK != status) {
+        NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample.strings failed. %@", [AJNStatus descriptionForStatusCode:status]);
+
+        // pass nil as output arguments in case of an error
+        //
+        *outStr = nil;
+
+    } else {
+
+        // pass the output arguments back to the caller
+        //
+
+        *outStr = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
+
+    }
+
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
 @end
@@ -1407,8 +1755,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     //
     // create an interface description, or if that fails, get the interface as it was already created
     //
-    interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.ping" enableSecurity:NO];
 
+    interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.ping" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     // add the methods to the interface description
     //
@@ -1465,7 +1813,8 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 }
 
 
-- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage
+- (QStatus)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
+
 {
     //
     // GENERATED CODE - DO NOT EDIT
@@ -1495,7 +1844,16 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 
 @implementation PingObjectProxy
 
-- (void)pingWithValue:(NSNumber *)value
+- (QStatus)pingWithValue:(NSNumber *)value
+
+{
+    QStatus status;
+    status = [self pingWithValue:value replyMessage:nil];
+    return status;
+}
+
+- (QStatus)pingWithValue:(NSNumber *)value replyMessage:(AJNMessage **)replyMessage
+
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.samples.ping"];
 
@@ -1515,12 +1873,14 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.samples.ping failed. %@", [AJNStatus descriptionForStatusCode:status]);
 
-        return;
+    } else {
 
     }
 
-
-
+    if (replyMessage != nil) {
+        *replyMessage = [[AJNMessage alloc] initWithHandle:new Message(reply)];
+        }
+    return status;
 }
 
 @end

@@ -241,29 +241,27 @@
             //
             AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:self.trafficType supportsMultipoint:self.multiPointSessionsEnabled proximity:self.proximityOptions transportMask:self.transportMask];
 
-            AJNSessionId sessionId = [self.bus joinSessionWithName:name onPort:self.delegate.sessionPort withDelegate:self options:sessionOptions];
+            [self.bus joinSessionAsyncWithName:name onPort:self.delegate.sessionPort withDelegate:self options:sessionOptions joinCompletedBlock:^(QStatus status, AJNSessionId sessionId, AJNSessionOptions *opts, void *context) {
+                if (status == ER_OK && self.sessionId == 0) {
+                    self.sessionId = sessionId;
 
-            if (sessionId > 0 && self.sessionId == 0) {
+                    [self sendStatusMessage:[NSString stringWithFormat:@"Successfully joined session [%u].", sessionId]];
 
-                self.sessionId = sessionId;
+                    // let our delegate know that we connected to the service
+                    //
+                    AJNProxyBusObject *proxyBusObject = [self.delegate proxyObjectOnBus:self.bus inSession:sessionId];
+                    QStatus status = [proxyBusObject introspectRemoteObject];
+                    if (status != ER_OK) {
+                        NSString *message = [NSString stringWithFormat:@"ERROR: Failed to introspect remote object in AJNClientController. %@", [AJNStatus descriptionForStatusCode:status]];
+                        NSLog(@"%@", message);
+                        [self sendStatusMessage:message];
+                    }
 
-                [self sendStatusMessage:[NSString stringWithFormat:@"Successfully joined session [%u].", sessionId]];
-
-                // let our delegate know that we connected to the service
-                //
-
-                AJNProxyBusObject *proxyBusObject = [self.delegate proxyObjectOnBus:self.bus inSession:sessionId];
-                QStatus status = [proxyBusObject introspectRemoteObject];
-                if (status != ER_OK) {
-                    NSString *message = [NSString stringWithFormat:@"ERROR: Failed to introspect remote object in AJNClientController. %@", [AJNStatus descriptionForStatusCode:status]];
-                    NSLog(@"%@", message);
-                    [self sendStatusMessage:message];
+                    if ([self.delegate respondsToSelector:@selector(didJoinInSession:withService:)]) {
+                        [self.delegate didJoinInSession:sessionId withService:name];
+                    }
                 }
-
-                if ([self.delegate respondsToSelector:@selector(didJoinInSession:withService:)]) {
-                    [self.delegate didJoinInSession:sessionId withService:name];
-                }
-            }
+            } context:nil];
         }
     }
 }

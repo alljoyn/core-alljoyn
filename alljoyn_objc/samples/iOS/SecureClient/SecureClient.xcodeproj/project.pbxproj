@@ -7,167 +7,116 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AC8810111649DA32006CD25A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810101649DA32006CD25A /* UIKit.framework */; };
-		AC8810131649DA32006CD25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810121649DA32006CD25A /* Foundation.framework */; };
-		AC8810151649DA32006CD25A /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810141649DA32006CD25A /* CoreGraphics.framework */; };
-		AC88101B1649DA32006CD25A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AC8810191649DA32006CD25A /* InfoPlist.strings */; };
-		AC88101D1649DA32006CD25A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AC88101C1649DA32006CD25A /* main.m */; };
-		AC8810211649DA32006CD25A /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = AC8810201649DA32006CD25A /* AppDelegate.m */; };
-		AC8810231649DA32006CD25A /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = AC8810221649DA32006CD25A /* Default.png */; };
-		AC8810251649DA32006CD25A /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = AC8810241649DA32006CD25A /* Default@2x.png */; };
-		AC8810271649DA32006CD25A /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = AC8810261649DA32006CD25A /* Default-568h@2x.png */; };
-		AC88102A1649DA32006CD25A /* MainStoryboard_iPhone.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AC8810281649DA32006CD25A /* MainStoryboard_iPhone.storyboard */; };
-		AC88102D1649DA32006CD25A /* MainStoryboard_iPad.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AC88102B1649DA32006CD25A /* MainStoryboard_iPad.storyboard */; };
-		AC8810301649DA32006CD25A /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC88102F1649DA32006CD25A /* ViewController.m */; };
-		AC8810E51649DE55006CD25A /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810E41649DE55006CD25A /* SystemConfiguration.framework */; };
-		AC8810E71649DE5A006CD25A /* libstdc++.6.0.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810E61649DE5A006CD25A /* libstdc++.6.0.9.dylib */; };
-		AC8811401649DFFC006CD25A /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = AC88113F1649DFFC006CD25A /* Constants.m */; };
-		AC88114D164AC9C2006CD25A /* SecureObjectModel.xml in Resources */ = {isa = PBXBuildFile; fileRef = AC88114C164AC9C2006CD25A /* SecureObjectModel.xml */; };
-		AC88116B164ACBA7006CD25A /* AJNSecureObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC881168164ACBA7006CD25A /* AJNSecureObject.mm */; };
-		AC88116C164ACBA7006CD25A /* SecureObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC88116A164ACBA7006CD25A /* SecureObject.m */; };
-		AC8811E3164DB7DA006CD25A /* AuthenticationTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC8811E2164DB7DA006CD25A /* AuthenticationTableViewController.m */; };
+		9ACB15411E7BEA7F006E0CB1 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB15401E7BEA7F006E0CB1 /* main.m */; };
+		9ACB15441E7BEA7F006E0CB1 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB15431E7BEA7F006E0CB1 /* AppDelegate.m */; };
+		9ACB15471E7BEA7F006E0CB1 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB15461E7BEA7F006E0CB1 /* ViewController.m */; };
+		9ACB154A1E7BEA7F006E0CB1 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9ACB15481E7BEA7F006E0CB1 /* Main.storyboard */; };
+		9ACB154C1E7BEA7F006E0CB1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9ACB154B1E7BEA7F006E0CB1 /* Assets.xcassets */; };
+		9ACB154F1E7BEA7F006E0CB1 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9ACB154D1E7BEA7F006E0CB1 /* LaunchScreen.storyboard */; };
+		9ACB155B1E7BEB02006E0CB1 /* AJNSecureObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB15581E7BEB02006E0CB1 /* AJNSecureObject.mm */; };
+		9ACB155C1E7BEB02006E0CB1 /* SecureObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB155A1E7BEB02006E0CB1 /* SecureObject.m */; };
+		9ACB15611E7BF357006E0CB1 /* AuthenticationTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB155E1E7BF357006E0CB1 /* AuthenticationTableViewController.m */; };
+		9AE3CC071E7FF36100B911B8 /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AE3CC061E7FF36100B911B8 /* Constants.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		AC88100C1649DA32006CD25A /* SecureClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecureClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC8810101649DA32006CD25A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		AC8810121649DA32006CD25A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		AC8810141649DA32006CD25A /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		AC8810181649DA32006CD25A /* SecureClient-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SecureClient-Info.plist"; sourceTree = "<group>"; };
-		AC88101A1649DA32006CD25A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		AC88101C1649DA32006CD25A /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		AC88101E1649DA32006CD25A /* SecureClient-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SecureClient-Prefix.pch"; sourceTree = "<group>"; };
-		AC88101F1649DA32006CD25A /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		AC8810201649DA32006CD25A /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		AC8810221649DA32006CD25A /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
-		AC8810241649DA32006CD25A /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
-		AC8810261649DA32006CD25A /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
-		AC8810291649DA32006CD25A /* en */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = en; path = en.lproj/MainStoryboard_iPhone.storyboard; sourceTree = "<group>"; };
-		AC88102C1649DA32006CD25A /* en */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = en; path = en.lproj/MainStoryboard_iPad.storyboard; sourceTree = "<group>"; };
-		AC88102E1649DA32006CD25A /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		AC88102F1649DA32006CD25A /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
-		AC8810E41649DE55006CD25A /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
-		AC8810E61649DE5A006CD25A /* libstdc++.6.0.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.6.0.9.dylib"; path = "usr/lib/libstdc++.6.0.9.dylib"; sourceTree = SDKROOT; };
-		AC88113E1649DFFC006CD25A /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
-		AC88113F1649DFFC006CD25A /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
-		AC88114C164AC9C2006CD25A /* SecureObjectModel.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = SecureObjectModel.xml; sourceTree = "<group>"; };
-		AC881167164ACBA7006CD25A /* AJNSecureObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNSecureObject.h; sourceTree = "<group>"; };
-		AC881168164ACBA7006CD25A /* AJNSecureObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNSecureObject.mm; sourceTree = "<group>"; };
-		AC881169164ACBA7006CD25A /* SecureObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecureObject.h; sourceTree = "<group>"; };
-		AC88116A164ACBA7006CD25A /* SecureObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SecureObject.m; sourceTree = "<group>"; };
-		AC8811E1164DB7D9006CD25A /* AuthenticationTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AuthenticationTableViewController.h; sourceTree = "<group>"; };
-		AC8811E2164DB7DA006CD25A /* AuthenticationTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthenticationTableViewController.m; sourceTree = "<group>"; };
+		9ACB153C1E7BEA7F006E0CB1 /* SecureClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecureClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9ACB15401E7BEA7F006E0CB1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		9ACB15421E7BEA7F006E0CB1 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		9ACB15431E7BEA7F006E0CB1 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		9ACB15451E7BEA7F006E0CB1 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		9ACB15461E7BEA7F006E0CB1 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		9ACB15491E7BEA7F006E0CB1 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		9ACB154B1E7BEA7F006E0CB1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9ACB154E1E7BEA7F006E0CB1 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		9ACB15501E7BEA7F006E0CB1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9ACB15571E7BEB02006E0CB1 /* AJNSecureObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNSecureObject.h; path = ../../SecureCommon/AJNSecureObject.h; sourceTree = "<group>"; };
+		9ACB15581E7BEB02006E0CB1 /* AJNSecureObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSecureObject.mm; path = ../../SecureCommon/AJNSecureObject.mm; sourceTree = "<group>"; };
+		9ACB15591E7BEB02006E0CB1 /* SecureObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SecureObject.h; path = ../../SecureCommon/SecureObject.h; sourceTree = "<group>"; };
+		9ACB155A1E7BEB02006E0CB1 /* SecureObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SecureObject.m; path = ../../SecureCommon/SecureObject.m; sourceTree = "<group>"; };
+		9ACB155D1E7BF357006E0CB1 /* AuthenticationTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AuthenticationTableViewController.h; sourceTree = "<group>"; };
+		9ACB155E1E7BF357006E0CB1 /* AuthenticationTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthenticationTableViewController.m; sourceTree = "<group>"; };
+		9AE3CC051E7FF36100B911B8 /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
+		9AE3CC061E7FF36100B911B8 /* Constants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Constants.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		AC8810091649DA31006CD25A /* Frameworks */ = {
+		9ACB15391E7BEA7F006E0CB1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC8810E71649DE5A006CD25A /* libstdc++.6.0.9.dylib in Frameworks */,
-				AC8810E51649DE55006CD25A /* SystemConfiguration.framework in Frameworks */,
-				AC8810111649DA32006CD25A /* UIKit.framework in Frameworks */,
-				AC8810131649DA32006CD25A /* Foundation.framework in Frameworks */,
-				AC8810151649DA32006CD25A /* CoreGraphics.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AC8810011649DA31006CD25A = {
+		9ACB15331E7BEA7F006E0CB1 = {
 			isa = PBXGroup;
 			children = (
-				AC8810161649DA32006CD25A /* SecureClient */,
-				AC88100F1649DA32006CD25A /* Frameworks */,
-				AC88100D1649DA32006CD25A /* Products */,
+				9ACB153E1E7BEA7F006E0CB1 /* SecureClient */,
+				9ACB153D1E7BEA7F006E0CB1 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		AC88100D1649DA32006CD25A /* Products */ = {
+		9ACB153D1E7BEA7F006E0CB1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AC88100C1649DA32006CD25A /* SecureClient.app */,
+				9ACB153C1E7BEA7F006E0CB1 /* SecureClient.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AC88100F1649DA32006CD25A /* Frameworks */ = {
+		9ACB153E1E7BEA7F006E0CB1 /* SecureClient */ = {
 			isa = PBXGroup;
 			children = (
-				AC8810E61649DE5A006CD25A /* libstdc++.6.0.9.dylib */,
-				AC8810E41649DE55006CD25A /* SystemConfiguration.framework */,
-				AC8810101649DA32006CD25A /* UIKit.framework */,
-				AC8810121649DA32006CD25A /* Foundation.framework */,
-				AC8810141649DA32006CD25A /* CoreGraphics.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		AC8810161649DA32006CD25A /* SecureClient */ = {
-			isa = PBXGroup;
-			children = (
-				AC881167164ACBA7006CD25A /* AJNSecureObject.h */,
-				AC881168164ACBA7006CD25A /* AJNSecureObject.mm */,
-				AC88101F1649DA32006CD25A /* AppDelegate.h */,
-				AC8810201649DA32006CD25A /* AppDelegate.m */,
-				AC88113E1649DFFC006CD25A /* Constants.h */,
-				AC88113F1649DFFC006CD25A /* Constants.m */,
-				AC8810281649DA32006CD25A /* MainStoryboard_iPhone.storyboard */,
-				AC88102B1649DA32006CD25A /* MainStoryboard_iPad.storyboard */,
-				AC881169164ACBA7006CD25A /* SecureObject.h */,
-				AC88116A164ACBA7006CD25A /* SecureObject.m */,
-				AC8811E1164DB7D9006CD25A /* AuthenticationTableViewController.h */,
-				AC8811E2164DB7DA006CD25A /* AuthenticationTableViewController.m */,
-				AC88102E1649DA32006CD25A /* ViewController.h */,
-				AC88102F1649DA32006CD25A /* ViewController.m */,
-				AC88114C164AC9C2006CD25A /* SecureObjectModel.xml */,
-				AC8810171649DA32006CD25A /* Supporting Files */,
+				9ACB15561E7BEAF0006E0CB1 /* object */,
+				9ACB15421E7BEA7F006E0CB1 /* AppDelegate.h */,
+				9ACB15431E7BEA7F006E0CB1 /* AppDelegate.m */,
+				9ACB15451E7BEA7F006E0CB1 /* ViewController.h */,
+				9ACB15461E7BEA7F006E0CB1 /* ViewController.m */,
+				9ACB155D1E7BF357006E0CB1 /* AuthenticationTableViewController.h */,
+				9ACB155E1E7BF357006E0CB1 /* AuthenticationTableViewController.m */,
+				9AE3CC051E7FF36100B911B8 /* Constants.h */,
+				9AE3CC061E7FF36100B911B8 /* Constants.m */,
+				9ACB15481E7BEA7F006E0CB1 /* Main.storyboard */,
+				9ACB154B1E7BEA7F006E0CB1 /* Assets.xcassets */,
+				9ACB154D1E7BEA7F006E0CB1 /* LaunchScreen.storyboard */,
+				9ACB15501E7BEA7F006E0CB1 /* Info.plist */,
+				9ACB153F1E7BEA7F006E0CB1 /* Supporting Files */,
 			);
 			path = SecureClient;
 			sourceTree = "<group>";
 		};
-		AC8810171649DA32006CD25A /* Supporting Files */ = {
+		9ACB153F1E7BEA7F006E0CB1 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				AC8810181649DA32006CD25A /* SecureClient-Info.plist */,
-				AC8810191649DA32006CD25A /* InfoPlist.strings */,
-				AC88101C1649DA32006CD25A /* main.m */,
-				AC88101E1649DA32006CD25A /* SecureClient-Prefix.pch */,
-				AC8810221649DA32006CD25A /* Default.png */,
-				AC8810241649DA32006CD25A /* Default@2x.png */,
-				AC8810261649DA32006CD25A /* Default-568h@2x.png */,
+				9ACB15401E7BEA7F006E0CB1 /* main.m */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		9ACB15561E7BEAF0006E0CB1 /* object */ = {
+			isa = PBXGroup;
+			children = (
+				9ACB15571E7BEB02006E0CB1 /* AJNSecureObject.h */,
+				9ACB15581E7BEB02006E0CB1 /* AJNSecureObject.mm */,
+				9ACB15591E7BEB02006E0CB1 /* SecureObject.h */,
+				9ACB155A1E7BEB02006E0CB1 /* SecureObject.m */,
+			);
+			name = object;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		AC881152164ACAAB006CD25A /* Generate Code */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "\"$(SOURCE_ROOT)/$(PROJECT_NAME)/SecureObjectModel.xml\" SecureObject";
-			buildConfigurationList = AC881155164ACAAB006CD25A /* Build configuration list for PBXLegacyTarget "Generate Code" */;
-			buildPhases = (
-			);
-			buildToolPath = ../../../bin/AllJoynCodeGenerator;
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = "Generate Code";
-			passBuildSettingsInEnvironment = 1;
-			productName = "Generate Code";
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
-		AC88100B1649DA31006CD25A /* SecureClient */ = {
+		9ACB153B1E7BEA7F006E0CB1 /* SecureClient */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AC8810331649DA32006CD25A /* Build configuration list for PBXNativeTarget "SecureClient" */;
+			buildConfigurationList = 9ACB15531E7BEA7F006E0CB1 /* Build configuration list for PBXNativeTarget "SecureClient" */;
 			buildPhases = (
-				AC8810081649DA31006CD25A /* Sources */,
-				AC8810091649DA31006CD25A /* Frameworks */,
-				AC88100A1649DA31006CD25A /* Resources */,
+				9ACB15381E7BEA7F006E0CB1 /* Sources */,
+				9ACB15391E7BEA7F006E0CB1 /* Frameworks */,
+				9ACB153A1E7BEA7F006E0CB1 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -175,168 +124,193 @@
 			);
 			name = SecureClient;
 			productName = SecureClient;
-			productReference = AC88100C1649DA32006CD25A /* SecureClient.app */;
+			productReference = 9ACB153C1E7BEA7F006E0CB1 /* SecureClient.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		AC8810031649DA31006CD25A /* Project object */ = {
+		9ACB15341E7BEA7F006E0CB1 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0450;
-				ORGANIZATIONNAME = "AllSeen Alliance.";
+				LastUpgradeCheck = 0820;
+				ORGANIZATIONNAME = AllJoyn;
+				TargetAttributes = {
+					9ACB153B1E7BEA7F006E0CB1 = {
+						CreatedOnToolsVersion = 8.2.1;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
-			buildConfigurationList = AC8810061649DA31006CD25A /* Build configuration list for PBXProject "SecureClient" */;
+			buildConfigurationList = 9ACB15371E7BEA7F006E0CB1 /* Build configuration list for PBXProject "SecureClient" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
-			mainGroup = AC8810011649DA31006CD25A;
-			productRefGroup = AC88100D1649DA32006CD25A /* Products */;
+			mainGroup = 9ACB15331E7BEA7F006E0CB1;
+			productRefGroup = 9ACB153D1E7BEA7F006E0CB1 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AC88100B1649DA31006CD25A /* SecureClient */,
-				AC881152164ACAAB006CD25A /* Generate Code */,
+				9ACB153B1E7BEA7F006E0CB1 /* SecureClient */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		AC88100A1649DA31006CD25A /* Resources */ = {
+		9ACB153A1E7BEA7F006E0CB1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC88101B1649DA32006CD25A /* InfoPlist.strings in Resources */,
-				AC8810231649DA32006CD25A /* Default.png in Resources */,
-				AC8810251649DA32006CD25A /* Default@2x.png in Resources */,
-				AC8810271649DA32006CD25A /* Default-568h@2x.png in Resources */,
-				AC88102A1649DA32006CD25A /* MainStoryboard_iPhone.storyboard in Resources */,
-				AC88102D1649DA32006CD25A /* MainStoryboard_iPad.storyboard in Resources */,
-				AC88114D164AC9C2006CD25A /* SecureObjectModel.xml in Resources */,
+				9ACB154F1E7BEA7F006E0CB1 /* LaunchScreen.storyboard in Resources */,
+				9ACB154C1E7BEA7F006E0CB1 /* Assets.xcassets in Resources */,
+				9ACB154A1E7BEA7F006E0CB1 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		AC8810081649DA31006CD25A /* Sources */ = {
+		9ACB15381E7BEA7F006E0CB1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC88101D1649DA32006CD25A /* main.m in Sources */,
-				AC8810211649DA32006CD25A /* AppDelegate.m in Sources */,
-				AC8810301649DA32006CD25A /* ViewController.m in Sources */,
-				AC8811401649DFFC006CD25A /* Constants.m in Sources */,
-				AC88116B164ACBA7006CD25A /* AJNSecureObject.mm in Sources */,
-				AC88116C164ACBA7006CD25A /* SecureObject.m in Sources */,
-				AC8811E3164DB7DA006CD25A /* AuthenticationTableViewController.m in Sources */,
+				9ACB15471E7BEA7F006E0CB1 /* ViewController.m in Sources */,
+				9ACB155B1E7BEB02006E0CB1 /* AJNSecureObject.mm in Sources */,
+				9ACB155C1E7BEB02006E0CB1 /* SecureObject.m in Sources */,
+				9ACB15441E7BEA7F006E0CB1 /* AppDelegate.m in Sources */,
+				9ACB15411E7BEA7F006E0CB1 /* main.m in Sources */,
+				9AE3CC071E7FF36100B911B8 /* Constants.m in Sources */,
+				9ACB15611E7BF357006E0CB1 /* AuthenticationTableViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		AC8810191649DA32006CD25A /* InfoPlist.strings */ = {
+		9ACB15481E7BEA7F006E0CB1 /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				AC88101A1649DA32006CD25A /* en */,
+				9ACB15491E7BEA7F006E0CB1 /* Base */,
 			);
-			name = InfoPlist.strings;
+			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		AC8810281649DA32006CD25A /* MainStoryboard_iPhone.storyboard */ = {
+		9ACB154D1E7BEA7F006E0CB1 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				AC8810291649DA32006CD25A /* en */,
+				9ACB154E1E7BEA7F006E0CB1 /* Base */,
 			);
-			name = MainStoryboard_iPhone.storyboard;
-			sourceTree = "<group>";
-		};
-		AC88102B1649DA32006CD25A /* MainStoryboard_iPad.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				AC88102C1649DA32006CD25A /* en */,
-			);
-			name = MainStoryboard_iPad.storyboard;
+			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		AC8810311649DA32006CD25A /* Debug */ = {
+		9ACB15511E7BEA7F006E0CB1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.2;
+				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		AC8810321649DA32006CD25A /* Release */ = {
+		9ACB15521E7BEA7F006E0CB1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
+				IPHONEOS_DEPLOYMENT_TARGET = 10.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		AC8810341649DA32006CD25A /* Debug */ = {
+		9ACB15541E7BEA7F006E0CB1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ENABLE_BITCODE = NO;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "SecureClient/SecureClient-Prefix.pch";
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/include/\"";
-				INFOPLIST_FILE = "SecureClient/SecureClient-Info.plist";
+				INFOPLIST_FILE = SecureClient/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/$(CONFIGURATION)/\"";
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
+				"OTHER_CFLAGS[arch=*]" = (
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
 				);
@@ -345,32 +319,22 @@
 					"-lajrouter",
 					"-lAllJoynFramework_iOS",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.SecureClient.jorge;
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.objc.SecureClient;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "";
-				VALID_ARCHS = "arm64 armv7 armv7s arm";
-				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
 		};
-		AC8810351649DA32006CD25A /* Release */ = {
+		9ACB15551E7BEA7F006E0CB1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ENABLE_BITCODE = NO;
-				GCC_ENABLE_CPP_EXCEPTIONS = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "SecureClient/SecureClient-Prefix.pch";
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/include/\"";
-				INFOPLIST_FILE = "SecureClient/SecureClient-Info.plist";
+				INFOPLIST_FILE = SecureClient/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/iOS/AllJoynFramework/$(CONFIGURATION)/\"";
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
+				"OTHER_CFLAGS[arch=*]" = (
 					"-DNS_BLOCK_ASSERTIONS=1",
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
@@ -380,77 +344,33 @@
 					"-lajrouter",
 					"-lAllJoynFramework_iOS",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.SecureClient.jorge;
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.objc.SecureClient;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "";
-				VALID_ARCHS = "arm64 armv7 armv7s arm";
-				WRAPPER_EXTENSION = app;
-			};
-			name = Release;
-		};
-		AC881153164ACAAB006CD25A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				DEBUGGING_SYMBOLS = YES;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Debug;
-		};
-		AC881154164ACAAB006CD25A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AC8810061649DA31006CD25A /* Build configuration list for PBXProject "SecureClient" */ = {
+		9ACB15371E7BEA7F006E0CB1 /* Build configuration list for PBXProject "SecureClient" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AC8810311649DA32006CD25A /* Debug */,
-				AC8810321649DA32006CD25A /* Release */,
+				9ACB15511E7BEA7F006E0CB1 /* Debug */,
+				9ACB15521E7BEA7F006E0CB1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AC8810331649DA32006CD25A /* Build configuration list for PBXNativeTarget "SecureClient" */ = {
+		9ACB15531E7BEA7F006E0CB1 /* Build configuration list for PBXNativeTarget "SecureClient" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				AC8810341649DA32006CD25A /* Debug */,
-				AC8810351649DA32006CD25A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		AC881155164ACAAB006CD25A /* Build configuration list for PBXLegacyTarget "Generate Code" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AC881153164ACAAB006CD25A /* Debug */,
-				AC881154164ACAAB006CD25A /* Release */,
+				9ACB15541E7BEA7F006E0CB1 /* Debug */,
+				9ACB15551E7BEA7F006E0CB1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = AC8810031649DA31006CD25A /* Project object */;
+	rootObject = 9ACB15341E7BEA7F006E0CB1 /* Project object */;
 }
