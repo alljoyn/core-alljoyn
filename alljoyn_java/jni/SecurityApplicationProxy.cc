@@ -76,6 +76,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_create(JNIE
         return;
     }
 
+    busPtr->IncRef();
     SetHandle(thiz, securityApplicationProxyPtr);
 
     if (jenv->ExceptionCheck()) {
