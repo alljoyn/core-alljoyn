@@ -274,6 +274,9 @@ void _NamedPipeDaemonEndpoint::AuthStop()
 
 void _NamedPipeDaemonEndpoint::AuthenticationWorker(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_WORK work)
 {
+    QCC_UNUSED(instance);
+    QCC_UNUSED(work);
+
     _NamedPipeDaemonEndpoint* conn = reinterpret_cast<_NamedPipeDaemonEndpoint*>(context);
     QCC_DbgHLPrintf(("Worker: reading NUL byte"));
     uint8_t byte;
@@ -541,6 +544,8 @@ NamedPipeDaemonTransport::~NamedPipeDaemonTransport()
 void* NamedPipeDaemonTransport::Run(_In_ void* arg)
 {
     QCC_DbgTrace(("NamedPipeDaemonTransport::Run"));
+    QCC_UNUSED(arg);
+
     QStatus status = ER_OK;
 
     while (!IsTransportStopping()) {
@@ -561,6 +566,8 @@ void* NamedPipeDaemonTransport::Run(_In_ void* arg)
 
 QStatus NamedPipeDaemonTransport::NormalizeTransportSpec(_In_z_ const char* inSpec, _Out_ qcc::String& outSpec, _Inout_ std::map<qcc::String, qcc::String>& argMap) const
 {
+    QCC_UNUSED(argMap);
+
     outSpec = inSpec;
     return ER_OK;
 }
@@ -571,6 +578,8 @@ QStatus NamedPipeDaemonTransport::NormalizeTransportSpec(_In_z_ const char* inSp
 QStatus NamedPipeDaemonTransport::StartListen(_In_z_ const char* listenSpec)
 {
     QCC_DbgTrace(("StartListen"));
+    QCC_UNUSED(listenSpec);
+
     QStatus status = ER_OK;
 
     if (IsTransportStopping()) {
@@ -606,6 +615,8 @@ QStatus NamedPipeDaemonTransport::StartListen(_In_z_ const char* listenSpec)
 
 QStatus NamedPipeDaemonTransport::StopListen(_In_z_ const char* listenSpec)
 {
+    QCC_UNUSED(listenSpec);
+
     QCC_DbgTrace(("StopListen"));
     return Stop();
 }
@@ -716,6 +727,8 @@ void NamedPipeDaemonTransport::ManageAuthenticatingEndpoints()
 
 void* NamedPipeAcceptThread::Run(_In_ void* arg)
 {
+    QCC_UNUSED(arg);
+
     QStatus status = ER_OK;
 
     /*
@@ -755,6 +768,9 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
             }
 
             BOOL success = qcc::NamedPipeWrapper::AllJoynCloseBusHandle(pipeHandle);
+            if (!success) {
+                QCC_LogError(("NamedPipeAcceptThread::Run: failed to close handle: 0x%p", pipeHandle));
+            }
             QCC_ASSERT(success);
         }
 
