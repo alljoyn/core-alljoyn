@@ -155,7 +155,7 @@ public class InterfaceDescriptionTest extends TestCase {
             methodDef.addAnnotation(MethodDef.ANNOTATION_METHOD_NOREPLY, "true");
 
             SignalDef signalDef = new SignalDef("Ping", "s", ifaceName);
-            signalDef.addArg( new ArgDef("value", "s") );
+            signalDef.addArg( new ArgDef("value", "s", ArgDef.DIRECTION_OUT) );
             signalDef.addAnnotation(SignalDef.ANNOTATION_SIGNAL_SESSIONLESS, "true");
 
             PropertyDef propertyDef = new PropertyDef("Color", "s", PropertyDef.ACCESS_READWRITE, ifaceName);

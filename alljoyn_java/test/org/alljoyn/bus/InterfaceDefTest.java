@@ -146,7 +146,7 @@ public class InterfaceDefTest extends TestCase {
         // Define signal that has annotations
 
         signalDef = new SignalDef("Ping", "s", ifaceName);
-        signalDef.addArg( new ArgDef("message", "s") );
+        signalDef.addArg( new ArgDef("message", "s", ArgDef.DIRECTION_OUT) );
         signalDef.setDescription("The signal description", "en"); // an annotation
         signalDef.addAnnotation(SignalDef.ANNOTATION_DEPRECATED, "true");
         signalDef.addAnnotation(SignalDef.ANNOTATION_SIGNAL_SESSIONLESS, "true");
@@ -166,8 +166,8 @@ public class InterfaceDefTest extends TestCase {
         assertEquals(1, args.size());
 
         ArgDef arg = signalDef.getArg("message");
-        assertTrue(arg.isInArg());
-        assertEquals(ArgDef.DIRECTION_IN, arg.getDirection());
+        assertTrue(arg.isOutArg());
+        assertEquals(ArgDef.DIRECTION_OUT, arg.getDirection());
         assertEquals("s", arg.getType());
 
         Map<String,String> annotations = signalDef.getAnnotationList();
@@ -300,7 +300,7 @@ public class InterfaceDefTest extends TestCase {
         methodDef.addArg( new ArgDef("data", "a{sv}", ArgDef.DIRECTION_OUT) );
 
         SignalDef signalDef = new SignalDef("Ping", "s", ifaceName);
-        signalDef.addArg( new ArgDef("message", "s") );
+        signalDef.addArg( new ArgDef("message", "s", ArgDef.DIRECTION_OUT) );
 
         PropertyDef propertyDef = new PropertyDef("Color", "s", PropertyDef.ACCESS_READWRITE, ifaceName);
 
@@ -339,7 +339,7 @@ public class InterfaceDefTest extends TestCase {
         methodDef.addArg( new ArgDef("result", "b", ArgDef.DIRECTION_OUT) );
 
         SignalDef signalDef = new SignalDef("EmitSomething", "s", ifaceName);
-        signalDef.addArg( new ArgDef("something", "s") );
+        signalDef.addArg( new ArgDef("something", "s", ArgDef.DIRECTION_OUT) );
 
         PropertyDef propertyDef = new PropertyDef("SomeProperty", "s", PropertyDef.ACCESS_READWRITE, ifaceName);
 
