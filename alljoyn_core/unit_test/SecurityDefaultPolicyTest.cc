@@ -1437,7 +1437,7 @@ TEST_F(SecurityDefaultPolicyTest, default_policy_overridden_when_a_new_policy_in
     InstallMemberShipOnManager();
 
     PermissionPolicy policy;
-    policy.SetVersion(1);
+    policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {

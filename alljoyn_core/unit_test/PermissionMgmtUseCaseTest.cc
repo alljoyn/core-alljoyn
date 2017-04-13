@@ -206,7 +206,7 @@ static QStatus GenerateWildCardPolicy(BusAttachment& bus, BusAttachment& targetB
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(20);
+    policy.SetSerialNumber(20);
 
     /* add the acls section */
     PermissionPolicy::Acl acls[1];
@@ -238,7 +238,7 @@ static QStatus GenerateAllowAllPeersPolicy(BusAttachment& bus, BusAttachment& ta
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(21);
+    policy.SetSerialNumber(21);
 
     /* add the acls section */
     PermissionPolicy::Acl acls[2];
@@ -281,7 +281,7 @@ static QStatus GenerateNoOutboundGetPropertyPolicy(BusAttachment& bus, BusAttach
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(22);
+    policy.SetSerialNumber(22);
 
     /* add the acls section */
     PermissionPolicy::Acl acls[1];
@@ -307,7 +307,7 @@ static QStatus GenerateGetAllPropertiesPolicy(BusAttachment& bus, BusAttachment&
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(23);
+    policy.SetSerialNumber(23);
 
     /* add the acls section */
     PermissionPolicy::Acl acls[1];
@@ -356,7 +356,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(2);
+    policy.SetSerialNumber(2);
 
     /* add the acls section */
     PermissionPolicy::Acl acls[4];
@@ -499,7 +499,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
 
 static void AddSpecificCertAuthorityToPolicy(PermissionPolicy& policy, const KeyInfoNISTP256& restrictedCA)
 {
-    policy.SetVersion(policy.GetVersion() + 1);
+    policy.SetSerialNumber(policy.GetSerialNumber() + 1);
 
     /* add one more acl */
     size_t newAclsSize = policy.GetAclsSize() + 1;
@@ -555,7 +555,7 @@ static QStatus GenerateSmallAnyUserPolicy(BusAttachment& bus, BusAttachment& tar
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(3);
+    policy.SetSerialNumber(3);
 
     /* add more acls */
     PermissionPolicy::Acl acls[1];
@@ -624,7 +624,7 @@ static QStatus GenerateFullAccessAnyUserPolicy(BusAttachment& bus, BusAttachment
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(4);
+    policy.SetSerialNumber(4);
     PermissionPolicy::Acl acl;
 
     /* replacing the ANY_TRUSTED acl */
@@ -673,7 +673,7 @@ static QStatus GenerateAnyUserDeniedPrefixPolicy(BusAttachment& bus, BusAttachme
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(5);
+    policy.SetSerialNumber(5);
 
     PermissionPolicy::Acl acl;
 
@@ -711,7 +711,7 @@ static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachmen
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(6);
+    policy.SetSerialNumber(6);
     PermissionPolicy::Acl acl;
 
     /* acls record 0  ANY TRUSTED */
@@ -764,7 +764,7 @@ static QStatus GenerateFullAnonymousAccessOutgoingPolicy(BusAttachment& bus, Bus
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(7);
+    policy.SetSerialNumber(7);
     PermissionPolicy::Acl acls[1];
 
     /* acls record 0  ALL */
@@ -793,7 +793,7 @@ static QStatus GenerateFullAccessOutgoingPolicyWithGuestServices(BusAttachment& 
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(8);
+    policy.SetSerialNumber(8);
 
     PermissionPolicy::Acl acls[2];
 
@@ -858,7 +858,7 @@ static QStatus GenerateGuildSpecificAccessOutgoingPolicy(BusAttachment& bus, Bus
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(9);
+    policy.SetSerialNumber(9);
 
     PermissionPolicy::Acl acls[2];
 
@@ -921,7 +921,7 @@ static QStatus GeneratePolicyPeerPublicKey(BusAttachment& bus, BusAttachment& ta
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(10);
+    policy.SetSerialNumber(10);
 
     /* add more acls */
 
@@ -970,7 +970,7 @@ static QStatus GeneratePolicyDenyPeerPublicKey(BusAttachment& bus, BusAttachment
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
     EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
-    policy.SetVersion(11);
+    policy.SetSerialNumber(11);
 
     PermissionPolicy::Acl acls[1];
 
@@ -1553,7 +1553,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
 
-        EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
+        EXPECT_EQ(policy.GetSerialNumber(), retPolicy.GetSerialNumber()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
     }
 
@@ -1572,7 +1572,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
 
-        EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
+        EXPECT_EQ(policy.GetSerialNumber(), retPolicy.GetSerialNumber()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
         /* install a policy with the same policy version number.  Expect to fail. */
         EXPECT_NE(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy again with same policy version number expected to fail, but it did not.";
@@ -1609,7 +1609,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionPolicy policy;
         EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
 
-        EXPECT_EQ(policy.GetVersion(), (uint32_t) 0) << " Default policy is supposed to have policy version 0.";
+        EXPECT_EQ(policy.GetSerialNumber(), (uint32_t) 0) << " Default policy is supposed to have policy version 0.";
     }
 
     /*
@@ -2180,12 +2180,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
-        uint32_t originalPolicyVersion = retPolicy.GetVersion();
+        uint32_t originalPolicySerialNumber = retPolicy.GetSerialNumber();
         EXPECT_EQ(ER_OK, saProxy.ResetPolicy()) << "ResetPolicy failed.";
         /* get policy again.  Expect it to return a policy version 0 */
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
-        EXPECT_EQ(retPolicy.GetVersion(), (uint32_t) 0) << " Policy after reset is supposed to have policy version 0.";
-        EXPECT_NE(retPolicy.GetVersion(), originalPolicyVersion) << " Policy after reset is not supposed to have same version as the non-default policy.";
+        EXPECT_EQ(retPolicy.GetSerialNumber(), (uint32_t) 0) << " Policy after reset is supposed to have policy version 0.";
+        EXPECT_NE(retPolicy.GetSerialNumber(), originalPolicySerialNumber) << " Policy after reset is not supposed to have same version as the non-default policy.";
     }
 
     /*

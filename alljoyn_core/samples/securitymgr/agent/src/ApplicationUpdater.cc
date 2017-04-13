@@ -91,21 +91,21 @@ QStatus ApplicationUpdater::UpdatePolicy(ProxyObjectManager::ManagedProxyObject&
 {
     QCC_DbgPrintf(("Updating policy"));
 
-    uint32_t remoteVersion;
-    QStatus status = mngdProxy.GetPolicyVersion(remoteVersion);
+    uint32_t remoteSerialNumber;
+    QStatus status = mngdProxy.GetPolicySerialNumber(remoteSerialNumber);
     if (ER_OK != status) {
         QCC_DbgPrintf(("Failed to get remote policy version"));
         NotifyAboutSyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
         return status;
     }
-    QCC_DbgPrintf(("Remote policy version is %i", remoteVersion));
+    QCC_DbgPrintf(("Remote policy version is %i", remoteSerialNumber));
 
     if (localPolicy == nullptr) {
         status = ER_OK;
         QCC_DbgPrintf(("No policy in local storage"));
 
         // hard coded to 0 as GetDefaultPolicy might fail (see ASACORE-2200)
-        if (remoteVersion != 0) {
+        if (remoteSerialNumber != 0) {
             status = mngdProxy.ResetPolicy();
             if (ER_OK != status) {
                 QCC_DbgPrintf(("Failed to reset policy"));
@@ -120,9 +120,9 @@ QStatus ApplicationUpdater::UpdatePolicy(ProxyObjectManager::ManagedProxyObject&
         return status;
     }
 
-    uint32_t localVersion = localPolicy->GetVersion();
-    QCC_DbgPrintf(("Local policy version %i", localVersion));
-    if (localVersion == remoteVersion) {
+    uint32_t localSerialNumber = localPolicy->GetSerialNumber();
+    QCC_DbgPrintf(("Local policy version %i", localSerialNumber));
+    if (localSerialNumber == remoteSerialNumber) {
         QCC_DbgPrintf(("Policy already up to date"));
         return ER_OK;
     }

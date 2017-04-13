@@ -923,7 +923,7 @@ qcc::String PermissionPolicy::ToString(size_t indent) const
     qcc::String in = qcc::String(indent, ' ');
     str += in + "<permissionPolicy>\n";
     str += in + "  <specificationVersion>" +  U32ToString(specificationVersion) + "</specificationVersion>\n";
-    str += in + "  <version>" + U32ToString(version) + "</version>\n";
+    str += in + "  <serialNumber>" + U32ToString(serialNumber) + "</serialNumber>\n";
 
     if ((aclsSize > 0) && acls) {
         for (size_t cnt = 0; cnt < aclsSize; cnt++) {
@@ -940,7 +940,7 @@ bool PermissionPolicy::operator==(const PermissionPolicy& other) const
         return false;
     }
 
-    if (version != other.version) {
+    if (serialNumber != other.serialNumber) {
         return false;
     }
 
@@ -999,7 +999,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
 
     if (ER_OK == status) {
         status = msgArg.Set("(qua(a(ya(yyayayay)ay)a(ssa(syy))))",
-                            GetSpecificationVersion(), GetVersion(), GetAclsSize(), aclsArgs);
+                            GetSpecificationVersion(), GetSerialNumber(), GetAclsSize(), aclsArgs);
         if (ER_OK == status) {
             msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
         }
@@ -1029,9 +1029,9 @@ QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
     uint16_t specVersion;
     MsgArg* aclsArgs;
     size_t aclsArgsCount = 0;
-    uint32_t policyVersion;
+    uint32_t policyserialNumber;
     QStatus status = msgArg.Get("(qua(a(ya(yyayayay)ay)a(ssa(syy))))",
-                                &specVersion, &policyVersion, &aclsArgsCount, &aclsArgs);
+                                &specVersion, &policyserialNumber, &aclsArgsCount, &aclsArgs);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionPolicy::Import got status 0x%x\n", status));
         return status;
@@ -1041,7 +1041,7 @@ QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
         return ER_INVALID_DATA;
     }
     SetSpecificationVersion(specVersion);
-    SetVersion(policyVersion);
+    SetSerialNumber(policyserialNumber);
 
     if (aclsArgsCount > 0) {
         PermissionPolicy::Acl* aclArray = nullptr;
@@ -1263,7 +1263,7 @@ QStatus PermissionPolicy::ManifestTemplateToMsgArg(const Rule* rules, size_t cou
 PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
     if (&other != this) {
         specificationVersion = other.specificationVersion;
-        version = other.version;
+        serialNumber = other.serialNumber;
         aclsSize = other.aclsSize;
         delete [] acls;
         acls = nullptr;
@@ -1278,7 +1278,7 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
 }
 
 PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
-    specificationVersion(other.specificationVersion), version(other.version),
+    specificationVersion(other.specificationVersion), serialNumber(other.serialNumber),
     aclsSize(other.aclsSize) {
     acls = nullptr;
     if (aclsSize > 0) {

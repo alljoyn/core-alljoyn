@@ -424,7 +424,7 @@ TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
     vector<GroupInfo> groups;
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
-    policy.SetVersion(42);
+    policy.SetSerialNumber(42);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, policy));
     ASSERT_TRUE(WaitForUpdatesCompleted());
 
@@ -433,7 +433,7 @@ TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
 
     // make sure wrapper returns an older policy
     PermissionPolicy olderPolicy = policy;
-    olderPolicy.SetVersion(1);
+    olderPolicy.SetSerialNumber(1);
     wrappedCA->SetPolicy(olderPolicy);
 
     // start the test application

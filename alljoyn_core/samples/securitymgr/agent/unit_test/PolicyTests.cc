@@ -139,19 +139,19 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     ASSERT_TRUE(CheckPolicy(app, policy2));
 
     /* Install a newer policy and check retrieved policy */
-    policy2.SetVersion(100);
+    policy2.SetSerialNumber(100);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
     ASSERT_TRUE(CheckPolicy(app, policy2));
 
     /* Install an older policy and ensure failure */
-    policy2.SetVersion(1);
+    policy2.SetSerialNumber(1);
     ASSERT_EQ(ER_POLICY_NOT_NEWER, storage->UpdatePolicy(app, policy2));
     ASSERT_FALSE(WaitForUpdatesCompleted(app));
     ASSERT_FALSE(CheckPolicy(app, policy2));
 
     /* Install an default v=0 policy and ensure successful update */
-    policy2.SetVersion(0);
+    policy2.SetSerialNumber(0);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
     ASSERT_TRUE(CheckPolicy(app, policy2));
@@ -160,7 +160,7 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     PermissionPolicy finalPolicy;
     ASSERT_EQ(ER_OK, storage->GetPolicy(app, finalPolicy));
     // Latest successful update was with policy v=100
-    ASSERT_EQ((size_t)(100 + 1), finalPolicy.GetVersion());
+    ASSERT_EQ((size_t)(100 + 1), finalPolicy.GetSerialNumber());
 }
 
 /**

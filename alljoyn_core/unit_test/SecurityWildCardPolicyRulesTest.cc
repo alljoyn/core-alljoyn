@@ -631,7 +631,7 @@ void SecurityWildCardPolicyRulesTest::SetUp()
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -710,7 +710,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_object_path) {
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -799,7 +799,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_interface_names) {
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -891,7 +891,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_member_names) {
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -982,7 +982,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_message_type_matched_properly_i
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1078,7 +1078,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, unspecified_action_mask_is_explicitly_DE
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1181,7 +1181,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, object_path_not_specified_rule_not_consi
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1259,7 +1259,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, interface_name_not_specified_rule_not_co
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1336,7 +1336,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, empty_string_not_considered_as_match) {
 
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {

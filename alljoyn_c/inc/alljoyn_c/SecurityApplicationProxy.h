@@ -264,13 +264,13 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesaddi
  * This method allows the admin to retrieve the active policy version from an application.
  *
  * @param[in]    proxy              The alljoyn_securityapplicationproxy connected to the managed application.
- * @param[out]   version            The active policy version which is the policy's serial number
+ * @param[out]   serialnumber       The active policy's serial number
  *
  * @return
  *          - #ER_OK                If successful.
  *          - An error status indicating failure.
  */
-AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicyversion(alljoyn_securityapplicationproxy proxy, uint32_t* version);
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicyserialnumber(alljoyn_securityapplicationproxy proxy, uint32_t* serialnumber);
 
 /**
  * This method allows the admin to retrieve the active policy from an application.

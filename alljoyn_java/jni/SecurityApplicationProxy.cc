@@ -1177,10 +1177,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
 
 /*
  * Class:     org_alljoyn_bus_SecurityApplicationProxy
- * Method:    getPolicyVersion
+ * Method:    getPolicySerialNumber
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_getPolicyVersion(JNIEnv* jenv, jobject thiz)
+JNIEXPORT jint JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_getPolicySerialNumber(JNIEnv* jenv, jobject thiz)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -1196,16 +1196,16 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_getPolicyVe
         return 0;
     }
 
-    uint32_t version;
-    QStatus status = secPtr->GetPolicyVersion(version);
-    QCC_DbgPrintf(("%s: version = %d", __FUNCTION__, version));
+    uint32_t serialNumber;
+    QStatus status = secPtr->GetPolicySerialNumber(serialNumber);
+    QCC_DbgPrintf(("%s: version = %d", __FUNCTION__, serialNumber));
 
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return 0;
     }
 
-    return version;
+    return serialNumber;
 }
 
 /*

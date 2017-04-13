@@ -1382,20 +1382,20 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicy)
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
 }
 
-TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicyVersion)
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicySerialNumber)
 {
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_updatepolicy(m_managedAppSecurityApplicationProxy, m_oldPolicy));
     ASSERT_EQ(ER_OK, alljoyn_proxybusobject_secureconnection((alljoyn_proxybusobject)m_managedAppSecurityApplicationProxy, true));
 
-    uint32_t version = 0;
-    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicyversion(m_managedAppSecurityApplicationProxy, &version));
-    EXPECT_EQ(100U, version);
+    uint32_t serialnumber = 0;
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicyserialnumber(m_managedAppSecurityApplicationProxy, &serialnumber));
+    EXPECT_EQ(100U, serialnumber);
 
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_updatepolicy(m_managedAppSecurityApplicationProxy, m_newPolicy));
     ASSERT_EQ(ER_OK, alljoyn_proxybusobject_secureconnection((alljoyn_proxybusobject)m_managedAppSecurityApplicationProxy, true));
 
-    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicyversion(m_managedAppSecurityApplicationProxy, &version));
-    EXPECT_EQ(200U, version);
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicyserialnumber(m_managedAppSecurityApplicationProxy, &serialnumber));
+    EXPECT_EQ(200U, serialnumber);
 }
 
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetDefaultPolicy)

@@ -645,7 +645,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_fails_if_version_not_newer)
      * Rule1: Object Path=*, Interface=*, Member Name=*, Type=Method, Action mask:  PROVIDE
      */
     PermissionPolicy policy1;
-    policy1.SetVersion(1234);
+    policy1.SetSerialNumber(1234);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -682,8 +682,8 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_fails_if_version_not_newer)
 
     PermissionPolicy fetchedPolicy;
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy));
-    EXPECT_EQ(static_cast<uint32_t>(1234), fetchedPolicy.GetVersion());
-    EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
+    EXPECT_EQ(static_cast<uint32_t>(1234), fetchedPolicy.GetSerialNumber());
+    EXPECT_EQ(policy1.GetSerialNumber(), fetchedPolicy.GetSerialNumber());
     EXPECT_EQ(policy1, fetchedPolicy);
 
     /*
@@ -695,7 +695,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_fails_if_version_not_newer)
      * manager calls GetProperty ("policy") on peer1.
      */
     PermissionPolicy policy2;
-    policy2.SetVersion(1200);
+    policy2.SetSerialNumber(1200);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -729,7 +729,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_fails_if_version_not_newer)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy));
-    EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
+    EXPECT_EQ(policy1.GetSerialNumber(), fetchedPolicy.GetSerialNumber());
     EXPECT_EQ(policy1, fetchedPolicy);
 }
 
@@ -773,7 +773,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
      * Rule1: Object Path=*, Interface=*, Member Name=*, Type=Method, Action mask:  PROVIDE
      */
     PermissionPolicy policy1;
-    policy1.SetVersion(1234);
+    policy1.SetSerialNumber(1234);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -811,7 +811,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
     PermissionPolicy fetchedPolicy;
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy));
 
-    EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
+    EXPECT_EQ(policy1.GetSerialNumber(), fetchedPolicy.GetSerialNumber());
     EXPECT_EQ(policy1, fetchedPolicy);
 
     /*
@@ -821,7 +821,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
      * Rule1: Object Path=/abc, Interface=*, Member Name=*, Type=Method, Action mask:  PROVIDE
      */
     PermissionPolicy policy2;
-    policy2.SetVersion(1235);
+    policy2.SetSerialNumber(1235);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -858,7 +858,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
 
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy2));
     EXPECT_NE(policy1, fetchedPolicy2);
-    EXPECT_EQ(policy2.GetVersion(), fetchedPolicy2.GetVersion());
+    EXPECT_EQ(policy2.GetSerialNumber(), fetchedPolicy2.GetSerialNumber());
     EXPECT_EQ(policy2, fetchedPolicy2);
 }
 
@@ -2504,21 +2504,21 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetPolicy(policy));
 
     // Assume the default policy which is always 0
-    EXPECT_EQ(static_cast<uint32_t>(0), policy.GetVersion());
+    EXPECT_EQ(static_cast<uint32_t>(0), policy.GetSerialNumber());
 
-    policy.SetVersion(policy.GetVersion() + 1);
+    policy.SetSerialNumber(policy.GetSerialNumber() + 1);
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdatePolicy(policy));
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.SecureConnection(true));
 
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetPolicy(policy));
 
-    EXPECT_EQ(static_cast<uint32_t>(1), policy.GetVersion());
+    EXPECT_EQ(static_cast<uint32_t>(1), policy.GetSerialNumber());
 
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.ResetPolicy());
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetPolicy(policy));
 
     // Reset back to the default policy which is always 0
-    EXPECT_EQ(static_cast<uint32_t>(0), policy.GetVersion());
+    EXPECT_EQ(static_cast<uint32_t>(0), policy.GetSerialNumber());
 
     String membershipSerial = "2";
     qcc::MembershipCertificate peer2MembershipCertificate[1];
@@ -2670,7 +2670,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
    Identity
    Manifest
    IdentityCertificateId
-   PolicyVersion
+   PolicySerialNumber
    Policy
    DefaultPolicy
    MembershipSummaries
@@ -2757,7 +2757,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Identity", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Manifests", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "IdentityCertificateId", &propArg));
-    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "PolicyVersion", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "PolicySerialNumber", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Policy", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "DefaultPolicy", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "MembershipSummaries", &propArg));
@@ -2789,7 +2789,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
  * Identity
  * Manifest
  * IdentityCertificateId
- * PolicyVersion
+ * PolicySerialNumber
  * Policy
  * DefaultPolicy
  * MembershipSummaries
@@ -2894,8 +2894,8 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
     String serial;
     qcc::KeyInfoNISTP256 issuerKey;
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetIdentityCertificateId(serial, issuerKey));
-    uint32_t policyVersion;
-    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetPolicyVersion(policyVersion));
+    uint32_t policySerialNumber;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetPolicySerialNumber(policySerialNumber));
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetPolicy(policy));
     MsgArg membershipSummariesArg;
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetMembershipSummaries(membershipSummariesArg));
@@ -3174,7 +3174,7 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
  * Identity
  * Manifest
  * IdentityCertificateId
- * PolicyVersion
+ * PolicySerialNumber
  * Policy
  * DefaultPolicy
  * MembershipSummaries
@@ -3278,7 +3278,7 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         // Call UpdatePolicy
         PermissionPolicy policy;
         sapBus1toBus2.GetDefaultPolicy(policy);
-        policy.SetVersion(1);
+        policy.SetSerialNumber(1);
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.UpdatePolicy(policy));
 
         // Call ResetPolicy
@@ -3322,9 +3322,9 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         qcc::KeyInfoNISTP256 issuerKey;
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetIdentityCertificateId(serial, issuerKey));
 
-        // Fetch PolicyVersion property
-        uint32_t policyVersion;
-        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetPolicyVersion(policyVersion));
+        // Fetch PolicySerialNumber property
+        uint32_t policySerialNumber;
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetPolicySerialNumber(policySerialNumber));
 
         // Fetch Policy property
         PermissionPolicy policy;
@@ -3351,7 +3351,7 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
  * Identity
  * Manifest
  * IdentityCertificateId
- * PolicyVersion
+ * PolicySerialNumber
  * Policy
  * DefaultPolicy
  * MembershipSummaries
@@ -3363,7 +3363,7 @@ TEST(SecurityManagementPolicy2Test, verify_values_are_readonly) {
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Identity")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Manifests")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("IdentityCertificateId")->access);
-    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("PolicyVersion")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("PolicySerialNumber")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Policy")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("DefaultPolicy")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("MembershipSummaries")->access);

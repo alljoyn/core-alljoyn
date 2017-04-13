@@ -586,15 +586,15 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
 
     /**
-     * Get the version number of the currently installed policy.
+     * Get the serial number of the currently installed policy.
      *
-     * @param[out] policyVersion the PolicyVersion
+     * @param[out] policySerialNumber the PolicySerialNumber
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetPolicyVersion(uint32_t& policyVersion);
+    QStatus GetPolicySerialNumber(uint32_t& policySerialNumber);
 
     /**
      * Get the currently installed policy.

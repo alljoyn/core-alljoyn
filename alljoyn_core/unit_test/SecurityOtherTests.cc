@@ -600,7 +600,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
     // Entry.  This is a policy that will deny eveything.
     {
         PermissionPolicy policy;
-        policy.SetVersion(1);
+        policy.SetSerialNumber(1);
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
         SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy);
@@ -609,7 +609,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
     }
     {
         PermissionPolicy policy;
-        policy.SetVersion(1);
+        policy.SetSerialNumber(1);
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
         SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, policy);
@@ -1432,7 +1432,7 @@ class SecurityOther2Test : public testing::Test {
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         // Permission policy that will be installed on peer2
         PermissionPolicy peer2Policy;
-        peer2Policy.SetVersion(1);
+        peer2Policy.SetSerialNumber(1);
         {
             PermissionPolicy::Acl acls[1];
             {
@@ -1472,7 +1472,7 @@ class SecurityOther2Test : public testing::Test {
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         // Permission policy that will be installed on peer2
         PermissionPolicy peer2Policy;
-        peer2Policy.SetVersion(1);
+        peer2Policy.SetSerialNumber(1);
         {
             PermissionPolicy::Acl acls[1];
             {

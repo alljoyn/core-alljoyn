@@ -250,7 +250,7 @@ TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
 
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
-    policy.SetVersion(2);
+    policy.SetSerialNumber(2);
     ASSERT_TRUE(CheckPolicy(policy));
 }
 
@@ -285,7 +285,7 @@ TEST_F(ConcurrentUpdateTests, UpdateMultiple) {
 
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
 
-    policy.SetVersion(2);
+    policy.SetSerialNumber(2);
     ASSERT_TRUE(CheckPolicy(policy));
 
     vector<GroupInfo> memberships;

@@ -454,7 +454,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_fails_if_version_not_newer)
      * Rule1: Object Path=*, Interface=*, Member Name=*, Type=Method, Action mask:  PROVIDE
      */
     PermissionPolicy policy1;
-    policy1.SetVersion(1234);
+    policy1.SetSerialNumber(1234);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -490,8 +490,8 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_fails_if_version_not_newer)
 
     PermissionPolicy fetchedPolicy;
     ASSERT_EQ(ER_OK, pcPeer1.GetPolicy(fetchedPolicy));
-    EXPECT_EQ(static_cast<uint32_t>(1234), fetchedPolicy.GetVersion());
-    EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
+    EXPECT_EQ(static_cast<uint32_t>(1234), fetchedPolicy.GetSerialNumber());
+    EXPECT_EQ(policy1.GetSerialNumber(), fetchedPolicy.GetSerialNumber());
     EXPECT_EQ(policy1, fetchedPolicy);
 }
 
@@ -537,7 +537,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_new_policy_should_override_ol
      * Rule1: Object Path=*, Interface=*, Member Name=*, Type=Method, Action mask:  PROVIDE
      */
     PermissionPolicy policy1;
-    policy1.SetVersion(1234);
+    policy1.SetSerialNumber(1234);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -574,7 +574,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_new_policy_should_override_ol
     PermissionPolicy fetchedPolicy;
     ASSERT_EQ(ER_OK, pcPeer1.GetPolicy(fetchedPolicy));
 
-    EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
+    EXPECT_EQ(policy1.GetSerialNumber(), fetchedPolicy.GetSerialNumber());
     EXPECT_EQ(policy1, fetchedPolicy);
 
     /*
@@ -584,7 +584,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_new_policy_should_override_ol
      * Rule1: Object Path=/abc, Interface=*, Member Name=*, Type=Method, Action mask:  PROVIDE
      */
     PermissionPolicy policy2;
-    policy2.SetVersion(1235);
+    policy2.SetSerialNumber(1235);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -620,7 +620,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_new_policy_should_override_ol
 
     ASSERT_EQ(ER_OK, pcPeer1.GetPolicy(fetchedPolicy2));
     EXPECT_NE(policy1, fetchedPolicy2);
-    EXPECT_EQ(policy2.GetVersion(), fetchedPolicy2.GetVersion());
+    EXPECT_EQ(policy2.GetSerialNumber(), fetchedPolicy2.GetSerialNumber());
     EXPECT_EQ(policy2, fetchedPolicy2);
 }
 
@@ -1286,7 +1286,7 @@ TEST_P(SecurityOfflineManagementMethodCalls, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1310,7 +1310,7 @@ TEST_P(SecurityOfflineManagementMethodCalls, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {

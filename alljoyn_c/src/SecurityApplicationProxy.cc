@@ -252,10 +252,10 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionali
     return status;
 }
 
-QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicyversion(alljoyn_securityapplicationproxy proxy, uint32_t* version)
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicyserialnumber(alljoyn_securityapplicationproxy proxy, uint32_t* serialnumber)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((SecurityApplicationProxy*)proxy)->GetPolicyVersion(*version);
+    return ((SecurityApplicationProxy*)proxy)->GetPolicySerialNumber(*serialnumber);
 }
 
 

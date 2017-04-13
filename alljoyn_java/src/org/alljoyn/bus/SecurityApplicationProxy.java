@@ -415,14 +415,14 @@ public class SecurityApplicationProxy {
     public native CertificateX509[] getIdentity() throws BusException;
 
     /**
-     * Get the version number of the currently installed policy.
+     * Get the serial  number of the currently installed policy.
      *
-     * @return policyVersion the PolicyVersion
+     * @return policySerialNumber the PolicySerialNumber
      *
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native int getPolicyVersion() throws BusException;
+    public native int getPolicySerialNumber() throws BusException;
 
     /**
      * This method notifies the application about the fact that the Security Manager

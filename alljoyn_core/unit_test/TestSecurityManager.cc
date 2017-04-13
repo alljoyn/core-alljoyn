@@ -64,7 +64,7 @@ TestSecurityManager::TestSecurityManager(string appName) :
     bus(appName.c_str()),
     opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
     authListener(), caKeyPair(), caPublicKeyInfo(), adminGroup(), identityGuid(),
-    identityName("testIdentity"), certSerialNumber(0), policyVersion(0)
+    identityName("testIdentity"), certSerialNumber(0), policySerialNumber(0)
 {
     QCC_VERIFY(ER_OK == caKeyPair.GenerateDSAKeyPair());
 
@@ -474,7 +474,7 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
     SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     PermissionPolicy copy;
-    copy.SetVersion(++policyVersion);
+    copy.SetSerialNumber(++policySerialNumber);
     AddAdminAcl(policy, copy);
 
     EXPECT_EQ(ER_OK, (status = peerProxy.StartManagement()));

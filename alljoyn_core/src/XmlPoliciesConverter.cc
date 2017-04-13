@@ -121,7 +121,7 @@ void XmlPoliciesConverter::SetPolicyVersion(const XmlElement* xmlPolicyVersion, 
 void XmlPoliciesConverter::SetPolicySerialNumber(const XmlElement* xmlSerialNumber, PermissionPolicy& policy)
 {
     uint32_t serialNumber = StringToU32(xmlSerialNumber->GetContent());
-    policy.SetVersion(serialNumber);
+    policy.SetSerialNumber(serialNumber);
 }
 
 void XmlPoliciesConverter::SetPolicyAcls(const XmlElement* acls, PermissionPolicy& policy)
@@ -236,7 +236,7 @@ void XmlPoliciesConverter::SetPolicyVersion(const PermissionPolicy& policy, XmlE
 
 void XmlPoliciesConverter::SetPolicySerialNumber(const PermissionPolicy& policy, XmlElement* policyXmlElement)
 {
-    policyXmlElement->CreateChild(SERIAL_NUMBER_XML_ELEMENT)->SetContent(U32ToString(policy.GetVersion()));
+    policyXmlElement->CreateChild(SERIAL_NUMBER_XML_ELEMENT)->SetContent(U32ToString(policy.GetSerialNumber()));
 }
 
 void XmlPoliciesConverter::SetPolicyAcls(const PermissionPolicy& policy, XmlElement* policyXmlElement)

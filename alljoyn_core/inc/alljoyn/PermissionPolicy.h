@@ -660,7 +660,7 @@ class PermissionPolicy {
      * Constructor
      *
      */
-    PermissionPolicy() : specificationVersion(SPEC_VERSION), version(0), aclsSize(0), acls(NULL)
+    PermissionPolicy() : specificationVersion(SPEC_VERSION), serialNumber(0), aclsSize(0), acls(NULL)
     {
     }
 
@@ -682,13 +682,13 @@ class PermissionPolicy {
         return specificationVersion;
     }
 
-    void SetVersion(uint32_t version)
+    void SetSerialNumber(uint32_t serialNumber)
     {
-        this->version = version;
+        this->serialNumber = serialNumber;
     }
-    const uint32_t GetVersion() const
+    const uint32_t GetSerialNumber() const
     {
-        return version;
+        return serialNumber;
     }
 
     /**
@@ -824,7 +824,7 @@ class PermissionPolicy {
 
   private:
     uint16_t specificationVersion;
-    uint32_t version;
+    uint32_t serialNumber;
     size_t aclsSize;
     Acl* acls;
 };

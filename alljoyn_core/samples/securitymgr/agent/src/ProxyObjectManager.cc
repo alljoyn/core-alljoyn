@@ -226,12 +226,12 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetPolicy(PermissionPolicy& poli
     return status;
 }
 
-QStatus ProxyObjectManager::ManagedProxyObject::GetPolicyVersion(uint32_t&  policyVersion)
+QStatus ProxyObjectManager::ManagedProxyObject::GetPolicySerialNumber(uint32_t&  policySerialNumber)
 {
     CheckReAuthenticate();
-    QStatus status = remoteObj->GetPolicyVersion(policyVersion);
+    QStatus status = remoteObj->GetPolicySerialNumber(policySerialNumber);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to GetPolicyVersion"));
+        QCC_LogError(status, ("Failed to GetPolicySerialNumber"));
     }
 
     return status;

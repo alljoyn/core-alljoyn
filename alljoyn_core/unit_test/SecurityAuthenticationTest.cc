@@ -1005,7 +1005,7 @@ class SecurityAuthenticationTest2 : public testing::Test {
 
     PermissionPolicy CreatePeer1Policy(uint32_t version) {
         PermissionPolicy policy;
-        policy.SetVersion(version);
+        policy.SetSerialNumber(version);
         {
             PermissionPolicy::Acl acls[1];
             {
@@ -1040,9 +1040,9 @@ class SecurityAuthenticationTest2 : public testing::Test {
     // ACL1: Peer type: WITH_MEMBERSHIP, SGID: Living Room
     // ACL2: Peer type: FROM_CERTIFICATE_AUTHORITY: CA1
     // ACL3: Peer Type: WITH_PUBLIC_KEY: Peer C
-    PermissionPolicy CreatePeer2PolicyA(uint32_t version) {
+    PermissionPolicy CreatePeer2PolicyA(uint32_t serialNumber) {
         PermissionPolicy policy;
-        policy.SetVersion(version);
+        policy.SetSerialNumber(serialNumber);
         {
             PermissionPolicy::Acl acls[3];
 
@@ -1104,9 +1104,9 @@ class SecurityAuthenticationTest2 : public testing::Test {
     // Peer[0]: FROM_CERTIFICATE_AUTHORITY, Public key of CA1
     // Peer[1]: WITH_MEMBERSHIP, SGID: Living Room
     // Peer[2]: WITH_PUBLIC_KEY: Peer C's public key
-    PermissionPolicy CreatePeer2PolicyB(uint32_t version) {
+    PermissionPolicy CreatePeer2PolicyB(uint32_t serialNumber) {
         PermissionPolicy policy;
-        policy.SetVersion(version);
+        policy.SetSerialNumber(serialNumber);
         {
             PermissionPolicy::Acl acls[1];
 
@@ -2061,9 +2061,9 @@ class SecurityAuthenticationTest3 : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Join());
     }
 
-    PermissionPolicy CreatePeer1Policy(uint32_t version) {
+    PermissionPolicy CreatePeer1Policy(uint32_t serialNumber) {
         PermissionPolicy policy;
-        policy.SetVersion(version);
+        policy.SetSerialNumber(serialNumber);
         {
             PermissionPolicy::Acl acls[1];
             {
@@ -2082,9 +2082,9 @@ class SecurityAuthenticationTest3 : public testing::Test {
     //(i.e app. bus has three ACLs.)
     //
     //The ACLs does not have any rules.
-    PermissionPolicy CreatePeer2Policy(uint32_t version) {
+    PermissionPolicy CreatePeer2Policy(uint32_t serialNumber) {
         PermissionPolicy policy;
-        policy.SetVersion(version);
+        policy.SetSerialNumber(serialNumber);
         {
             PermissionPolicy::Acl acls[3];
             // ACL0:  Peer type: WITH_MEMBERSHIP, SGID: Living Room

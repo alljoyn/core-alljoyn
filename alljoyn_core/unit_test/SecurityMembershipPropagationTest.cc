@@ -416,7 +416,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
     ASSERT_EQ(ER_OK, sapWithPeer1.SecureConnection());
 
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(2);
+    peer2Policy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -611,7 +611,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
      * signed by CA1 are authorized by Manager.
      */
     PermissionPolicy managerPolicy;
-    managerPolicy.SetVersion(2);
+    managerPolicy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -645,7 +645,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
     ASSERT_EQ(ER_OK, sapWithPeer1.SecureConnection());
 
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(2);
+    peer2Policy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -835,7 +835,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
      * to Peer2's policy.
      */
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(2);
+    peer2Policy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1005,7 +1005,7 @@ TEST(MembershipPropagationTest, manager_updates_own_policy_via_remote_call) {
      * to the manager's policy via a remote call.
      */
     PermissionPolicy managerPolicy;
-    managerPolicy.SetVersion(2);
+    managerPolicy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[1];
         {

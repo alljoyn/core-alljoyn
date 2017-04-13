@@ -80,7 +80,7 @@ class TestSecurityManager :
     GUID128 identityGuid;
     string identityName;
     int certSerialNumber;
-    int policyVersion;
+    int policySerialNumber;
     InMemoryKeyStoreListener keyStoreListener;
 
     /* SessionListener */

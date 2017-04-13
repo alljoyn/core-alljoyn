@@ -163,8 +163,8 @@ TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
 
-    uint32_t currentVersion;
-    ASSERT_EQ(ER_OK, GetPolicyVersion(app, currentVersion));
+    uint32_t currentSerialNumber;
+    ASSERT_EQ(ER_OK, GetPolicySerialNumber(app, currentSerialNumber));
     /* Try to install another identity */
     IdentityInfo info2;
     info2.name = "AnotherName";
@@ -172,8 +172,8 @@ TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
     ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifestTemplate));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
     ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifestTemplate));
-    uint32_t remoteVersion;
-    ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
-    ASSERT_EQ(1 + currentVersion, remoteVersion);
+    uint32_t remoteSerialNumber;
+    ASSERT_EQ(ER_OK, GetPolicySerialNumber(app, remoteSerialNumber));
+    ASSERT_EQ(1 + currentSerialNumber, remoteSerialNumber);
 }
 } // namespace

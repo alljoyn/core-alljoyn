@@ -485,7 +485,7 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
     // This is the Peers policy we are testing the others are permissive this is
     // restrictive.
     PermissionPolicy peer3Policy;
-    peer3Policy.SetVersion(1);
+    peer3Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[4];
         //ACL0:  Peer type: ALL; MODIFY for method call ping
@@ -1318,7 +1318,7 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
      */
 
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(2);
+    peer2Policy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[3];
         {
@@ -1400,7 +1400,7 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
  */
 
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(2);
+    peer1Policy.SetSerialNumber(2);
     {
         PermissionPolicy::Acl acls[4];
         {

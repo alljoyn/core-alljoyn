@@ -167,7 +167,7 @@ class EventListener :
             break;
 
         case SYNC_ER_POLICY:
-            cout << "  Policy version    : " << er->GetPolicy()->GetVersion() << endl;
+            cout << "  Policy SN         : " << er->GetPolicy()->GetSerialNumber() << endl;
             break;
 
         default:

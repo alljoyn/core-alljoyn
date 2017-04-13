@@ -393,9 +393,9 @@ QStatus UIStorageImpl::UpdatePolicy(Application& app, PermissionPolicy& policy)
         return status;
     }
 
-    if (policy.GetVersion() == 0) {
-        policy.SetVersion(local.GetVersion() + 1);
-    } else if (local.GetVersion() >= policy.GetVersion()) {
+    if (policy.GetSerialNumber() == 0) {
+        policy.SetSerialNumber(local.GetSerialNumber() + 1);
+    } else if (local.GetSerialNumber() >= policy.GetSerialNumber()) {
         status = ER_POLICY_NOT_NEWER;
         QCC_LogError(status, ("Provided policy is not newer"));
         return status;

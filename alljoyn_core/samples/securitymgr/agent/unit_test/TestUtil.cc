@@ -478,7 +478,7 @@ QStatus BasicTest::GetMembershipSummaries(const OnlineApplication& app, vector<M
     return mngdProxy.GetMembershipSummaries(summaries);
 }
 
-QStatus BasicTest::GetPolicyVersion(const OnlineApplication& app, uint32_t& version)
+QStatus BasicTest::GetPolicySerialNumber(const OnlineApplication& app, uint32_t& serialNumber)
 {
     CreateProxyObjectManager();
     ProxyObjectManager::ManagedProxyObject mngdProxy(app);
@@ -487,7 +487,7 @@ QStatus BasicTest::GetPolicyVersion(const OnlineApplication& app, uint32_t& vers
         printf("failed to connect to the application\n");
         return status;
     }
-    return mngdProxy.GetPolicyVersion(version);
+    return mngdProxy.GetPolicySerialNumber(serialNumber);
 }
 
 QStatus BasicTest::GetIdentity(const OnlineApplication& app, IdentityCertificateChain& idCertChain)

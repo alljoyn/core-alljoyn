@@ -55,16 +55,16 @@ static PermissionPolicy::Rule::Member::MemberType s_sampleMemberType = Permissio
 TEST(PermissionPolicyTest, construct)
 {
     PermissionPolicy permissionPolicy;
-    EXPECT_EQ((uint32_t)1, permissionPolicy.GetSpecificationVersion());
-    EXPECT_EQ((uint16_t)0, permissionPolicy.GetVersion());
+    EXPECT_EQ((uint16_t)1, permissionPolicy.GetSpecificationVersion());
+    EXPECT_EQ((uint32_t)0, permissionPolicy.GetSerialNumber());
 
 }
 
 TEST(PermissionPolicyTest, SetSerialNum)
 {
     PermissionPolicy permissionPolicy;
-    permissionPolicy.SetVersion(555777666);
-    EXPECT_EQ((uint32_t)555777666, permissionPolicy.GetVersion());
+    permissionPolicy.SetSerialNumber(555777666);
+    EXPECT_EQ((uint32_t)555777666, permissionPolicy.GetSerialNumber());
 }
 
 TEST(PermissionPolicyTest, Peer_constructor)

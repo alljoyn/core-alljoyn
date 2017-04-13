@@ -119,7 +119,7 @@ QStatus SecurityTestHelper::RetrieveDSAPublicKeyFromKeyStore(ajn::BusAttachment&
 }
 
 void SecurityTestHelper::CreatePermissivePolicyAll(ajn::PermissionPolicy& policy, uint32_t version) {
-    policy.SetVersion(version);
+    policy.SetSerialNumber(version);
     {
         ajn::PermissionPolicy::Acl acls[1];
         {
@@ -147,7 +147,7 @@ void SecurityTestHelper::CreatePermissivePolicyAll(ajn::PermissionPolicy& policy
 }
 
 void SecurityTestHelper::CreatePermissivePolicyAnyTrusted(ajn::PermissionPolicy& policy, uint32_t version) {
-    policy.SetVersion(version);
+    policy.SetSerialNumber(version);
     {
         ajn::PermissionPolicy::Acl acls[1];
         {

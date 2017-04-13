@@ -155,9 +155,9 @@ void PermissionMgmtObj::Load()
     PermissionPolicy* policy = new PermissionPolicy();
     status = RetrievePolicy(*policy);
     if (ER_OK == status) {
-        policyVersion = policy->GetVersion();
+        policySerialNumber = policy->GetSerialNumber();
     } else {
-        policyVersion = 0;
+        policySerialNumber = 0;
         delete policy;
         policy = nullptr;
     }
@@ -458,7 +458,7 @@ QStatus PermissionMgmtObj::GetPublicKey(KeyInfoNISTP256& publicKeyInfo)
 
 static void GenerateDefaultPolicy(const KeyInfoNISTP256& certificateAuthority, const GUID128& adminGroupGUID, const KeyInfoNISTP256& adminGroupAuthority, const ECCPublicKey* localPublicKey, PermissionPolicy& policy)
 {
-    policy.SetVersion(0);
+    policy.SetSerialNumber(0);
 
     /* add the acls section */
     PermissionPolicy::Acl acls[4];
@@ -673,7 +673,7 @@ QStatus PermissionMgmtObj::ClaimInternal(
         QCC_LogError(status, ("Failed to StoreApplicationState"));
         return status;
     }
-    policyVersion = defaultPolicy->GetVersion();
+    policySerialNumber = defaultPolicy->GetSerialNumber();
     /*
      * On success, ownership of defaultpolicy transfers to PermissionManager, which is then
      * responsible for freeing it later. defaultpolicy does not leak here.
@@ -779,7 +779,7 @@ QStatus PermissionMgmtObj::InstallPolicy(const PermissionPolicy& policy)
 
     QStatus status = StorePolicy(*policyCopy.get(), false);
     if (ER_OK == status) {
-        policyVersion = policyCopy->GetVersion();
+        policySerialNumber = policyCopy->GetSerialNumber();
         /* PermissionManager takes ownership of the heap-allocated policy object when calling PolicyChanged. */
         PolicyChanged(policyCopy.release());
     }
@@ -806,7 +806,7 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     PermissionPolicy existingPolicy;
     status = RetrievePolicy(existingPolicy);
     if (ER_OK == status) {
-        if (policy.GetVersion() <= existingPolicy.GetVersion()) {
+        if (policy.GetSerialNumber() <= existingPolicy.GetSerialNumber()) {
             MethodReply(msg, ER_POLICY_NOT_NEWER);
             return;
         }
@@ -851,7 +851,7 @@ QStatus PermissionMgmtObj::ResetPolicy()
     }
 Exit:
     if (ER_OK == status) {
-        policyVersion = defaultPolicy->GetVersion();
+        policySerialNumber = defaultPolicy->GetSerialNumber();
         /*
          * Calling PolicyChanged causes the PermissionManager to take ownership of defaultPolicy, so it does
          * not leak here.
@@ -2746,7 +2746,7 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim, bool endManagement)
     bus.GetInternal().GetKeyStore().Clear(ECDHE_NAME_PREFIX_PATTERN);
 
     applicationState = PermissionConfigurator::CLAIMABLE;
-    policyVersion = 0;
+    policySerialNumber = 0;
 
     if (endManagement) {
         /* After Reset it's impossible to call "EndManagement" remotely.

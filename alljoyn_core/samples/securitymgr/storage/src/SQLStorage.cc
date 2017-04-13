@@ -123,7 +123,7 @@ QStatus SQLStorage::StoreApplication(const Application& app, const bool update, 
         PermissionPolicy policy;
         funcStatus = GetPolicy(app, policy);
         if (ER_OK == funcStatus) {
-            policy.SetVersion(policy.GetVersion() + 1);
+            policy.SetSerialNumber(policy.GetSerialNumber() + 1);
             funcStatus = StorePolicy(app, policy);
         } else if (ER_END_OF_DATA == funcStatus) {
             funcStatus = ER_OK;  //No policy defined, so we can't increase the version.

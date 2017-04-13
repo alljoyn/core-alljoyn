@@ -1014,15 +1014,15 @@ QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, 
     return status;
 }
 
-QStatus SecurityApplicationProxy::GetPolicyVersion(uint32_t& policyVersion)
+QStatus SecurityApplicationProxy::GetPolicySerialNumber(uint32_t& policySerialNumber)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
     MsgArg arg;
-    status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "PolicyVersion", arg);
+    status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "PolicySerialNumber", arg);
     if (ER_OK == status) {
-        policyVersion = arg.v_variant.val->v_uint32;
+        policySerialNumber = arg.v_variant.val->v_uint32;
     }
 
     return status;

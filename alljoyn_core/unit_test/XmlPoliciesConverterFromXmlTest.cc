@@ -588,7 +588,7 @@ TEST_F(XmlPoliciesConverterFromXmlDetailedTest, shouldGetSerialNumber)
 {
     ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_policy));
 
-    EXPECT_EQ((uint16_t)10, m_policy.GetVersion());
+    EXPECT_EQ((uint16_t)10, m_policy.GetSerialNumber());
 }
 
 TEST_F(XmlPoliciesConverterFromXmlDetailedTest, shouldGetOneAcl)

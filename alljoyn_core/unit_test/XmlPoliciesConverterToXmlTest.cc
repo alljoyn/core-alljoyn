@@ -373,7 +373,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedPassTest, shouldGetSerialNumber)
     ASSERT_EQ(ER_OK, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
     ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(m_retrievedPolicyXml.c_str(), m_retrievedPolicy));
 
-    EXPECT_EQ((uint16_t)10, m_retrievedPolicy.GetVersion());
+    EXPECT_EQ((uint16_t)10, m_retrievedPolicy.GetSerialNumber());
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedPassTest, shouldGetSomeAcls)

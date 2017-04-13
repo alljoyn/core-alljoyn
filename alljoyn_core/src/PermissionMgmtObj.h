@@ -805,7 +805,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetManifestTemplate(MsgArg& arg);
     QStatus GetManifestTemplateDigest(MsgArg& arg);
     PermissionConfigurator::ApplicationState applicationState;
-    uint32_t policyVersion;
+    uint32_t policySerialNumber;
     uint16_t claimCapabilities;
     uint16_t claimCapabilityAdditionalInfo;
 

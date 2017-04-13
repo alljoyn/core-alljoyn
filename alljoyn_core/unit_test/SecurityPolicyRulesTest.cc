@@ -479,7 +479,7 @@ class SecurityPolicyRulesTest : public testing::Test {
  * changed for all of the GetAllProperties tests.
  */
 void SecurityPolicyRulesTest::CreatePolicyWithMembersForGetAllProperties(PermissionPolicy& policy, PermissionPolicy::Rule::Member* members, size_t membersSize) {
-    policy.SetVersion(1);
+    policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -604,7 +604,7 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -628,7 +628,7 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -758,7 +758,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -785,7 +785,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1014,7 +1014,7 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1040,7 +1040,7 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1169,7 +1169,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1195,7 +1195,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1416,7 +1416,7 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1442,7 +1442,7 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1570,7 +1570,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1596,7 +1596,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1836,7 +1836,7 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -1862,7 +1862,7 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -2006,7 +2006,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     /* install permissions to send signals */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -2032,7 +2032,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -3434,7 +3434,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -3483,7 +3483,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -3626,7 +3626,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
     /* install permissions make method calls */
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -3655,7 +3655,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
 
     //Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -3817,7 +3817,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_3)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -3865,7 +3865,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_3)
     }
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4005,7 +4005,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
     /* install permissions make method calls */
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4034,7 +4034,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
 
     //Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4265,7 +4265,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4314,7 +4314,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     }
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4522,7 +4522,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     /* install permissions make method calls */
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4551,7 +4551,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
 
     //Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4708,7 +4708,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_7)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4762,7 +4762,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_7)
     }
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4901,7 +4901,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
     /* install permissions make method calls */
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -4930,7 +4930,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
 
     //Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5094,7 +5094,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_9)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5148,7 +5148,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_9)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5271,7 +5271,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
     /* install permissions make method calls */
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5300,7 +5300,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
 
     //Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5466,7 +5466,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5589,7 +5589,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5734,7 +5734,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
     /* install permissions make method calls */
     // Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -5763,7 +5763,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
 
     //Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -6721,7 +6721,7 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -6749,7 +6749,7 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -6850,7 +6850,7 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
     /* install permissions make method calls */
     // Permission policy that will be installed on peer2
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -6878,7 +6878,7 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
 
     //Permission policy that will be installed on peer1
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7007,7 +7007,7 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     /* install permissions make method calls */
     // Permission policy that will be installed on peer2
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7036,7 +7036,7 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
 
     //Permission policy that will be installed on peer1
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7196,7 +7196,7 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     /* install permissions make method calls */
     // Permission policy that will be installed on peer2
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7225,7 +7225,7 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
 
     //Permission policy that will be installed on peer1
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7384,7 +7384,7 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     /* install permissions make method calls */
     // Permission policy that will be installed on peer2
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7414,7 +7414,7 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
 
     //Permission policy that will be installed on peer1
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7541,7 +7541,7 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_method_call_should_pass)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7572,7 +7572,7 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_method_call_should_pass)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7670,7 +7670,7 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_recieving_peer_has_incorrect
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7701,7 +7701,7 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_recieving_peer_has_incorrect
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7797,7 +7797,7 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_sending_peer_has_incorrect_p
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7828,7 +7828,7 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_sending_peer_has_incorrect_p
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -7999,7 +7999,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_successfull)
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8031,7 +8031,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_successfull)
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8205,7 +8205,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8238,7 +8238,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     // Permission policy that will be installed on peer2
     GUID128 sgid3Guid;
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8423,7 +8423,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8455,7 +8455,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8629,7 +8629,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
 
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8661,7 +8661,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8846,7 +8846,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -8878,7 +8878,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -9029,7 +9029,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_membership_not_presen
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
+    peer1Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {
@@ -9061,7 +9061,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_membership_not_presen
 
     // Permission policy that will be installed on peer2
     PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
+    peer2Policy.SetSerialNumber(1);
     {
         PermissionPolicy::Acl acls[1];
         {

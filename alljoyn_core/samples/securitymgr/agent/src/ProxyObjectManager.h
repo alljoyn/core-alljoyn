@@ -101,7 +101,7 @@ class ProxyObjectManager :
 
         QStatus GetPolicy(PermissionPolicy& policy);
 
-        QStatus GetPolicyVersion(uint32_t& policyVersion);
+        QStatus GetPolicySerialNumber(uint32_t& policySerialNumber);
 
         QStatus GetDefaultPolicy(PermissionPolicy& policy);
 

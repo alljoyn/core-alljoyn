@@ -220,8 +220,8 @@ class BasicTest :
     QStatus GetMembershipSummaries(const OnlineApplication& app,
                                    vector<MembershipSummary>& summaries);
 
-    QStatus GetPolicyVersion(const OnlineApplication& app,
-                             uint32_t& version);
+    QStatus GetPolicySerialNumber(const OnlineApplication& app,
+                                  uint32_t& serialNumber);
 
     QStatus GetIdentity(const OnlineApplication& app,
                         IdentityCertificateChain& idCertChain);

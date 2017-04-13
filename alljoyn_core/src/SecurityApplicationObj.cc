@@ -318,8 +318,8 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
                 delete [] xData;
                 delete [] yData;
             }
-        } else if (0 == strcmp("PolicyVersion", propName)) {
-            status = val.Set("u", policyVersion);;
+        } else if (0 == strcmp("PolicySerialNumber", propName)) {
+            status = val.Set("u", policySerialNumber);;
         } else if (0 == strcmp("Policy", propName)) {
             status = GetPolicy(val);
         } else if (0 == strcmp("DefaultPolicy", propName)) {
