@@ -25,9 +25,9 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
-package org.alljoyn.config.test;
+package org.alljoyn.config.samples.configclient;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,8 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.alljoyn.about.AboutKeys;
-import org.alljoyn.config.test.ConfigApplication.Device;
+import org.alljoyn.bus.AboutKeys;
+import org.alljoyn.config.samples.configclient.ConfigApplication.Device;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -99,7 +99,6 @@ public class ConfigActivity extends Activity {
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
 
         // General
@@ -158,18 +157,14 @@ public class ConfigActivity extends Activity {
 
             @Override
             public void onReceive(Context context, Intent intent) {
-
                 if (ConfigApplication.ACTION_PASSWORD_IS_INCORRECT.equals(intent.getAction())) {
                     if (passwordAlertDialog != null && !passwordAlertDialog.isShowing()) {
                         passwordAlertDialog.show();
                     }
-                }
-
-                else if (ConfigApplication.ACTION_ERROR.equals(intent.getAction())) {
+                } else if (ConfigApplication.ACTION_ERROR.equals(intent.getAction())) {
                     String error = intent.getStringExtra(ConfigApplication.EXTRA_ERROR);
                     ((ConfigApplication) getApplication()).showAlert(ConfigActivity.this, error);
                 } else if (ConfigApplication.ACTION_CONNECTED_TO_NETWORK.equals(intent.getAction())) {
-
                     String ssid = intent.getStringExtra(ConfigApplication.EXTRA_NETWORK_SSID);
                     currentNetworkTextView.setText(getString(R.string.current_network, ssid));
                 }
@@ -183,12 +178,10 @@ public class ConfigActivity extends Activity {
 
         initPasswordAlertDialog();
         getVersion();
-
     }
 
     // Initialize the pop-up requesting the user to enter its password.
     private void initPasswordAlertDialog() {
-
         AlertDialog.Builder alert = new AlertDialog.Builder(ConfigActivity.this);
         alert.setTitle(R.string.alert_password_incorrect_title);
         alert.setCancelable(false);
@@ -200,7 +193,6 @@ public class ConfigActivity extends Activity {
         alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int whichButton) {
-
                 String devicePassword = input.getText().toString();
                 Device device = ((ConfigApplication) getApplication()).getDevice(deviceId);
                 if (device != null) {
@@ -216,7 +208,6 @@ public class ConfigActivity extends Activity {
 
     // Gets the device config version and displays it
     private void getVersion() {
-
         final AsyncTask<Void, Void, Short> task = new AsyncTask<Void, Void, Short>() {
 
             @Override
@@ -240,7 +231,6 @@ public class ConfigActivity extends Activity {
             }
         };
         task.execute();
-
     }
 
     // Gets the configurable data of the device and display it
@@ -259,12 +249,10 @@ public class ConfigActivity extends Activity {
 
             @Override
             protected void onPreExecute() {
-
             	requestLanguage = deviceLangValue.getText().toString();
-            	device          = ((ConfigApplication) getApplication()).getDevice(deviceId);
+            	device = ((ConfigApplication) getApplication()).getDevice(deviceId);
 
             	if ( requestLanguage.length() == 0 && device != null ) {
-
             		requestLanguage = device.configLanguage;
             	}
 
@@ -274,7 +262,6 @@ public class ConfigActivity extends Activity {
 
             @Override
             protected Void doInBackground(Void... params) {
-
                 if (device != null) {
                     ((ConfigApplication) getApplication()).getConfig(requestLanguage, device.appId);
                 }
@@ -283,7 +270,6 @@ public class ConfigActivity extends Activity {
 
             @Override
             protected void onPostExecute(Void result) {
-
                 Device device = ((ConfigApplication) getApplication()).getDevice(deviceId);
                 if (device != null) {
                     deviceNameValue.setText(device.deviceName);
@@ -299,13 +285,11 @@ public class ConfigActivity extends Activity {
         } else {
             task.execute();
         }
-
     }
 
     // Sets the config data to the values the user entered in the screen.
     @SuppressWarnings("unchecked")
 	private void setConfig() {
-
         final AsyncTask<Map<String, Object>, Void, Void> task = new AsyncTask<Map<String, Object>, Void, Void>() {
 
         	/**
@@ -320,12 +304,10 @@ public class ConfigActivity extends Activity {
 
             @Override
             protected void onPreExecute() {
-
             	requestLanguage = deviceLangValue.getText().toString();
-            	device          = ((ConfigApplication) getApplication()).getDevice(deviceId);
+            	device = ((ConfigApplication) getApplication()).getDevice(deviceId);
 
             	if ( requestLanguage.length() == 0 && device != null ) {
-
             		requestLanguage = device.configLanguage;
             	}
 
@@ -335,7 +317,6 @@ public class ConfigActivity extends Activity {
 
             @Override
             protected Void doInBackground(Map<String, Object>... params) {
-
                 if (device != null) {
                     Map<String, Object> configMap = params[0];
                     ((ConfigApplication) getApplication()).setConfig(configMap, device.appId, requestLanguage);
@@ -348,7 +329,6 @@ public class ConfigActivity extends Activity {
                 Log.d(TAG, "setConfig: onPostExecute");
                 dismissLoadingPopup();
             }
-
         };
 
         HashMap<String, Object> configMap = new HashMap<String, Object>();
@@ -376,15 +356,12 @@ public class ConfigActivity extends Activity {
         	 */
         	private Device device;
 
-
             @Override
             protected void onPreExecute() {
-
             	requestLanguage = deviceLangValue.getText().toString();
-            	device          = ((ConfigApplication) getApplication()).getDevice(deviceId);
+            	device = ((ConfigApplication) getApplication()).getDevice(deviceId);
 
-            	if ( requestLanguage.length() == 0 && device != null ) {
-
+            	if (requestLanguage.length() == 0 && device != null) {
             		requestLanguage = device.configLanguage;
             	}
 
@@ -431,13 +408,11 @@ public class ConfigActivity extends Activity {
         String[] stringArray = new String[listToReset.size()];
         listToReset.toArray(stringArray);
         task.execute(new String[][] { stringArray });
-
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         ((ConfigApplication) getApplication()).stopConfigSession();
         if (mainReceiver != null) {
             try {
@@ -455,7 +430,6 @@ public class ConfigActivity extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-
         switch (item.getItemId()) {
         case R.id.menu_config_refresh:
             getVersion();
@@ -481,12 +455,9 @@ public class ConfigActivity extends Activity {
         alert.setMessage(R.string.alert_factory_reset);
 
         alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-
             @Override
             public void onClick(DialogInterface dialog, int whichButton) {
-
                 final AsyncTask<Void, Void, Void> task = new AsyncTask<Void, Void, Void>() {
-
                     @Override
                     protected void onPreExecute() {
                         Log.d(TAG, "factoryReset: onPreExecute");
@@ -528,9 +499,7 @@ public class ConfigActivity extends Activity {
         alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int whichButton) {
-
                 final AsyncTask<Void, Void, Void> task = new AsyncTask<Void, Void, Void>() {
-
                     @Override
                     protected void onPreExecute() {
                         Log.d(TAG, "restart: onPreExecute");
@@ -561,7 +530,6 @@ public class ConfigActivity extends Activity {
 
     // Sets the device password
     public void setPassword() {
-
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         alert.setTitle(R.string.alert_title_enter_new_password);
 
@@ -573,9 +541,7 @@ public class ConfigActivity extends Activity {
         alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int whichButton) {
-
                 final AsyncTask<Void, Void, Void> task = new AsyncTask<Void, Void, Void>() {
-
                     private String newPassword;
                     private String oldPassword;
 
@@ -613,11 +579,9 @@ public class ConfigActivity extends Activity {
             }
         });
         alert.show();
-
     }
 
-    // Given a device parameter, displays a dialog with the device announcement
-    // data.
+    // Given a device parameter, displays a dialog with the device announcement data.
     private void showAnnounce() {
         Device device = ((ConfigApplication) getApplication()).getDevice(deviceId);
 
@@ -630,15 +594,13 @@ public class ConfigActivity extends Activity {
 
         alert.setPositiveButton(android.R.string.ok, null);
         alert.show();
-
     }
 
     /*
      * (non-Javadoc)
      *
      * @see
-     * android.app.Activity#onConfigurationChanged(android.content.res.Configuration
-     * )
+     * android.app.Activity#onConfigurationChanged(android.content.res.Configuration)
      */
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
@@ -646,11 +608,8 @@ public class ConfigActivity extends Activity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
 
-    // Let the user know the device was not found and we cannot move to the
-    // About
-    // screen
+    // Let the user know the device was not found and we cannot move to the About screen
     private void closeScreen() {
-
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         alert.setTitle(R.string.error);
         alert.setMessage(R.string.device_was_not_found);
@@ -666,8 +625,7 @@ public class ConfigActivity extends Activity {
     }
 
     // Display a progress dialog with the given msg.
-    // If the dialog is already showing - it will update its message to the
-    // given msg.
+    // If the dialog is already showing - it will update its message to the given msg.
     private void showLoadingPopup(String msg) {
         if (loadingPopup != null) {
             if (!loadingPopup.isShowing()) {
@@ -678,7 +636,6 @@ public class ConfigActivity extends Activity {
                 Log.d(TAG, "setMessage with msg = " + msg);
             }
         }
-
     }
 
     // Dismiss the progress dialog (only if it is showing).
@@ -701,6 +658,5 @@ public class ConfigActivity extends Activity {
         });
         alert.show();
         return;
-
     }
 }
