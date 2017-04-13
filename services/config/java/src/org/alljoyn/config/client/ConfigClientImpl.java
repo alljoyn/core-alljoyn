@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 package org.alljoyn.config.client;
 
@@ -36,19 +36,19 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.Variant;
 import org.alljoyn.config.transport.ConfigTransport;
+
 import org.alljoyn.services.common.ClientBaseImpl;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
-import org.alljoyn.services.common.utils.TransportUtil;
+import org.alljoyn.services.common.TransformUtil;
 
 /**
  * A default implementation of the ConfigClient interface
  */
-public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient
-{
-	public final static String TAG = ConfigClientImpl.class.getName();
+public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient {
 
-	public ConfigClientImpl(String deviceName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
-	{
+	public final static String TAG = ConfigClientImpl.class.getSimpleName();
+
+	public ConfigClientImpl(String deviceName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port) {
 		super(deviceName, bus, serviceAvailabilityListener, ConfigTransport.OBJ_PATH, ConfigTransport.class, port);
 	}
 
@@ -56,64 +56,57 @@ public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient
 	public short getVersion() throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces.
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
 		return configTransport.getVersion();
 	}
 
 	@Override
-	public Map<String, Object> getConfig(String languageTag) throws BusException
-	{
+	public Map<String, Object> getConfig(String languageTag) throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
 		Map<String, Variant> configMap = configTransport.GetConfigurations(languageTag);
-		return TransportUtil.fromVariantMap(configMap);
+		return TransformUtil.fromVariantMap(configMap);
 	}
 
 	@Override
-	public void setConfig(Map<String, Object> config, String languageTag) throws BusException
-	{
+	public void setConfig(Map<String, Object> config, String languageTag) throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
-		configTransport.UpdateConfigurations(languageTag, TransportUtil.toVariantMap(config));
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
+		configTransport.UpdateConfigurations(languageTag, TransformUtil.toVariantMap(config));
 	}
 
 	@Override
-	public void setPasscode(String daemonRealm, char[] newPasscode)
-			throws BusException
-	{
+	public void setPasscode(String daemonRealm, char[] newPasscode) throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
-		configTransport.SetPasscode(daemonRealm, TransportUtil.toByteArray(newPasscode));
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
+		configTransport.SetPasscode(daemonRealm, TransformUtil.toByteArray(newPasscode));
 	}
 
 	@Override
-	public void restart() throws BusException
-	{
+	public void restart() throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces.
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
 		configTransport.Restart();
 	}
 
 	@Override
-	public void factoryReset() throws BusException
-	{
+	public void factoryReset() throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
 		configTransport.FactoryReset();
 	}
 
 	@Override
-	public void ResetConfigurations(String language, String[] fieldsToRemove)throws BusException {
-
+	public void ResetConfigurations(String language, String[] fieldsToRemove) throws BusException {
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
+		ConfigTransport configTransport = proxyObj.getInterface(ConfigTransport.class);
 		configTransport.ResetConfigurations(language, fieldsToRemove);
-
 	}
+
 }

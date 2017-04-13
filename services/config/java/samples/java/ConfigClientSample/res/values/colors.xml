@@ -26,14 +26,9 @@
       PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
       TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
       PERFORMANCE OF THIS SOFTWARE.
-      ^M
-
  -->
 
 <resources>
-
-<!-- <color name="background_pressed">#FFFF4F4F</color>
-<color name="background_focused">#FF58A9D4</color>  -->
 
 <color name="background_pressed">#FFBFEFFF</color>
 <color name="background_focused">#FFB2DFEE</color>
