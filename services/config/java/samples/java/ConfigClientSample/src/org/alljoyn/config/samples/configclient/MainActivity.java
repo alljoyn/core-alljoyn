@@ -25,15 +25,15 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
-package org.alljoyn.config.test;
+package org.alljoyn.config.samples.configclient;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
 
-import org.alljoyn.config.test.ConfigApplication.Device;
+import org.alljoyn.config.samples.configclient.ConfigApplication.Device;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -57,8 +57,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 /**
- * The DeviceListActivity displays all the devices we received announcements
- * from.
+ * The DeviceListActivity displays all the devices we received announcements from.
  */
 public class MainActivity extends Activity implements OnCreateContextMenuListener {
 
@@ -70,7 +69,6 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_layout);
         ConfigApplication application = (ConfigApplication) getApplication();
@@ -78,10 +76,8 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
         // ************** AllJoyn Connect/Disconnect Button ******************
         m_AJConnect = (Button) findViewById(R.id.AllJoynConnect);
         m_AJConnect.setOnClickListener(new OnClickListener() {
-
             @Override
             public void onClick(View v) {
-
                 if (m_AJConnect.getText().equals(getString(R.string.AllJoynConnect))) {
                     allJoynConnect();
                 } else if (m_AJConnect.getText().equals(getString(R.string.AllJoynDisconnect))) {
@@ -100,7 +96,6 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
         deviceAdapter = new ArrayAdapter<Device>(this, android.R.layout.simple_list_item_1);
         listView.setAdapter(deviceAdapter);
         listView.setOnItemClickListener(new OnItemClickListener() {
-
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Device selectedDevice = deviceAdapter.getItem(position);
@@ -108,30 +103,22 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
                 intent.putExtra(ConfigApplication.EXTRA_DEVICE_ID, selectedDevice.appId);
                 startActivity(intent);
             }
-
         });
 
         // ************** Class receiver ******************
         m_receiver = new BroadcastReceiver() {
-
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (ConfigApplication.ACTION_DEVICE_FOUND.equals(intent.getAction()) || ConfigApplication.ACTION_DEVICE_LOST.equals(intent.getAction())) {
-
                     deviceAdapter.clear();
                     HashMap<UUID, Device> deviceList = ((ConfigApplication) getApplication()).getDeviceList();
                     if (deviceList == null) {
                         return;
                     }
-
                     addAllDevices(deviceList.values());
-                }
-
-                else if (ConfigApplication.ACTION_CONNECTED_TO_NETWORK.equals(intent.getAction())) {
-
+                } else if (ConfigApplication.ACTION_CONNECTED_TO_NETWORK.equals(intent.getAction())) {
                     String ssid = intent.getStringExtra(ConfigApplication.EXTRA_NETWORK_SSID);
                     m_currentNetwork.setText(getString(R.string.current_network, ssid));
-
                 }
             }
         };
@@ -140,7 +127,6 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
         filter.addAction(ConfigApplication.ACTION_DEVICE_LOST);
         filter.addAction(ConfigApplication.ACTION_CONNECTED_TO_NETWORK);
         registerReceiver(m_receiver, filter);
-
     }
 
     /**
@@ -149,9 +135,7 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
      * @param devices
      */
     private void addAllDevices(Collection<Device> devices) {
-
         for (Device device : devices) {
-
             deviceAdapter.add(device);
         }
     }
@@ -168,12 +152,9 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
         alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(final DialogInterface dialog, int whichButton) {
-
                 runOnUiThread(new Runnable() {
-
                     @Override
                     public void run() {
-
                         dialog.dismiss();
                         ((ConfigApplication) getApplication()).setRealmName(input.getText().toString());
                         m_AJConnect.setText(R.string.AllJoynDisconnect);
@@ -195,7 +176,6 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
             @Override
             public void onClick(final DialogInterface dialog, int whichButton) {
                 runOnUiThread(new Runnable() {
-
                     @Override
                     public void run() {
                         dialog.dismiss();
@@ -209,7 +189,6 @@ public class MainActivity extends Activity implements OnCreateContextMenuListene
 
         alert.setNegativeButton(android.R.string.cancel, null);
         alert.show();
-
     }
 
     @Override
