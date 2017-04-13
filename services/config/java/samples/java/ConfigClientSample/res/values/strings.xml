@@ -27,8 +27,6 @@
       PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
       TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
       PERFORMANCE OF THIS SOFTWARE.
-      ^M
-
  -->
 
 <resources>
@@ -36,18 +34,6 @@
     <!-- General -->
     <string name="app_name">Config Client</string>
     <string name="current_network">Current network: %s</string>
-
-   <!-- Scan Wifi Activity -->
-    <!--
-	<string name="Scan_WIFI_networks">Scan WIFI networks</string>
-	<string name="scan_wifi_text">Choose network to connect</string>
-	<string name="enter_wifi_password_title">Enter password</string>
-    <string name="enter_wifi_password_message">Enter password if needed. If your WIFI is free, leave this field empty</string>
-    <string name="connecting_to">"Connecting to %s"</string>
-    <string name="failed_to_connect_to_wifi_title">Failed to connect</string>
-    <string name="failed_to_connect_to_wifi_message">"Failed to connect to %s. Please try to refresh your list, or enter another password and try again"</string>
-	<string name="wifi_activity_scanning">Scanning&#8230;</string>
-     -->
 
 	<!-- Announced Names Activity -->
 	<string name="AllJoynConnect">Connect to AllJoyn</string>
@@ -113,6 +99,8 @@
 	<string name="alert_msg_disconnect_from_alljoyn">Are you sure you want to disconnect from AllJoyn?</string>
 	<string name="config_device_name">Name</string>
 	<string name="config_default_lang">Default lang</string>
-	<string name="get_announce_about_map_null">About map:\nAbout map is null\n</string>
+	<string name="get_announce_about_map_null">About map:
+\nAbout map is null
+\n</string>
 
 </resources>
