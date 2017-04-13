@@ -25,17 +25,17 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 package org.alljoyn.config.server;
 
 /**
- * A handler of passpword change requests coming from remote peer clients.
+ * A handler of password change requests coming from remote peer clients.
  */
 public interface SetPasswordHandler {
 
 	/**
-	 * Handler of passpword change requests coming from remote peer clients.
+	 * Handler of password change requests coming from remote peer clients.
 	 * @param peerName
 	 * @param password
 	 */

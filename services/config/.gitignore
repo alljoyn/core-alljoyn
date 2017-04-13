@@ -1,3 +1,9 @@
+*.iml
+.idea
+.grade
+gradle.properties
+out
+
 *.a
 *.class
 *.jar

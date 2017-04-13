@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
 package org.alljoyn.config;
 
@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.alljoyn.bus.AboutObjectDescription;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
@@ -48,14 +49,14 @@ import org.alljoyn.config.server.PassphraseChangedListener;
 import org.alljoyn.config.server.RestartHandler;
 import org.alljoyn.config.server.SetPasswordHandler;
 import org.alljoyn.config.transport.ConfigTransport;
+
 import org.alljoyn.services.common.BusObjectDescription;
 import org.alljoyn.services.common.LanguageNotSupportedException;
 import org.alljoyn.services.common.PropertyStore;
-import org.alljoyn.services.common.PropertyStore.Filter;
 import org.alljoyn.services.common.PropertyStoreException;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.ServiceCommonImpl;
-import org.alljoyn.services.common.utils.TransportUtil;
+import org.alljoyn.services.common.TransformUtil;
 
 /**
  * An implementation of the ConfigService interface
@@ -68,7 +69,12 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
     /********* Sender *********/
 
+    @Deprecated // See m_dataStore
     private PropertyStore m_propertyStore;
+
+    /* Property data store. Replacement of the deprecated m_propertyStore. */
+    private AboutDataStore m_dataStore;
+
     private ConfigInterface m_configInterface;
     private RestartHandler m_restartHandler;
     private FactoryResetHandler m_factoryResetHandler;
@@ -85,28 +91,45 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
      * @return {@link ConfigService} instance
      */
     public static ConfigService getInstance() {
-        if (m_instance == null)
+        if (m_instance == null) {
             m_instance = new ConfigServiceImpl();
+        }
         return (ConfigService) m_instance;
     }
 
     private ConfigServiceImpl() {
         super();
-        TAG = "ioe" + ConfigClientImpl.class.getSimpleName();
+        TAG = ConfigServiceImpl.class.getSimpleName();
     }
 
     /**
      * **************** Server **************
      */
+
     @Override
+    public void startConfigServer(AboutDataStore dataStore, ConfigChangeListener configChangeListener,
+                                  RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
+                                  PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
+        setBus(bus);
+        super.startServer();
+        m_dataStore = dataStore;
+        m_restartHandler = restartHandler;
+        m_factoryResetHandler = factoryResetHandler;
+        m_passphraseChangeListener = passphraseChangeListener;
+        m_configChangeListener = configChangeListener;
+
+        registerConfigInterface();
+    }
+
+    @Deprecated @Override
     public void startConfigServer(ConfigDataStore configDataStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
-            PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
+                                  PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
         startConfigServer((PropertyStore)configDataStore, configChangeListener, restartHandler, factoryResetHandler, passphraseChangeListener, bus);
     }
 
-    @Override
+    @Deprecated @Override
     public void startConfigServer(PropertyStore propertyStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
-            PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
+                                  PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
         setBus(bus);
         super.startServer();
         m_propertyStore = propertyStore;
@@ -118,12 +141,12 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         registerConfigInterface();
     }
 
-    private void registerConfigInterface() {
+    private void registerConfigInterface() throws Exception {
         m_configInterface = new ConfigInterface();
         Status status = getBus().registerBusObject(m_configInterface, ConfigTransport.OBJ_PATH);
         getLogger().debug(TAG, String.format("BusAttachment.registerBusObject(m_aboutConfigInterface): %s", status));
         if (status != Status.OK) {
-            return;
+            throw new BusException(String.format("Failed to register bus object %s : %s", ConfigInterface.INTERFACE_NAME, status));
         }
     }
 
@@ -133,8 +156,9 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
      * @return the ConfigInterface field
      */
     public ConfigInterface getConfigInterface() {
-        if (m_configInterface == null)
+        if (m_configInterface == null) {
             m_configInterface = new ConfigInterface();
+        }
         return m_configInterface;
     }
 
@@ -176,7 +200,18 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
             Map<String, Object> persistedConfiguration = new HashMap<String, Object>();
 
             try {
-                m_propertyStore.readAll(languageTag, Filter.WRITE, persistedConfiguration);
+                if (m_dataStore != null) {
+                    m_dataStore.readAll(languageTag, AboutDataStore.Filter.WRITE, persistedConfiguration);
+                } else {
+                    // TODO: remove in release 17.04
+                    m_propertyStore.readAll(languageTag, PropertyStore.Filter.WRITE, persistedConfiguration);
+                }
+            } catch (ErrorReplyBusException e) {
+                if (e.getErrorName().equals(AboutDataStore.UNSUPPORTED_LANGUAGE)) {
+                    throw e;
+                } else {
+                    e.printStackTrace();
+                }
             } catch (PropertyStoreException e) {
                 if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
                     throw new LanguageNotSupportedException();
@@ -185,7 +220,7 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
                 }
             }
 
-            Map<String, Variant> configuration = TransportUtil.toVariantMap(persistedConfiguration);
+            Map<String, Variant> configuration = TransformUtil.toVariantMap(persistedConfiguration);
             return configuration;
         }
 
@@ -193,7 +228,18 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         public void ResetConfigurations(String language, String[] fieldsToRemove) throws BusException {
             for (String key : fieldsToRemove) {
                 try {
-                    m_propertyStore.reset(key, language);
+                    if (m_dataStore != null) {
+                        m_dataStore.reset(key, language);
+                    } else {
+                        // TODO: remove in release 17.04
+                        m_propertyStore.reset(key, language);
+                    }
+                } catch (ErrorReplyBusException e) {
+                    if (e.getErrorName().equals(AboutDataStore.UNSUPPORTED_LANGUAGE)) {
+                        throw e;
+                    } else {
+                        e.printStackTrace();
+                    }
                 } catch (PropertyStoreException e) {
                     if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
                         throw new LanguageNotSupportedException();
@@ -208,35 +254,48 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
         @Override
         public void UpdateConfigurations(String languageTag, Map<String, Variant> configuration) throws BusException {
+            if (m_dataStore == null && m_propertyStore == null) {
+                return;
+            }
 
-            Map<String, Object> toObjectMap = TransportUtil.fromVariantMap(configuration);
+            Map<String, Object> toObjectMap = TransformUtil.fromVariantMap(configuration);
 
             // notify application
-            if (m_propertyStore != null) {
-                for (Entry<String, Object> entry : toObjectMap.entrySet()) {
-                    try {
+            for (Entry<String, Object> entry : toObjectMap.entrySet()) {
+                try {
+                    if (m_dataStore != null) {
+                        m_dataStore.update(entry.getKey(), languageTag, entry.getValue());
+                    } else {
+                        // TODO: remove in release 17.04
                         m_propertyStore.update(entry.getKey(), languageTag, entry.getValue());
-                    } catch (PropertyStoreException e) {
-                        if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
-                            throw new LanguageNotSupportedException();
-                        } else if (e.getReason() == PropertyStoreException.INVALID_VALUE) {
-                            throw new ErrorReplyBusException("org.alljoyn.Error.InvalidValue", "Invalid value");
-                        } else {
-                            e.printStackTrace();
-                        }
+                    }
+                } catch (ErrorReplyBusException e) {
+                    if (e.getErrorName().equals(AboutDataStore.UNSUPPORTED_LANGUAGE)
+                            || e.getErrorName().equals(AboutDataStore.INVALID_VALUE)) {
+                        throw e;
+                    } else {
+                        e.printStackTrace();
+                    }
+                } catch (PropertyStoreException e) {
+                    if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
+                        throw new LanguageNotSupportedException();
+                    } else if (e.getReason() == PropertyStoreException.INVALID_VALUE) {
+                        throw new ErrorReplyBusException("org.alljoyn.Error.InvalidValue", "Invalid value");
+                    } else {
+                        e.printStackTrace();
                     }
                 }
+            }
 
-                if (m_configChangeListener != null) {
-                    m_configChangeListener.onConfigChanged(configuration, languageTag);
-                }
+            if (m_configChangeListener != null) {
+                m_configChangeListener.onConfigChanged(configuration, languageTag);
             }
         }
 
         @Override
         public void SetPasscode(String daemonRealm, byte[] passphrase) throws BusException {
             if (m_setPasswordHandler != null) {
-                m_setPasswordHandler.setPassword(daemonRealm, TransportUtil.toCharArray(passphrase));
+                m_setPasswordHandler.setPassword(daemonRealm, TransformUtil.toCharArray(passphrase));
             }
 
             if (m_passphraseChangeListener != null) {
@@ -247,7 +306,14 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         @Override
         public void FactoryReset() throws BusException {
             try {
-                m_propertyStore.resetAll();
+                if (m_dataStore != null) {
+                    m_dataStore.resetAll();
+                } else {
+                    // TODO: remove in release 17.04
+                    m_propertyStore.resetAll();
+                }
+            } catch (ErrorReplyBusException e) {
+                e.printStackTrace();
             } catch (PropertyStoreException e) {
                 e.printStackTrace();
             }
@@ -277,9 +343,14 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         m_setPasswordHandler = setPasswordHandler;
     }
 
-    @Override
+    @Deprecated @Override
     public List<BusObjectDescription> getBusObjectDescriptions() {
         return null;
     }
 
-}// AboutConfigServiceImpl
+    @Override
+    public List<AboutObjectDescription> getAboutObjectDescriptions() {
+        return null;
+    }
+
+}
