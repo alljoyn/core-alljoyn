@@ -25,9 +25,9 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 
-package org.alljoyn.config.test;
+package org.alljoyn.config.samples.configclient;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.alljoyn.about.AboutKeys;
+import org.alljoyn.bus.AboutKeys;
 import org.alljoyn.bus.AboutListener;
 import org.alljoyn.bus.AboutObjectDescription;
 import org.alljoyn.bus.BusAttachment;
@@ -51,11 +51,11 @@ import org.alljoyn.config.ConfigService;
 import org.alljoyn.config.ConfigServiceImpl;
 import org.alljoyn.config.client.ConfigClient;
 import org.alljoyn.config.transport.ConfigTransport;
-import org.alljoyn.services.android.security.AuthPasswordHandler;
-import org.alljoyn.services.android.security.SrpAnonymousKeyListener;
-import org.alljoyn.services.android.utils.AndroidLogger;
-import org.alljoyn.services.common.utils.TransportUtil;
+import org.alljoyn.config.samples.configclient.security.AuthPasswordHandler;
+import org.alljoyn.config.samples.configclient.security.SrpAnonymousKeyListener;
+import org.alljoyn.services.common.TransformUtil;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.content.BroadcastReceiver;
@@ -73,8 +73,8 @@ import android.util.Log;
 /**
  * Handles all the AllJoyn devices that it received announcements from, and
  * enables the user to perform all the config service methods
- *
  */
+@SuppressLint("LongLogTag")
 public class ConfigApplication extends Application implements AuthPasswordHandler, AboutListener {
 
     public static final String TAG = "ConfigClient";
@@ -89,7 +89,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
     private String daemonName = null;
     private BroadcastReceiver mainReceiver;
 
-    // private SoftAPDetails m_curentPeer;
     private WifiManager wifiManager;
 
     /**
@@ -160,15 +159,13 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
          *            The device friendly name
          * @param port
          *            The device port
-         * @param interfaces
+         * @param objectDescriptions
          *            The device supported interfaces
-         * @param aboutMap
+         * @param aboutData
          *            The device about fields
-         * @param password
-         *            The device password
          */
-        public Device(UUID appId, String busName, String deviceFriendlyName, short port, AboutObjectDescription[] objectDescriptions, Map<String, Object> aboutData) {
-
+        public Device(UUID appId, String busName, String deviceFriendlyName, short port,
+                      AboutObjectDescription[] objectDescriptions, Map<String, Object> aboutData) {
             this.appId = appId;
             this.busName = busName;
             this.deviceName = deviceFriendlyName;
@@ -255,9 +252,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
 
             @Override
             public void onReceive(Context context, Intent intent) {
-
                 if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(intent.getAction())) {
-
                     NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
 
                     String str = "";
@@ -287,7 +282,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
     /**
      * Sets the daemon realm name.
      *
-     * @param realmName
+     * @param daemonName
      *            The daemon realm name.
      */
     public void setRealmName(String daemonName) {
@@ -304,7 +299,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      * Connect to the Alljoyn bus and register bus objects
      */
     public void doConnect() {
-
         /* All communication through AllJoyn begins with a BusAttachment. */
         DaemonInit.PrepareDaemon(getApplicationContext());
         String ss = getPackageName();
@@ -322,7 +316,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             configService.startConfigClient(busAttachment);
 
             keyStoreFileName = getApplicationContext().getFileStreamPath("alljoyn_keystore").getAbsolutePath();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -339,16 +332,13 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
                 busAttachment.releaseName(daemonName);
                 Log.w(TAG, "Failed to advertise daemon name " + daemonName);
             } else {
-                Log.d(TAG, "Succefully advertised daemon name " + daemonName);
+                Log.d(TAG, "Successfully advertised daemon name " + daemonName);
             }
         }
 
-        // Set keyListener
+        // Set KeyListener
         if (keyStoreFileName != null && keyStoreFileName.length() > 0) {
-
-            final String[] authMechanisms = new String[] { "ALLJOYN_SRP_KEYX", "ALLJOYN_ECDHE_PSK" };
-
-            SrpAnonymousKeyListener authListener = new SrpAnonymousKeyListener(ConfigApplication.this, new AndroidLogger(), authMechanisms);
+            SrpAnonymousKeyListener authListener = new SrpAnonymousKeyListener(ConfigApplication.this);
             Status authStatus = busAttachment.registerAuthListener(authListener.getAuthMechanismsAsString(), authListener, keyStoreFileName);
             Log.d(TAG, "BusAttachment.registerAuthListener status = " + authStatus);
             if (authStatus != Status.OK) {
@@ -361,7 +351,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      * Disconnect from Alljoyn bus and unregister bus objects.
      */
     public void doDisconnect() {
-
         /*
          * It is important to unregister the BusObject before disconnecting from
          * the bus. Failing to do so could result in a resource leak.
@@ -382,20 +371,17 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
                 busAttachment.disconnect();
                 busAttachment = null;
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     // Add an AllJoyn device to the application
-    private void addDevice(UUID deviceId, String busName, short port, String deviceFriendlyName, String defaultLang, AboutObjectDescription[] objectDescriptions, Map<String, Object> aboutData) {
-
+    private void addDevice(UUID deviceId, String busName, short port, String deviceFriendlyName,
+                           String defaultLang, AboutObjectDescription[] objectDescriptions, Map<String, Object> aboutData) {
         Device oldDevice = devicesMap.get(deviceId);
 
-        if (oldDevice != null) {// device already exist. update the fields that
-                                // might have changed.
-
+        if (oldDevice != null) { // Device already exist. Update the fields that might have changed.
             oldDevice.busName = busName;
             oldDevice.aboutData = aboutData;
             oldDevice.deviceName = deviceFriendlyName;
@@ -449,9 +435,17 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
         return devicesMap.get(deviceId);
     }
 
+    // Retrieve a device by its bus name
+    public Device getDevice(String busName) {
+        if (busName == null) return null;
+        for (Device device : devicesMap.values()) {
+            if (device.busName.equals(busName)) return device;
+        }
+        return null;
+    }
+
     // Display a dialog with the given errorMsg and displays it.
     public void showAlert(Context context, String errorMsg) {
-
         AlertDialog.Builder alert = new AlertDialog.Builder(context);
         alert.setTitle("Error");
         alert.setMessage(errorMsg);
@@ -474,32 +468,25 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      *             If failed to create the configClient or to establish session
      */
     public void startConfigSession(Device peer) throws Exception {
-
         if (peer == null || peer.busName == null) {
-
             throw new IllegalArgumentException("Received peer or peer.busName is undefined");
         }
 
         // If the configClient is already connected with the received peer, no
         // need to create an additional session
         if (configClient != null && configClient.getPeerName().equals(peer.busName)) {
-
             if (configClient.isConnected()) {
-
                 Log.d(TAG, "ConfigClient is already in the session with the peer: '" + peer.busName + "', sid: '" + configClient.getSessionId() + "'");
-
                 return;
             }
         }
         // Need to create a new configClient
         else {
             try {
-
                 // Try to close the previous connection, if exists
                 stopConfigSession();
                 configClient = configService.createFeatureConfigClient(peer.busName, null, peer.port);
             } catch (Exception e) {
-
                 String m = e.getMessage();
                 Log.d(TAG, "startSession: Exception: " + m);
                 e.printStackTrace();
@@ -508,13 +495,10 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             }
         }
 
-        // Instead of checking the returned status, we check the isConnected()
-        // method.
-        // It takes into account both the Status.Ok and the
-        // Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED
+        // Instead of checking the returned status, we check the isConnected() method.
+        // It takes into account both the Status.Ok and the Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED
         Status status = configClient.connect();
         if (!configClient.isConnected()) {
-
             throw new Exception("Failed to connect to the peer: '" + peer.busName + "', Status: '" + status + "'");
         }
 
@@ -525,9 +509,7 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      * End the session with the config server
      */
     public void stopConfigSession() {
-
         if (configClient != null) {
-
             Log.d(TAG, "Closing connection with the peer: '" + configClient.getPeerName() + "'");
             configClient.disconnect();
         }
@@ -541,7 +523,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      * @return the config service version.
      */
     public Short getConfigVersion(UUID deviceId) {
-
         short configVersion = -1;
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
@@ -555,7 +536,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
         }
 
         try {
-
             startConfigSession(device);
             configVersion = configClient.getVersion();
         } catch (Exception e) {
@@ -571,7 +551,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      * @return the config service fields.
      */
     public void getConfig(String lang, UUID deviceId) {
-
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
             return;
@@ -582,7 +561,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             return;
         }
         try {
-
             startConfigSession(device);
             Map<String, Object> configMap = configClient.getConfig(lang);
             Log.d(TAG, "GET_CONFIG: Config information was received");
@@ -594,14 +572,12 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             e.printStackTrace();
             updateTheUiAboutError("GET_CONFIG: Exception: " + e.toString());
         }
-
     }
 
     /**
      * Factory reset the alljoyn device.
      */
     public void doFactoryReset(UUID deviceId) {
-
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
             return;
@@ -613,11 +589,11 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             return;
         }
         try {
-
             startConfigSession(device);
             configClient.factoryReset();
+            device.password = SrpAnonymousKeyListener.DEFAULT_PINCODE;
+            busAttachment.clearKeyStore();
         } catch (Exception e) {
-
             e.printStackTrace();
             updateTheUiAboutError("FACTORY RESET: Exception: " + e.toString());
         }
@@ -627,7 +603,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      * Restart the alljoyn device
      */
     public void doRestart(UUID deviceId) {
-
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
             return;
@@ -638,7 +613,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             return;
         }
         try {
-
             startConfigSession(device);
             configClient.restart();
         } catch (Exception e) {
@@ -654,7 +628,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      *            the password to set.
      */
     public void setPasscodeOnServerSide(String newpassword, UUID deviceId) {
-
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
             return;
@@ -665,7 +638,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
             return;
         }
         try {
-
             startConfigSession(device);
             configClient.setPasscode(daemonName, newpassword.toCharArray());
             Log.i(TAG_PASSWORD, "calling setPasscode on the server side");
@@ -692,7 +664,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      *            the map containing all the fields to be set.
      */
     public void setConfig(Map<String, Object> configMap, UUID deviceId, String lang) {
-
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
             return;
@@ -705,7 +676,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
         }
 
         try {
-
             startConfigSession(device);
             configClient.setConfig(configMap, lang);
         } catch (Exception e) {
@@ -722,7 +692,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      *            the map containing all the fields to be reset.
      */
     public void resetConfiguration(String[] fieldsToRemove, String lang, UUID deviceId) {
-
         if (deviceId == null) {
             updateTheUiAboutError(getString(R.string.no_peer_selected));
             return;
@@ -735,7 +704,6 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
         }
 
         try {
-
             startConfigSession(device);
             configClient.ResetConfigurations(lang, fieldsToRemove);
         } catch (Exception e) {
@@ -755,38 +723,27 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
      */
     @Override
     public char[] getPassword(String peerName) {
-
         Log.i(TAG_PASSWORD, "AuthPasswordHandler asked for password");
-        if (peerName != null) {
-            Collection<Device> devices = devicesMap.values();
-            Iterator<Device> iterator = devices.iterator();
-            for (; iterator.hasNext();) {
-                Device device = iterator.next();
-                if (device.busName.equals(peerName)) {
-                    char[] password = device.password;
-                    Log.i(TAG_PASSWORD, "Client password = " + String.valueOf(password) + " for peerName " + peerName + ", Name=" + device.deviceName);
-                    if (password != null) {
-                        return password;
-                    }
-                }
-            }
+        Device device = getDevice(peerName);
+        if (device != null) {
+            Log.i(TAG_PASSWORD, "Client password = " + String.valueOf(device.password) + " for peerName " + peerName + ", deviceName=" + device.deviceName);
+            return device.password;
         } else {
-            Log.e(TAG_PASSWORD, "peerName == null, retrn null");
+            Log.e(TAG_PASSWORD, "peerName == null, return null");
+            return null;
         }
-        return null;
     }
 
     /*
      * (non-Javadoc)
      *
      * @see
-     * org.alljoyn.services.android.security.AuthPasswordHandler#completed(java
-     * .lang.String, java.lang.String, boolean)
+     * org.alljoyn.services.android.security.AuthPasswordHandler#completed(java.lang.String, java.lang.String, boolean)
      */
     @Override
     public void completed(String mechanism, String authPeer, boolean authenticated) {
         if (!authenticated) {
-            Log.i(TAG_PASSWORD, " ** " + authPeer + " failed to authenticate");
+            Log.w(TAG_PASSWORD, " ** " + authPeer + " failed to authenticate");
             Intent intent = new Intent(ACTION_PASSWORD_IS_INCORRECT);
             sendBroadcast(intent);
         } else {
@@ -857,17 +814,16 @@ public class ConfigApplication extends Application implements AuthPasswordHandle
     public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
         Map<String, Object> newMap = new HashMap<String, Object>();
         try {
-
-            newMap = TransportUtil.fromVariantMap(aboutData);
+            newMap = TransformUtil.fromVariantMap(aboutData);
             UUID deviceId = (UUID) newMap.get(AboutKeys.ABOUT_APP_ID);
             String deviceFriendlyName = (String) newMap.get(AboutKeys.ABOUT_DEVICE_NAME);
             String defaultLanguage = (String) newMap.get(AboutKeys.ABOUT_DEFAULT_LANGUAGE);
 
             Log.d(TAG, "onAnnouncement received: with parameters: busName:" + busName + ", port:" + port + ", deviceid" + deviceId + ", deviceName:" + deviceFriendlyName);
             addDevice(deviceId, busName, port, deviceFriendlyName, defaultLanguage, objectDescriptions, newMap);
-
         } catch (BusException e) {
             e.printStackTrace();
         }
     }
+
 }
