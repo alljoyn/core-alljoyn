@@ -25,16 +25,17 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-******************************************************************************/
+ ******************************************************************************/
 package org.alljoyn.config;
 
 import org.alljoyn.bus.AboutDataListener;
 
 import org.alljoyn.services.common.PropertyStore;
 
+/**
+ * @deprecated see org.alljoyn.config.AboutDataStore
+ */
+@Deprecated
 public interface ConfigDataStore extends AboutDataListener, PropertyStore
 {
-	// Since the PropertyStore class is deprecated, we trivially extend it
-	// so that when it is removed the interface definition can just be copied
-	// here.
 }
