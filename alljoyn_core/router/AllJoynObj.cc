@@ -2687,9 +2687,10 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
          * if the session Id of the endpoint which is leaving matches this session id.
          */
         while ((it2 != b2bEndpoints.end())) {
-            if ((b2bEp->GetSessionId() == it2->second->GetSessionId()) && (it2->second->GetRemoteGUID() != otherSideGuid)) {
+            SessionId sid = b2bEp->GetSessionId();
+            if ((sid != 0) && (sid == it2->second->GetSessionId()) && (it2->second->GetRemoteGUID() != otherSideGuid)) {
                 MsgArg detachSessionArgs[2];
-                detachSessionArgs[0].Set("u", b2bEp->GetSessionId());
+                detachSessionArgs[0].Set("u", sid);
                 detachSessionArgs[1].Set("s", vepName.c_str());
                 Message sigMsg(bus);
                 QStatus status = sigMsg->SignalMsg("us",
