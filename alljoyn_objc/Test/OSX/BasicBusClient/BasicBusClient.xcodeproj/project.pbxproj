@@ -572,15 +572,9 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicBusClient/BasicBusClient-Prefix.pch";
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/inc\"",
-				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/include/\"";
 				INFOPLIST_FILE = "BasicBusClient/BasicBusClient-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/lib\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/$(CONFIGURATION)/\"";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
@@ -589,6 +583,7 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
+					"-lAllJoynFramework_macOS",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -603,15 +598,9 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicBusClient/BasicBusClient-Prefix.pch";
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/inc\"",
-				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/include/\"";
 				INFOPLIST_FILE = "BasicBusClient/BasicBusClient-Info.plist";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/lib\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/AllJoynFramework/$(CONFIGURATION)/\"";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
@@ -620,6 +609,7 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
+					"-lAllJoynFramework_macOS",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
