@@ -46,11 +46,6 @@
 
 @implementation ViewController
 
-@synthesize secureObjectProxy = _secureObjectProxy;
-@synthesize startButton = _startButton;
-@synthesize clientController = _clientController;
-@synthesize password = _password;
-
 - (NSString *)applicationName
 {
     return kAppName;
@@ -74,7 +69,6 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-	// Do any additional setup after loading the view, typically from a nib.
 
     // allocate the client bus controller and set bus properties
     //
@@ -85,7 +79,6 @@
     self.clientController.allowRemoteMessages = YES;
     self.clientController.multiPointSessionsEnabled = YES;
     self.clientController.delegate = self;
-
 }
 
 - (IBAction)didTouchStartButton:(id)sender
@@ -98,12 +91,6 @@
         [self.clientController start];
         [self.startButton setTitle:@"Stop" forState:UIControlStateNormal];
     }
-}
-
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 - (void)shouldUnloadProxyObjectOnBus:(AJNBusAttachment *)bus
@@ -138,7 +125,7 @@
 {
     // enable security for the bus
     //
-    NSString *keystoreFilePath = @"Documents/alljoyn_keystore/s_central.ks";
+    NSString *keystoreFilePath = [NSString stringWithFormat:@"%@/alljoyn_keystore/s_central.ks", [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0]];
     // Enable the authentication you want to use (ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA)
     QStatus status = [bus enablePeerSecurity:@"ALLJOYN_ECDHE_PSK" authenticationListener:self keystoreFileName:keystoreFilePath sharing:YES];
     NSString *message;
@@ -205,7 +192,7 @@
                     "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n"
                     "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n"
                     "-----END CERTIFICATE-----"};
-                    credentials.certificateChain = [NSString stringWithUTF8String:certchain];
+                credentials.certificateChain = [NSString stringWithUTF8String:certchain];
             }
         }
     }

@@ -395,7 +395,7 @@ static dispatch_group_t group;
             
             queue = nil;
             
-            NSLog(@"Threads completed for iteration %d", i);
+            NSLog(@"Threads completed for iteration %ld", (long)i);
             
             [delegate didCompleteIteration:i totalIterations:iterations];
         }
