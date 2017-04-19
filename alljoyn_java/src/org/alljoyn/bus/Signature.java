@@ -33,9 +33,12 @@ import org.alljoyn.bus.annotation.Position;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,7 +52,7 @@ public final class Signature {
     public static Object[] structArgs(Object struct) throws IllegalAccessException,
                                                             BusException {
         Class<?> type = struct.getClass();
-        Field[] fields = type.getFields();
+        Field[] fields = getInstanceFields(type);
 
         /*
          * If the given struct is an instance of Object[], there is no implementation class from
@@ -74,7 +77,7 @@ public final class Signature {
     }
 
     public static Field[] structFields(Class<?> cls) throws BusException {
-        Field[] fields = cls.getFields();
+        Field[] fields = getInstanceFields(cls);
         Field[] orderedFields = new Field[fields.length];
         for (Field field : fields) {
             Position position = field.getAnnotation(Position.class);
@@ -88,7 +91,7 @@ public final class Signature {
     }
 
     public static Type[] structTypes(Class<?> cls) throws AnnotationBusException {
-        Field[] fields = cls.getFields();
+        Field[] fields = getInstanceFields(cls);
         Type[] types = new Type[fields.length];
         for (Field field : fields) {
             Position position = field.getAnnotation(Position.class);
@@ -102,7 +105,7 @@ public final class Signature {
     }
 
     public static String structSig(Class<?> cls) throws AnnotationBusException {
-        Field[] fields = cls.getFields();
+        Field[] fields = getInstanceFields(cls);
         String[] sig = new String[fields.length];
         for (Field field : fields) {
             Position position = field.getAnnotation(Position.class);
@@ -221,5 +224,22 @@ public final class Signature {
             sig += typeSig(types[i], (signatures == null) ? null : signatures[i]);
         }
         return sig;
+    }
+
+    /**
+     * Returns an array containing {@code Field} objects reflecting all the accessible
+     * public instance fields of the class or interface represented by the given
+     * {@code Class} object. Synthetic fields (added by the compiler) are also omitted.
+     * @param cls
+     */
+    private static Field[] getInstanceFields(Class<?> cls) {
+        Field[] fields = cls.getFields();
+        List<Field> instanceFields = new ArrayList<Field>();
+        for (Field field : fields) {
+            if (!field.isSynthetic() && !Modifier.isStatic(field.getModifiers())) {
+                instanceFields.add(field);
+            }
+        }
+        return instanceFields.toArray(new Field[]{});
     }
 }
