@@ -63,8 +63,8 @@
 
              <fileset dir="src" defaultexcludes="yes" includes="*/**" excludes="SConscript"/>
 
-             <doctitle><![CDATA[<h1>AllJoyn&trade; Config Service Version 15.04.00</h1>]]></doctitle>
-             <bottom><![CDATA[<small>AllJoyn&trade; Config Service Java API Reference Manual Version 15.04.00<br/>Copyright AllSeen Alliance, Inc. All Rights Reserved.<br/><br/>AllSeen, AllSeen Alliance, and AllJoyn are trademarks of the AllSeen Alliance, Inc in the United States and other jurisdictions.<br/><br/><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN "AS-IS" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>]]></bottom>
+             <doctitle><![CDATA[<h1>AllJoyn&trade; Config Service Version 16.10.00a</h1>]]></doctitle>
+             <bottom><![CDATA[<small>AllJoyn&trade; Config Service Java API Reference Manual Version 16.10.00a<br/>Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source Project (AJOSP) Contributors and others. All rights reserved.<br/><br/>AllSeen, AllSeen Alliance, and AllJoyn are trademarks of the AllSeen Alliance, Inc in the United States and other jurisdictions.<br/><br/><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN "AS-IS" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>]]></bottom>
         </javadoc>
      </target>
 
