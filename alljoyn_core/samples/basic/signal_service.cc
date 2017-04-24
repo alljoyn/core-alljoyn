@@ -39,6 +39,7 @@
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+
 #include <qcc/platform.h>
 
 #include <signal.h>

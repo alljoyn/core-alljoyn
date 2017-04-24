@@ -26,6 +26,7 @@
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+
 #include "SecurityAgentImpl.h"
 
 #include <qcc/Debug.h>

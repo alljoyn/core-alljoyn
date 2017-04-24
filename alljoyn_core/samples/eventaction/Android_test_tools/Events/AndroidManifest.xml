@@ -27,10 +27,11 @@
      TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
      PERFORMANCE OF THIS SOFTWARE.
 -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.event.tester"
-    android:versionCode="1"
-    android:versionName="00.00.01">
+    android:versionCode="16100097"
+    android:versionName="16.10.00a">
 
     <uses-sdk android:minSdkVersion="16" />
 

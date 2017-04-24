@@ -1043,7 +1043,6 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
     //
 <xsl:apply-templates select="./property" mode="objc-interface-property-descriptions"/>
 </xsl:if>
-
 <xsl:if test="count(method)>0">
     // add the methods to the interface description
     //

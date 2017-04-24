@@ -215,7 +215,6 @@ TestSignalWithNoArgsSignalMember = interfaceDescription->GetMember("TestSignalWi
     ChatSignalMember = interfaceDescription->GetMember("Chat");
     assert(ChatSignalMember);
 
-
     return status;
 }
 
@@ -830,7 +829,6 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     QStatus status = ER_OK;
 
     AJNInterfaceDescription *interfaceDescription;
-
 
     //
     // BasicStringsDelegate interface (org.alljoyn.bus.sample.strings)

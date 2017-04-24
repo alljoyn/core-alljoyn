@@ -193,7 +193,7 @@ static NSString * const kPathPrefix = @"/test/";
 
         [self.aboutData setSoftwareVersion:@"1.0"];
 
-        [self.aboutData setHardwareVersion:@"00.00.01"];
+        [self.aboutData setHardwareVersion:@"16.10.00a"];
 
         [self.aboutData setSupportUrl:@"some.random.url"];
 

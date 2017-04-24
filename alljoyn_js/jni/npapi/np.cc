@@ -26,6 +26,7 @@
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "npn.h"
 
 #include "PluginData.h"
@@ -130,7 +131,7 @@ NP_EXPORT(char*) NP_GetPluginVersion()
 {
     Initialize();
     QCC_DbgPrintf(("%s", __FUNCTION__));
-    return const_cast<char*>("00.00.01");
+    return const_cast<char*>("16.10.00a");
 }
 
 NP_EXPORT(char*) NP_GetMIMEDescription()

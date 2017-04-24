@@ -32,7 +32,12 @@
 #include "SignatureUtils.h"
 #include "SocketFdHost.h"
 #include <assert.h>
-#include <math.h>
+/* due to a change in gcc6, cmath must be included now */
+#if defined(__GNUC__) && (__GNUC__ >= 6)
+ #include <cmath>
+#else
+ #include <math.h>
+#endif
 #include <stdlib.h>
 #include <qcc/Debug.h>
 
