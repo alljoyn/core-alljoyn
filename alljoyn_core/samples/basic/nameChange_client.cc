@@ -2,8 +2,9 @@
  * @file
  * @brief  Sample implementation of an AllJoyn client.
  *
- * This is a simple client that will run and change the 'name' property of the
- * 'org.alljoyn.Bus.signal_sample' service then exit.
+ * This is a simple client that can change the 'name' property of the
+ * 'org.alljoyn.Bus.signal_sample' service then exit. Can also be used
+ * to run introspect on 'org.alljoyn.Bus.signal_sample'.
  */
 
 /******************************************************************************
@@ -39,9 +40,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
+#include <memory>
 
 #include <qcc/Mutex.h>
 #include <qcc/String.h>
+#include <qcc/Debug.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
@@ -156,15 +159,33 @@ QStatus ConnectToBus(void)
     return status;
 }
 
-/** Register a bus listener in order to get discovery indications and report the event to stdout. */
-void RegisterBusListener(void)
-{
-    /* Static bus listener */
-    static MyBusListener s_busListener;
+class ServiceSignalReceiver : public MessageReceiver {
+  public:
+    ServiceSignalReceiver() : m_signalReceivedFlag(false), m_msg(nullptr) { }
+    void SignalHandler(const InterfaceDescription::Member* member,
+                       const char* sourcePath, Message& msg) {
+        QCC_UNUSED(member);
+        QCC_UNUSED(sourcePath);
+        m_signalReceivedFlag = true;
+        m_msg.reset(new Message(msg));
+    }
+    void WaitForSignal() {
+        size_t count = 0;
+        while (!m_signalReceivedFlag && (count <= 100)) {
+            if (0 == (count++ % 10)) {
+                printf("Waited %zu seconds for signal.\n", count / 10);
+            }
 
-    s_msgBus->RegisterBusListener(s_busListener);
-    printf("BusListener registered.\n");
-}
+    #ifdef _WIN32
+            Sleep(100);
+    #else
+            usleep(100 * 1000);
+    #endif
+        }
+    }
+    bool m_signalReceivedFlag;
+    unique_ptr<Message> m_msg;
+};
 
 /** Begin discovery on the well-known name of the service to be called, report the result to
  *  stdout, and return the result status.
@@ -200,44 +221,88 @@ QStatus WaitForJoinSessionCompletion(void)
 #endif
     }
 
-    return s_joinComplete && !s_interrupt ? ER_OK : ER_ALLJOYN_JOINSESSION_REPLY_CONNECT_FAILED;
+    return (s_joinComplete && !s_interrupt) ? ER_OK : ER_ALLJOYN_JOINSESSION_REPLY_CONNECT_FAILED;
 }
 
-/** Introspect the remote object, change the 'name' property, report the result to stdout, and return
- * the result status.
- */
-QStatus DoNameChange(char* newName)
+void DoCleanup(void)
 {
-    s_sessionLock->Lock(MUTEX_CONTEXT);
-    ProxyBusObject remoteObj(*s_msgBus, SERVICE_NAME, SERVICE_PATH, s_sessionId);
-    s_sessionLock->Unlock(MUTEX_CONTEXT);
-    QStatus status = remoteObj.IntrospectRemoteObject();
+    fflush(stdout);
+    if (s_sessionId != 0) {
+        s_msgBus->LeaveJoinedSession(s_sessionId);
+    }
+    s_msgBus->CancelFindAdvertisedName(SERVICE_NAME);
+    if (s_msgBus->IsConnected()) {
+        s_msgBus->Disconnect();
+    }
+    if (ER_OK == s_msgBus->Stop()) {
+        s_msgBus->Join();
+    }
+}
 
+QStatus DoNameChange(ProxyBusObject& remoteObj, const String& newName)
+{
+    QStatus status = remoteObj.SetProperty(INTERFACE_NAME, "name", newName.c_str());
     if (ER_OK == status) {
-        if (newName) {
-            status = remoteObj.SetProperty(INTERFACE_NAME, "name", newName);
-
-            if (ER_OK == status) {
-                printf("SetProperty to change the 'name' property to '%s' was successful.\n", newName);
-            } else {
-                printf("Error calling SetProperty to change the 'name' property.\n");
-            }
-        } else {
-            status = ER_END_OF_DATA;
-            printf("Error new name not given: nameChange_client [new name].\n");
-        }
+        printf("SetProperty to change the 'name' property to '%s' was successful.\n", newName.c_str());
     } else {
-        printf("Introspection of '%s' (path='%s') failed.\n", SERVICE_NAME, SERVICE_PATH);
-        printf("Make sure the service is running before launching the client.\n");
+        printf("Error calling SetProperty to change the 'name' property (%s).\n", QCC_StatusText(status));
     }
 
     return status;
+}
+
+QStatus DoIntrospect(ProxyBusObject& remoteObj, const String& lang)
+{
+    QStatus status = remoteObj.IntrospectRemoteObject();
+    if (ER_OK != status) {
+        printf("Introspection of '%s' (path='%s') failed (%s).\n", SERVICE_NAME, SERVICE_PATH, QCC_StatusText(status));
+        return status;
+    }
+    uint32_t timeout = 30000;
+
+    Message replyMsg(*s_msgBus);
+    if (!lang.empty()) {
+        MsgArg msgArg("s", lang.c_str());
+        printf("Calling %s.IntrospectWithDescription.\n", org::allseen::Introspectable::InterfaceName);
+        status = remoteObj.MethodCall(org::allseen::Introspectable::InterfaceName, "IntrospectWithDescription", &msgArg, 1, replyMsg, timeout);
+    } else {
+        printf("Calling %s.Introspect.\n", org::freedesktop::DBus::Introspectable::InterfaceName);
+        status = remoteObj.MethodCall(org::freedesktop::DBus::Introspectable::InterfaceName, "Introspect", nullptr, 0, replyMsg, timeout);
+    }
+
+    /* Parse the XML reply */
+    if (ER_OK == status) {
+        printf("Introspection XML in sample:\n%s\n\n", replyMsg->GetArg(0)->v_string.str);
+        qcc::String ident = replyMsg->GetSender();
+        ident += " : ";
+        ident += replyMsg->GetObjectPath();
+        status = remoteObj.ParseXml(replyMsg->GetArg(0)->v_string.str, ident.c_str());
+    } else {
+        printf("Introspection failed (%s).\n", QCC_StatusText(status));
+    }
+
+    return status;
+}
+
+static void usage(void)
+{
+    printf("Usage: nameChange_Client [-h] [-i [lang]] [-n <nameToChangeTo>] \n\n");
+    printf("Options:\n");
+    printf("   -h                    = Print this help message\n");
+    printf("   -i [lang]             = Call introspect. If language is provided calls %s.IntrospectWithDescription.\n", org::allseen::Introspectable::InterfaceName);
+    printf("                           Supported languages are: en, de, hi. When no language is provided call %s.Introspect.\n", org::freedesktop::DBus::Introspectable::InterfaceName);
+    printf("   -n <nameToChangeTo>   = Change name to \"nameToChangeTo\" and wait for sessionless signal nameChanged in response.\n");
+    printf("\n");
 }
 
 /** Main entry point */
 int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     QCC_UNUSED(envArg);
+    MyBusListener s_busListener;
+    bool callIntrospect = false;
+    String lang;
+    String newName;
 
     if (AllJoynInit() != ER_OK) {
         return 1;
@@ -255,10 +320,39 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     /* Install SIGINT handler */
     signal(SIGINT, SigIntHandler);
 
+    /* Parse command line args */
+    for (int i = 1; i < argc; ++i) {
+        if (0 == strcmp("-h", argv[i])) {
+            usage();
+            exit(0);
+        } else if (0 == strcmp("-n", argv[i])) {
+            ++i;
+            if (i == argc) {
+                cout << "option " << argv[i - 1] << " requires a parameter" << endl;
+                usage();
+                exit(1);
+            } else {
+                newName = argv[i];
+            }
+        } else if (0 == strcmp("-i", argv[i])) {
+            ++i;
+            if ((i != argc) && (0 != strcmp("-h", argv[i])) && (0 != strcmp("-n", argv[i]))) {
+                lang = argv[i];
+            } else {
+                --i;
+            }
+            callIntrospect = true;
+        } else {
+            printf("Unknown option %s\n", argv[i]);
+            usage();
+            exit(1);
+        }
+    }
+
     QStatus status = ER_OK;
 
     /* Create message bus */
-    s_msgBus = new BusAttachment("myApp", true);
+    s_msgBus = new BusAttachment("nameChange_client", true);
     s_sessionLock = new qcc::Mutex();
     /* This test for nullptr is only required if new() behavior is to return nullptr
      * instead of throwing an exception upon an out of memory failure.
@@ -275,8 +369,9 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
         status = ConnectToBus();
     }
 
+    s_msgBus->RegisterBusListener(s_busListener);
+
     if (ER_OK == status) {
-        RegisterBusListener();
         status = FindAdvertisedName();
     }
 
@@ -284,13 +379,54 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
         status = WaitForJoinSessionCompletion();
     }
 
-    if (ER_OK == status) {
-        status = DoNameChange(argc > 1 ? argv[1] : nullptr);
+    if ((ER_OK == status) && callIntrospect) {
+        s_sessionLock->Lock(MUTEX_CONTEXT);
+        ProxyBusObject remoteObj(*s_msgBus, SERVICE_NAME, SERVICE_PATH, s_sessionId);
+        s_sessionLock->Unlock(MUTEX_CONTEXT);
+        status = DoIntrospect(remoteObj, lang);
     }
 
-    /* Deallocate bus */
-    delete s_msgBus;
-    delete s_sessionLock;
+    if ((ER_OK == status) && !newName.empty()) {
+        s_sessionLock->Lock(MUTEX_CONTEXT);
+        ProxyBusObject remoteObj(*s_msgBus, SERVICE_NAME, SERVICE_PATH, s_sessionId);
+        s_sessionLock->Unlock(MUTEX_CONTEXT);
+        ServiceSignalReceiver signalReceiver;
+        status = remoteObj.IntrospectRemoteObject();
+        if (ER_OK == status) {
+            s_msgBus->AddMatch("sessionless='t'");
+            status = s_msgBus->RegisterSignalHandler(&signalReceiver,
+                                                     static_cast<MessageReceiver::SignalHandler>(&ServiceSignalReceiver::SignalHandler),
+                                                     remoteObj.GetInterface(INTERFACE_NAME)->GetMember("nameChanged"),
+                                                     nullptr
+                                                     );
+            if (ER_OK != status) {
+                printf("RegisterSignalHandler failed (%s).\n", QCC_StatusText(status));
+            } else {
+                status = DoNameChange(remoteObj, newName);
+                signalReceiver.WaitForSignal();
+                if (signalReceiver.m_signalReceivedFlag) {
+                    printf("Received sessionless signal echoing new name '%s'.\n", (*signalReceiver.m_msg.get())->GetArg(0)->v_string.str);
+                }
+                s_msgBus->UnregisterSignalHandler(&signalReceiver,
+                                                  static_cast<MessageReceiver::SignalHandler>(&ServiceSignalReceiver::SignalHandler),
+                                                  remoteObj.GetInterface(INTERFACE_NAME)->GetMember("nameChanged"),
+                                                  nullptr
+                                                  );
+            }
+        } else {
+            printf("Introspection of '%s' (path='%s') failed (%s).\n", SERVICE_NAME, SERVICE_PATH, QCC_StatusText(status));
+            printf("Make sure the service is running before launching the client.\n");
+        }
+    }
+
+    /* Clean up */
+    DoCleanup();
+    if (s_msgBus != nullptr) {
+        delete s_msgBus;
+    }
+    if (s_sessionLock != nullptr) {
+        delete s_sessionLock;
+    }
 
     printf("Name change client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
