@@ -327,7 +327,7 @@ int32_t AJ_snprintf(char* buffer, size_t count, const char* format, ...)
     int32_t length = _vsnprintf(buffer, count, format, argp);
     QCC_ASSERT(length >= -1);
 
-    if (length == -1) {
+    if ((length == -1) || (length == count)) {
         buffer[count - 1] = '\0';
     }
 
