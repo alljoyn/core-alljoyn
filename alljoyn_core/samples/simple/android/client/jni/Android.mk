@@ -13,7 +13,8 @@ LOCAL_PATH := $(call my-dir)
 # here that reference the /lib and /inc directories in order to work
 # with the Jenkins build.
 #
-ifndef $(ALLJOYN_DIST)
+ifndef ALLJOYN_DIST
+    $(warning Android.mk: Environment variable 'ALLJOYN_DIST' absolute path not set - using relative path instead)
     ALLJOYN_DIST_LIB := ../../../../lib
     ALLJOYN_DIST_INC := ../../../inc
 else

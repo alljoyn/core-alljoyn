@@ -27,6 +27,7 @@
      TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
      PERFORMANCE OF THIS SOFTWARE.
 -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.eventaction"
     android:versionCode="1"
