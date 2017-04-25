@@ -3,11 +3,12 @@
  * @brief Sample implementation of an AllJoyn service.
  *
  * This sample will show how to set up an AllJoyn service that will registered with the
- * well-known name 'org.alljoyn.Bus.signal_sample'.  The service will register a signal method 'nameChanged'
- * as well as a property 'name'.
+ * well-known name 'org.alljoyn.Bus.signal_sample'.
+ * The service will register a sessioncast signal method 'nameChanged', sessionless signal
+ * method 'nameChangedSessionless' as well as a property 'name'.
  *
  * When the property 'sampleName' is changed by any client this service will emit the new name using
- * the 'nameChanged' signal.
+ * the 'nameChanged' sessioncast signal and 'nameChangedSessionless' sessionless signal.
  *
  */
 
@@ -62,9 +63,7 @@ using namespace qcc;
 using namespace ajn;
 
 /** Static top level message bus object */
-static BusAttachment* s_msgBus = NULL;
-
-static SessionId s_sessionId = 0;
+static BusAttachment* s_msgBus = nullptr;
 
 static const char* INTERFACE_NAME = "org.alljoyn.Bus.signal_sample";
 static const char* SERVICE_NAME = "org.alljoyn.Bus.signal_sample";
@@ -79,9 +78,9 @@ static void CDECL_CALL SigIntHandler(int sig)
     s_interrupt = true;
 }
 
-static const char* tags[] = { "en", "de" };
+static const char* tags[] = { "en", "de", "hi"  };
 static const char* objId = "obj";
-static const char* objDescription[] =  { "This is the object", "DE: This is the object" };
+static const char* objDescription[] =  { "This is the object", "Es ist das Objekt", "Ye Object hai" };
 
 class MyTranslator : public Translator {
   public:
@@ -89,7 +88,7 @@ class MyTranslator : public Translator {
     virtual ~MyTranslator() { }
 
     virtual size_t NumTargetLanguages() {
-        return 2;
+        return sizeof(tags) / sizeof(*tags);
     }
 
     virtual void GetTargetLanguage(size_t index, qcc::String& ret) {
@@ -100,8 +99,12 @@ class MyTranslator : public Translator {
         QCC_UNUSED(sourceLanguage);
 
         size_t i = 0;
-        if (targetLanguage && (0 == strcasecmp(targetLanguage, "de"))) {
-            i = 1;
+        if (targetLanguage != nullptr) {
+            if (strcmp(targetLanguage, "de") == 0) {
+                i = 1;
+            } else if (strcmp(targetLanguage, "hi") == 0) {
+                i = 2;
+            }
         }
 
         if (0 == strcmp(source, objId)) {
@@ -117,55 +120,75 @@ class BasicSampleObject : public BusObject {
   public:
     BasicSampleObject(BusAttachment& bus, const char* path) :
         BusObject(path),
-        nameChangedMember(NULL),
+        nameChangedMember(nullptr),
+        nameChangedSessionlessMember(nullptr),
         prop_name("Default name")
     {
         /* Add org.alljoyn.Bus.signal_sample interface */
-        InterfaceDescription* intf = NULL;
+        InterfaceDescription* intf = nullptr;
         QStatus status = bus.CreateInterface(INTERFACE_NAME, intf);
         if (status == ER_OK) {
-            intf->AddSignal("nameChanged", "s", "newName", 0);
+            intf->AddSignal("nameChanged", "s", "newName", MEMBER_ANNOTATE_SESSIONCAST);
+            intf->AddSignal("nameChangedSessionless", "s", "newName", MEMBER_ANNOTATE_SESSIONLESS);
+            intf->AddMethod("testMethod", "s", "s", "inStr,outStr");
             intf->AddProperty("name", "s", PROP_ACCESS_RW);
 
-            intf->SetDescriptionForLanguage("This is the interface", "en");
-            intf->SetDescriptionForLanguage("DE: This is the interface", "de");
+            intf->SetDescriptionForLanguage("This is the first interface", "en");
+            intf->SetDescriptionForLanguage("Dies ist das erste Schnittstelle", "de");
+            intf->SetDescriptionForLanguage("Ye pehla Interface hai", "hi");
             intf->SetMemberDescriptionForLanguage("nameChanged", "Emitted when the name changes", "en");
-            intf->SetMemberDescriptionForLanguage("nameChanged", "DE: Emitted when the name changes", "de");
-            intf->SetArgDescriptionForLanguage("nameChanged", "newName", "This is the new name", "en");
-            intf->SetArgDescriptionForLanguage("nameChanged", "newName", "DE: This is the new name", "de");
+            intf->SetMemberDescriptionForLanguage("nameChanged", "Emittiert, wenn der Name andert", "de");
+            intf->SetMemberDescriptionForLanguage("nameChanged", "Naam badalne pe emitte karen", "hi");
+            intf->SetMemberDescriptionForLanguage("nameChangedSessionless", "Emitted when the name changes", "en");
+            intf->SetMemberDescriptionForLanguage("nameChangedSessionless", "Emittiert, wenn der Name andert", "de");
+            intf->SetMemberDescriptionForLanguage("nameChangedSessionless", "Naam badalne pe emitte karen", "hi");
+            intf->SetMemberDescriptionForLanguage("testMethod", "This is the first method", "en");
+            intf->SetMemberDescriptionForLanguage("testMethod", "Dies ist die erste Methode", "de");
+            intf->SetMemberDescriptionForLanguage("testMethod", "Ye pehla method hai", "hi");
             intf->SetPropertyDescriptionForLanguage("name", "This is the actual name", "en");
-            intf->SetPropertyDescriptionForLanguage("name", "DE: This is the actual name", "de");
+            intf->SetPropertyDescriptionForLanguage("name", "Dies ist der eigentliche Name", "de");
+            intf->SetPropertyDescriptionForLanguage("name", "Ye asli naam hai", "hi");
 
             intf->Activate();
         } else {
-            printf("Failed to create interface %s\n", INTERFACE_NAME);
+            printf("Failed to create interface %s (%s).\n", INTERFACE_NAME, QCC_StatusText(status));
         }
 
         status = AddInterface(*intf);
 
         if (status == ER_OK) {
-            /* Register the signal handler 'nameChanged' with the bus */
+            /* Register the signal handlers with the bus */
             nameChangedMember = intf->GetMember("nameChanged");
-            QCC_ASSERT(nameChangedMember);
+            nameChangedSessionlessMember = intf->GetMember("nameChangedSessionless");
+            QCC_ASSERT(nameChangedMember != nullptr);
+            QCC_ASSERT(nameChangedSessionlessMember != nullptr);
         } else {
-            printf("Failed to Add interface: %s", INTERFACE_NAME);
+            printf("Failed to Add interface: %s (%s).", INTERFACE_NAME, QCC_StatusText(status));
         }
 
         SetDescription("", objId);
         SetDescriptionTranslator(&translator);
     }
 
-    QStatus EmitNameChangedSignal(qcc::String newName)
+    QStatus EmitNameChangedSignals(const qcc::String& newName)
     {
-        printf("Emiting Name Changed Signal.\n");
-        QCC_ASSERT(nameChangedMember);
-        if (0 == s_sessionId) {
-            printf("Sending NameChanged signal without a session id\n");
-        }
-        MsgArg arg("s", newName.c_str());
-        uint8_t flags = ALLJOYN_FLAG_GLOBAL_BROADCAST;
-        QStatus status = Signal(NULL, 0, *nameChangedMember, &arg, 1, 0, flags);
+        QCC_ASSERT(nameChangedMember != nullptr);
+        QCC_ASSERT(nameChangedSessionlessMember != nullptr);
 
+        MsgArg arg("s", newName.c_str());
+        arg.Stabilize();
+        printf("Emiting nameChanged sessioncast signal.\n");
+        QStatus status = Signal(nullptr, SESSION_ID_ALL_HOSTED, *nameChangedMember, &arg, 1);
+        if (status != ER_OK) {
+            printf("Emiting signal failed (%s).\n", QCC_StatusText(status));
+            return status;
+        }
+        uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
+        printf("Emiting nameChangedSessionless sessionless signal.\n");
+        status = Signal(nullptr, 0, *nameChangedSessionlessMember, &arg, 1, 0, flags);
+        if (status != ER_OK) {
+            printf("Emiting signal failed (%s).\n", QCC_StatusText(status));
+        }
         return status;
     }
 
@@ -191,9 +214,9 @@ class BasicSampleObject : public BusObject {
 
         QStatus status = ER_OK;
         if ((0 == strcmp("name", propName)) && (val.typeId == ALLJOYN_STRING)) {
-            printf("Set 'name' property was called changing name to %s\n", val.v_string.str);
+            printf("Set 'name' property was called changing name to '%s', current name: '%s'\n", val.v_string.str, prop_name.c_str());
             prop_name = val.v_string.str;
-            EmitNameChangedSignal(prop_name);
+            EmitNameChangedSignals(prop_name);
         } else {
             status = ER_BUS_NO_SUCH_PROPERTY;
         }
@@ -201,6 +224,7 @@ class BasicSampleObject : public BusObject {
     }
   private:
     const InterfaceDescription::Member* nameChangedMember;
+    const InterfaceDescription::Member* nameChangedSessionlessMember;
     qcc::String prop_name;
     MyTranslator translator;
 };
@@ -306,6 +330,18 @@ QStatus AdvertiseName(TransportMask mask)
     return status;
 }
 
+void DoCleanup(void)
+{
+    fflush(stdout);
+    s_msgBus->CancelAdvertiseName(SERVICE_NAME, TRANSPORT_ANY);
+    if (s_msgBus->IsConnected()) {
+        s_msgBus->Disconnect();
+    }
+    if (ER_OK == s_msgBus->Stop()) {
+        s_msgBus->Join();
+    }
+}
+
 /** Wait for SIGINT before continuing. */
 void WaitForSigInt(void)
 {
@@ -342,15 +378,18 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     signal(SIGINT, SigIntHandler);
 
     QStatus status = ER_OK;
-    BasicSampleObject* testObj = NULL;
+    BasicSampleObject* testObj = nullptr;
 
     /* Create message bus */
     s_msgBus = new BusAttachment("myApp", true);
+    if (s_msgBus == nullptr) {
+        status = ER_OUT_OF_MEMORY;
+    }
 
-    /* This test for NULL is only required if new() behavior is to return NULL
+    /* This test for nullptr is only required if new() behavior is to return nullptr
      * instead of throwing an exception upon an out of memory failure.
      */
-    if (s_msgBus) {
+    if (ER_OK == status) {
         /* Register a bus listener */
         if (ER_OK == status) {
             s_msgBus->RegisterBusListener(s_busListener);
@@ -395,12 +434,14 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     } else {
         status = ER_OUT_OF_MEMORY;
     }
-
     /* Clean up */
-    delete s_msgBus;
-    s_msgBus = NULL;
-    delete testObj;
-    testObj = NULL;
+    DoCleanup();
+    if (s_msgBus != nullptr) {
+        delete s_msgBus;
+    }
+    if (testObj != nullptr) {
+        delete testObj;
+    }
 
     printf("Signal service exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
