@@ -390,7 +390,7 @@ public class ContactsClient extends Activity {
                          * It is possible to join multiple session however joining multiple
                          * sessions is not shown in this sample.
                          */
-                        if (! mIsConnected){
+                        if (!mIsConnected){
                             Message msg = obtainMessage(JOIN_SESSION, name);
                             sendMessage(msg);
                         }
@@ -399,13 +399,21 @@ public class ContactsClient extends Activity {
 
                 Status status = mBus.connect();
                 logStatus("BusAttachment.connect()", status);
+                if (Status.OK != status) {
+                    finish();
+                    return;
+                }
 
                 status = mBus.findAdvertisedName(SERVICE_NAME);
                 logStatus(String.format("BusAttachement.findAdvertisedName(%s)", SERVICE_NAME), status);
+                if (Status.OK != status) {
+                    finish();
+                    return;
+                }
                 break;
             }
             case JOIN_SESSION: {
-                if (mIsStoppingDiscovery) {
+                if (mIsConnected || mIsStoppingDiscovery) {
                     break;
                 }
 

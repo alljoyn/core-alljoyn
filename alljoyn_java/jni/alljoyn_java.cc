@@ -8781,6 +8781,11 @@ QStatus JBusObject::Signal(const char* destination, SessionId sessionId, const c
     if (!signal) {
         return ER_BUS_OBJECT_NO_SUCH_MEMBER;
     }
+
+    if (sessionId == SESSION_ID_ALL_HOSTED) {
+        return BusObject::Signal(destination, sessionId, *signal, args, numArgs, timeToLive, flags, NULL);
+    }
+
     return BusObject::Signal(destination, sessionId, *signal, args, numArgs, timeToLive, flags, &msg);
 }
 

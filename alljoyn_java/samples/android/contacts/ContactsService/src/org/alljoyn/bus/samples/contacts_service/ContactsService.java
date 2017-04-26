@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-*
+ *
  *  This is a sample code demonstrating how to use AllJoyn messages to pass complex data types.
  *  This will send a String array containing all of the contacts found on the phone.
  *  or the list of phone number(s) and e-mail addresses for a contact based on their name.
@@ -354,9 +354,17 @@ public class ContactsService extends Activity {
 
                 Status status = mBus.registerBusObject(mService, "/addressbook");
                 logStatus("BusAttachment.registerBusObject()", status);
+                if (status != Status.OK) {
+                    finish();
+                    return;
+                }
 
                 status = mBus.connect();
                 logStatus("BusAttachment.connect()", status);
+                if (status != Status.OK) {
+                    finish();
+                    return;
+                }
 
                 Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
 
@@ -378,28 +386,38 @@ public class ContactsService extends Activity {
                 });
                 logStatus(String.format("BusAttachment.bindSessionPort(%d, %s)",
                                         contactPort.value, sessionOpts.toString()), status);
-
                 if (status != Status.OK) {
                     finish();
                     return;
                 }
 
-                status = mBus.requestName(SERVICE_NAME, BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE);
+                int flag = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING | BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
+                status = mBus.requestName(SERVICE_NAME, flag);
                 logStatus("BusAttachment.requestName()", status);
 
-                status = mBus.advertiseName(SERVICE_NAME, SessionOpts.TRANSPORT_ANY);
-                logStatus(String.format("BusAttachment.advertiseName(%s)", SERVICE_NAME), status);
+                if (status == Status.OK) {
+                    status = mBus.advertiseName(SERVICE_NAME, sessionOpts.transports);
+                    logStatus(String.format("BusAttachment.advertiseName(%s)", SERVICE_NAME), status);
+
+                    if (status != Status.OK) {
+                        status = mBus.releaseName(SERVICE_NAME);
+                        logStatus(String.format("BusAttachment.releaseName(%s)", SERVICE_NAME), status);
+                        finish();
+                        return;
+                    }
+                }
                 break;
             }
+
             case DISCONNECT: {
                 mBus.unregisterBusObject(mService);
                 mBus.disconnect();
                 mBusHandler.getLooper().quit();
                 break;
             }
+
             default:
                 break;
-
             }
         }
     }

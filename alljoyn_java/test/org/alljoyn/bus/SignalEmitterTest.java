@@ -322,7 +322,7 @@ public class SignalEmitterTest extends TestCase {
     /* Build an interface definition that contains the signal Ping(string). */
     private static BusObjectInfo buildBusObjectInfo(String path) {
         SignalDef signalDef = new SignalDef(DYN_SIGNAL_NAME, "s", DYN_IFACE_NAME);
-        signalDef.addArg( new ArgDef("string", "s") );
+        signalDef.addArg( new ArgDef("string", "s", ArgDef.DIRECTION_OUT) );
 
         InterfaceDef interfaceDef = new InterfaceDef(DYN_IFACE_NAME, true, null);
         interfaceDef.addSignal(signalDef);
@@ -336,7 +336,7 @@ public class SignalEmitterTest extends TestCase {
        and has matching criteria for signal handling. */
     private static BusObjectInfo buildClientBusObjectInfo(String rule, String source) {
         SignalDef signalDef = new SignalDef(DYN_SIGNAL_NAME, "s", DYN_IFACE_NAME, rule, source);
-        signalDef.addArg(new ArgDef("string", "s"));
+        signalDef.addArg(new ArgDef("string", "s", ArgDef.DIRECTION_OUT));
 
         InterfaceDef interfaceDef = new InterfaceDef(DYN_IFACE_NAME, true, null);
         interfaceDef.addSignal(signalDef);

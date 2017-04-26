@@ -25,8 +25,8 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
- *
  ******************************************************************************/
+
 #ifndef _ALLJOYN_JABOUTOBJECT_H
 #define _ALLJOYN_JABOUTOBJECT_H
 

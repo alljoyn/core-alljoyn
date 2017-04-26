@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
+    Project (AJOSP) Contributors and others.
+
+    SPDX-License-Identifier: Apache-2.0
+
+    All rights reserved. This program and the accompanying materials are
+    made available under the terms of the Apache License, Version 2.0
+    which accompanies this distribution, and is available at
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+    Alliance. All rights reserved.
+
+    Permission to use, copy, modify, and/or distribute this software for
+    any purpose with or without fee is hereby granted, provided that the
+    above copyright notice and this permission notice appear in all
+    copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+    WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+    AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+    DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+-->
+
+<config>
+    <keys>
+        <key name="Passphrase" writable="n" announce="n" public="n">
+            <value>000000</value>
+        </key>
+        <key name="DefaultLanguage" writable="y" announce="y" public="y">
+            <value>en</value>
+        </key>
+        <key name="DeviceName" writable="y" announce="y" public="y">
+            <value language="en">AllJoyn_Hello</value>
+            <value language="fr">AllJoyn_Bonjour</value>
+            <value language="he">AllJoyn_שלום</value>
+            <value language="ar">AllJoyn_مرحبا</value>
+        </key>
+        <key name="DeviceId" writable="n" announce="y" public="y">
+            <value>4564545455454</value>
+        </key>
+        <key name="AppName" writable="n" announce="y" public="y">
+            <value language="en">Config Server(en)</value>
+            <value language="fr">Config Server(fr)</value>
+            <value language="he">Config Server(he)</value>
+            <value language="ar">Config Server(ar)</value>
+        </key>
+        <key name="Description" writable="n" announce="y" public="y">
+            <value language="en">The best refrigerator</value>
+            <value language="fr">La meilleure réfrigérateur</value>
+            <value language="he">המקרר הטוב ביותר</value>
+            <value language="ar">أفضل ثلاجة</value>
+        </key>
+        <key name="Manufacturer" writable="n" announce="y" public="y">
+            <value language="en">IsraelHQ(EN)</value>
+            <value language="fr">ISraelHQ(FR)</value>
+            <value language="he">ISraelHQ(HE)</value>
+            <value language="ar">ISraelHQ(AR)</value>
+        </key>
+        <key name="ModelNumber" writable="n" announce="y" public="y">
+            <value>1.1.12.4</value>
+        </key>
+        <key name="DateOfManufacture" writable="n" announce="y" public="y">
+            <value>10/10/2014</value>
+        </key>
+        <key name="SoftwareVersion" writable="n" announce="y" public="y">
+            <value>2.2.2.2</value>
+        </key>
+        <key name="AJSoftwareVersion" writable="n" announce="n" public="y">
+            <value>3.3.1</value>
+        </key>
+        <key name="HardwareVersion" writable="n" announce="y" public="y">
+            <value>3.3.3.3</value>
+        </key>
+        <key name="SupportUrl" writable="n" announce="y" public="y">
+            <value>http://www.allseenalliance.org</value>
+        </key>
+    </keys>
+</config>
