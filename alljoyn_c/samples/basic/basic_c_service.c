@@ -37,6 +37,7 @@
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+
 #ifndef _WIN32
  #define _DEFAULT_SOURCE /* usleep, glibc >=2.20 */
  #define _BSD_SOURCE /* usleep */

@@ -2025,7 +2025,7 @@ public class BusAttachmentTest extends TestCase {
 
         InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
         MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
-        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("inStr", "s", ArgDef.DIRECTION_IN) );
         methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
         interfaceDef.addMethod(methodDef);
 
@@ -2067,7 +2067,7 @@ public class BusAttachmentTest extends TestCase {
 
         InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
         MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
-        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("inStr", "s", ArgDef.DIRECTION_IN) );
         methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
         interfaceDef.addMethod(methodDef);
 
@@ -2633,7 +2633,7 @@ public class BusAttachmentTest extends TestCase {
 
         // BusSignal: void EmitSomething(String something)
         SignalDef signalDef = new SignalDef("EmitSomething", "s", ifaceName);
-        signalDef.addArg( new ArgDef("something", "s") );
+        signalDef.addArg( new ArgDef("something", "s", ArgDef.DIRECTION_OUT) );
 
         // BusProperty: String getSomeProperty(), void setSomeProperty(String value)
         PropertyDef propertyDef = new PropertyDef("SomeProperty", "s", PropertyDef.ACCESS_READWRITE, ifaceName);
@@ -2659,21 +2659,21 @@ public class BusAttachmentTest extends TestCase {
 
         // BusMethod: String DoSomethingOneInArg(String arg1)
         methodDef = new MethodDef("DoSomethingOneInArg", "s", "s", ifaceName);
-        methodDef.addArg( new ArgDef("arg1", "s") );
+        methodDef.addArg( new ArgDef("arg1", "s", ArgDef.DIRECTION_IN) );
         methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
         interfaceDef.addMethod(methodDef);
 
         // BusMethod: void DoSomethingTwoInArgs(String arg1, int arg2)
         methodDef = new MethodDef("DoSomethingTwoInArgs", "si", "", ifaceName);
-        methodDef.addArg( new ArgDef("arg1", "s") );
-        methodDef.addArg( new ArgDef("arg2", "i") );
+        methodDef.addArg( new ArgDef("arg1", "s", ArgDef.DIRECTION_IN) );
+        methodDef.addArg( new ArgDef("arg2", "i", ArgDef.DIRECTION_IN) );
         interfaceDef.addMethod(methodDef);
 
         // BusMethod: void DoSomethingThreeInArgs(String arg1, boolean arg2, String arg3)
         methodDef = new MethodDef("DoSomethingThreeInArgs", "sbs", "", ifaceName);
-        methodDef.addArg( new ArgDef("arg1", "s") );
-        methodDef.addArg( new ArgDef("arg2", "b") );
-        methodDef.addArg( new ArgDef("arg3", "s") );
+        methodDef.addArg( new ArgDef("arg1", "s", ArgDef.DIRECTION_IN) );
+        methodDef.addArg( new ArgDef("arg2", "b", ArgDef.DIRECTION_IN) );
+        methodDef.addArg( new ArgDef("arg3", "s", ArgDef.DIRECTION_IN) );
         interfaceDef.addMethod(methodDef);
 
         // BusProperty: String getStringProperty(), void setStringProperty(String value)
