@@ -35,8 +35,9 @@ package org.alljoyn.bus.defs;
  */
 public class ArgDef extends BaseDef {
 
-    /* Argument direction values */
+    /** Argument direction "in". Indicates argument is sent to the object producer. */
     public static final String DIRECTION_IN = "in";
+    /** Argument direction "out". Indicates argument is sent to the object consumer. */
     public static final String DIRECTION_OUT = "out";
 
     final private String type;
@@ -44,7 +45,8 @@ public class ArgDef extends BaseDef {
 
 
     /**
-     * Constructor. Represents an argument in a method or signal. Direction defaults to 'in'.
+     * Constructor. Represents an argument in a method. Direction defaults to 'in'.
+     * Note: Do not use this constructor for signal arguments, as they must have direction='out'.
      *
      * @param name the name of the argument.
      * @param type the signature of the argument (represented by characters: y,b,n,q,i,u,x,t,d,s,o,g,a,r,v).
@@ -61,7 +63,7 @@ public class ArgDef extends BaseDef {
      * @param name the name of the argument.
      * @param type the signature of the argument (represented by characters: y,b,n,q,i,u,x,t,d,s,o,g,a,r,v).
      *             See https://dbus.freedesktop.org/doc/dbus-specification.html#idp94392448
-     * @param direction the direction of the argument (one of: in, out).
+     * @param direction the direction of the argument (one of: in, out) with respect to the object producer.
      *                  The direction 'unset' may be used internally only.
      * @throws IllegalArgumentException one or more arguments is invalid.
      */
