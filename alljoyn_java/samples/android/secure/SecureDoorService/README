@@ -3,9 +3,6 @@ the AllJoyn 'jar' and 'so' files must be added.
 
 Add the following jar files in the app/libs/ folder:
    alljoyn.jar
-   alljoyn_about.jar
-   alljoyn_config.jar
-   alljoyn_apps_andriod_utils.jar
 
 Add the following shared object files to the app/src/main/jniLibs/armeabi/ folder:
    liballjoyn_java.so
@@ -15,11 +12,17 @@ and also requires use of the Security Manager application in order setup securit
 between the client and service apps.
 
 Get started with security manager as follows:
-1. Run secmgr.exe from under
-      "%YourAllJoynBuildDirectory%\%OS%\%architecture%\(release|debug)\obj\alljoyn_core\samples\securitymgr\cli".
+0. The AllJoyn security manager sample can be built in Linux via scons. For example:
+      scons BINDINGS=cpp,java,c OS=linux CPU=x86_64 VARIANT=release
+   NOTE: In order to build security manager, sqlite3 must have been installed and the SQLITE_DIR
+   environment variable set to the folder containing the sqlite header files.
+1. Security manager can be run as follows:
+      cd <YourAllJoynBuildDir>/<OS>/<CPU>/(release|debug)/obj/alljoyn_core/samples/securitymgr/cli
+      export LD_LIBRARY_PATH=../agent/src:../storage/src:../external/sqlite3:../../..
+      ./secmgr
    This might be a good time to take a quick look at the available security manager commands by typing "h".
-   Note: To run secmgr, the LD_LIBRARY_PATH environment variable may need to reference the security manager,
-   alljoyn, and sqlite .so files.
+   NOTE: In order to run secmgr, the LD_LIBRARY_PATH environment variable must reference the files
+   libajsecmgr.so, libajsecstorage.so, libsqlite3.so, liballjoyn.so
 2. Run the secure door client and service.
 3. The security manager should display that it noticed two new, unclaimed apps.
 4. Use the security manager to claim both applications. Use the "c [appID]" command to do that.

@@ -36,6 +36,7 @@ import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
 import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.OnJoinSessionListener;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.SessionListener;
 import org.alljoyn.bus.SessionOpts;
@@ -361,7 +362,7 @@ public class ContactsClient extends Activity {
         private ProxyBusObject mProxyObj;
         private AddressBookInterface mAddressBookInterface;
 
-        private int     mSessionId;
+        private int mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
 
@@ -390,7 +391,7 @@ public class ContactsClient extends Activity {
                          * It is possible to join multiple session however joining multiple
                          * sessions is not shown in this sample.
                          */
-                        if (!mIsConnected){
+                        if (!mIsConnected) {
                             Message msg = obtainMessage(JOIN_SESSION, name);
                             sendMessage(msg);
                         }
@@ -412,33 +413,42 @@ public class ContactsClient extends Activity {
                 }
                 break;
             }
+
             case JOIN_SESSION: {
                 if (mIsConnected || mIsStoppingDiscovery) {
                     break;
                 }
 
-                short contactPort = CONTACT_PORT;
+                mIsConnected = true;
                 SessionOpts sessionOpts = new SessionOpts();
-                Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
 
-                Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
+                Status status = mBus.joinSession((String) msg.obj, CONTACT_PORT, sessionOpts, new SessionListener(){
                     @Override
                     public void sessionLost(int sessionId, int reason) {
                         mIsConnected = false;
                         logInfo(String.format("MyBusListener.sessionLost(sessionId = %d, reason = %d)", sessionId, reason));
                         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
                     }
-                });
-                logStatus("BusAttachment.joinSession()", status);
+                /* This is the asynchronous callback, invoked from AllJoyn when the join session attempt has completed. */
+                }, new OnJoinSessionListener() {
+                    @Override
+                    public void onJoinSession(Status status, int sessionId, SessionOpts opts, Object context) {
+                        logStatus("BusAttachment.joinSession()", status);
+                        mIsConnected = (status == Status.OK || status == Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED);
 
-                if (status == Status.OK) {
-                    mProxyObj = mBus.getProxyBusObject(SERVICE_NAME, "/addressbook", sessionId.value,
-                                                       new Class[] { AddressBookInterface.class });
-                    mAddressBookInterface = mProxyObj.getInterface(AddressBookInterface.class);
-                    mSessionId = sessionId.value;
-                    mIsConnected = true;
-                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
-                }
+                        if (status == Status.OK) {
+                            mProxyObj = mBus.getProxyBusObject(SERVICE_NAME,
+                                    "/addressbook",
+                                    sessionId,
+                                    new Class[] { AddressBookInterface.class });
+                            mAddressBookInterface = mProxyObj.getInterface(AddressBookInterface.class);
+                            mSessionId = sessionId;
+                            mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                        }
+                    }
+                }, null);
+
+                logStatus("BusAttachment.joinSession() requested", status);
                 break;
             }
 
@@ -451,9 +461,8 @@ public class ContactsClient extends Activity {
                 mBus.disconnect();
                 getLooper().quit();
                 break;
-
-
             }
+
             // Call AddressBookInterface.getContact method and send the result to the UI handler.
             case GET_CONTACT: {
                 if (mAddressBookInterface == null) {
@@ -469,6 +478,7 @@ public class ContactsClient extends Activity {
                 }
                 break;
             }
+
             // Call AddressBookInterface.getAllContactNames and send the result to the UI handler
             case GET_ALL_CONTACT_NAMES: {
                 try {
@@ -480,6 +490,7 @@ public class ContactsClient extends Activity {
                 }
                 break;
             }
+
             default:
                 break;
             }
