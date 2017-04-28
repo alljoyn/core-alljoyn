@@ -33,6 +33,7 @@ import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
 import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.OnJoinSessionListener;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.SessionListener;
 import org.alljoyn.bus.SessionOpts;
@@ -45,6 +46,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.text.InputType;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -123,10 +125,10 @@ public class Client extends Activity {
         mListView.setAdapter(mListViewArrayAdapter);
 
         mEditText = (EditText) findViewById(R.id.EditText);
+        mEditText.setInputType(InputType.TYPE_CLASS_TEXT);
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
                 public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_NULL
-                        && event.getAction() == KeyEvent.ACTION_UP) {
+                    if (actionId == EditorInfo.IME_ACTION_DONE) {
                         /* Call the remote object's cat method. */
                         Message msg = mBusHandler.obtainMessage(BusHandler.CAT,
                                                                 view.getText().toString());
@@ -184,13 +186,13 @@ public class Client extends Activity {
          * The name uses reverse URL style of naming, and matches the name used by the service.
          */
         private static final String SERVICE_NAME = "org.alljoyn.Bus.sample";
-        private static final short CONTACT_PORT=25;
+        private static final short CONTACT_PORT = 25;
 
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private BasicInterface mBasicInterface;
 
-        private int 	mSessionId;
+        private int mSessionId;
         private boolean mIsInASession;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
@@ -242,7 +244,7 @@ public class Client extends Activity {
                     	 * It is possible to join multiple session however joining multiple
                     	 * sessions is not shown in this sample.
                     	 */
-                    	if(!mIsConnected) {
+                        if (!mIsConnected) {
                     	    Message msg = obtainMessage(JOIN_SESSION);
                     	    msg.arg1 = transport;
                     	    msg.obj = name;
@@ -274,11 +276,12 @@ public class Client extends Activity {
 
                 break;
             }
-            case (JOIN_SESSION): {
+
+            case JOIN_SESSION: {
             	/*
-                 * If discovery is currently being stopped don't join to any other sessions.
+                 * If session is already connected or if discovery is currently starting/stopping don't join to any other sessions.
                  */
-                if (mIsStoppingDiscovery) {
+                if (mIsConnected || mIsStoppingDiscovery) {
                     break;
                 }
 
@@ -290,41 +293,47 @@ public class Client extends Activity {
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
-                short contactPort = CONTACT_PORT;
+                mIsConnected = true;
                 SessionOpts sessionOpts = new SessionOpts();
                 sessionOpts.transports = (short)msg.arg1;
-                Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
 
-                Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener() {
+                Status status = mBus.joinSession((String) msg.obj, CONTACT_PORT, sessionOpts, new SessionListener() {
                     @Override
                     public void sessionLost(int sessionId, int reason) {
                         mIsConnected = false;
                         logInfo(String.format("MyBusListener.sessionLost(sessionId = %d, reason = %d)", sessionId,reason));
                         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
                     }
-                });
-                logStatus("BusAttachment.joinSession() - sessionId: " + sessionId.value, status);
+                /* This is the asynchronous callback, invoked from AllJoyn when the join session attempt has completed. */
+                }, new OnJoinSessionListener() {
+                    @Override
+                    public void onJoinSession(Status status, int sessionId, SessionOpts opts, Object context) {
+                        logStatus("BusAttachment.joinSession() - sessionId: " + sessionId, status);
+                        mIsConnected = (status == Status.OK || status == Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED);
 
-                if (status == Status.OK) {
-                	/*
-                     * To communicate with an AllJoyn object, we create a ProxyBusObject.
-                     * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
-                     *
-                     * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
-                     * "/sample", uses sessionID of CONTACT_PORT, and implements the BasicInterface.
-                     */
-                	mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
-                										"/sample",
-                										sessionId.value,
-                										new Class<?>[] { BasicInterface.class });
+                        if (status == Status.OK) {
+                            /*
+                             * To communicate with an AllJoyn object, we create a ProxyBusObject.
+                             * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
+                             *
+                             * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
+                             * "/sample", uses sessionID of CONTACT_PORT, and implements the BasicInterface.
+                             */
+                            mProxyObj = mBus.getProxyBusObject(SERVICE_NAME,
+                                    "/sample",
+                                    sessionId,
+                                    new Class<?>[] { BasicInterface.class });
 
-                	/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-                	mBasicInterface =  mProxyObj.getInterface(BasicInterface.class);
+                            /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+                            mBasicInterface =  mProxyObj.getInterface(BasicInterface.class);
 
-                	mSessionId = sessionId.value;
-                	mIsConnected = true;
-                	mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
-                }
+                            mSessionId = sessionId;
+                            mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                        }
+                    }
+                }, null);
+
+                logStatus("BusAttachment.joinSession() requested", status);
                 break;
             }
 
@@ -358,6 +367,7 @@ public class Client extends Activity {
                 }
                 break;
             }
+
             default:
                 break;
             }
