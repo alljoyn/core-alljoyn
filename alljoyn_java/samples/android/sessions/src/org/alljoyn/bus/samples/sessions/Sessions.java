@@ -38,6 +38,7 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
 import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.OnJoinSessionListener;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.SessionListener;
 import org.alljoyn.bus.SessionOpts;
@@ -486,7 +487,7 @@ public class Sessions extends Activity {
         public static final int DISCONNECT = 8;
         public static final int TRANSFERDATA = 9;
 
-        private static final short CONTACT_PORT=545;
+        private static final short CONTACT_PORT = 545;
 
         private BusAttachment mBus;
 
@@ -664,13 +665,11 @@ public class Sessions extends Activity {
             }
             case JOIN: {
                 SessionOpts sessionOpts = new SessionOpts();
-                Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-
                 sessionOpts.transports = transportFoundOn;
-                Log.d(TAG, "Join Session initiated over the "+sessionOpts.transports+" transport.");
+                Log.d(TAG, "Join Session initiated over the " + sessionOpts.transports + " transport.");
 
-                final Status status = mBus.joinSession(connectTo, CONTACT_PORT, sessionId, sessionOpts, new SessionListener() {
-                    public void sessionLost(final int sessionId, int reason) {
+                final Status status = mBus.joinSession(connectTo, CONTACT_PORT, sessionOpts, new SessionListener() {
+                    public void sessionLost(final int sessionId, final int reason) {
                         runOnUiThread (new Runnable() {
                             public void run() {
                                 final ToggleButton mRemoteConnect = (ToggleButton)findViewById(R.id.RemoteConnect);
@@ -680,31 +679,39 @@ public class Sessions extends Activity {
                             }
                         });
                     }
-                });
-                if (status != Status.OK) {
-                    runOnUiThread (new Runnable() {
-                        public void run() {
-                            final ToggleButton mRemoteConnect = (ToggleButton)findViewById(R.id.RemoteConnect);
-                            mRemoteConnect.setChecked(false);
-                            makeAToast("!!!  ERROR  !!!\n\n"+"Session NOT Established.\n(Error Code = " + status.toString() + ")", "High");
+                /* This is the asynchronous callback, invoked from AllJoyn when the join session attempt has completed. */
+                }, new OnJoinSessionListener() {
+                    @Override
+                    public void onJoinSession(final Status status, int sessionId, SessionOpts opts, Object context) {
+                        logStatus("BusAttachment.joinSession() - sessionId: " + sessionId, status);
+
+                        if (status != Status.OK) {
+                            runOnUiThread (new Runnable() {
+                                public void run() {
+                                    final ToggleButton mRemoteConnect = (ToggleButton)findViewById(R.id.RemoteConnect);
+                                    mRemoteConnect.setChecked(false);
+                                    makeAToast("!!!  ERROR  !!!\n\n"+"Session NOT Established.\n(Error Code = " + status.toString() + ")", "High");
+                                }
+                            });
+                            Log.d(TAG, status.toString());
+                        } else {
+                            runOnUiThread (new Runnable() {
+                                public void run() {
+                                    final ToggleButton mRemoteConnect = (ToggleButton)findViewById(R.id.RemoteConnect);
+                                    mRemoteConnect.setChecked(true);
+                                }
+                            });
+                            connectID = sessionId;
+                            runOnUiThread (new Runnable() {
+                                public void run() {
+                                    makeAToast("###  SUCCESS  ###\n\n"+"Session Established (ID = "+connectID+")", "High");
+                                }
+                            });
                         }
-                    });
-                    Log.d (TAG, status.toString());
-                    return;
-                }
-                runOnUiThread (new Runnable() {
-                    public void run() {
-                        final ToggleButton mRemoteConnect = (ToggleButton)findViewById(R.id.RemoteConnect);
-                        mRemoteConnect.setChecked(true);
                     }
-                });
-                logStatus("BusAttachment.joinSession() - sessionId: " + sessionId.value, status);
-                connectID = sessionId.value;
-                runOnUiThread (new Runnable() {
-                    public void run() {
-                        makeAToast("###  SUCCESS  ###\n\n"+"Session Established (ID = "+connectID+")", "High");
-                    }
-                });
+                }, null);
+
+                logStatus("BusAttachment.joinSession() requested", status);
                 break;
             }
             case LEAVE: {
@@ -752,7 +759,7 @@ public class Sessions extends Activity {
     }
 
     private void makeAToast (String sMessage, String sImportance) {
-        int displayTime = Toast.LENGTH_SHORT * 2;
+        int displayTime = Toast.LENGTH_SHORT;
 
         if (sImportance == "High")
             displayTime = Toast.LENGTH_LONG;

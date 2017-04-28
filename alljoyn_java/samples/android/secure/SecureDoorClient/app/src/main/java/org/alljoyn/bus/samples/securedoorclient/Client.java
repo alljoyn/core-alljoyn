@@ -29,6 +29,8 @@
 
 package org.alljoyn.bus.samples.securedoorclient;
 
+import org.alljoyn.bus.samples.securedoorclient.DoorSessionManager.ResponseListener;
+
 import org.alljoyn.bus.alljoyn.DaemonInit;
 
 import org.alljoyn.bus.ApplicationStateListener;
@@ -163,6 +165,7 @@ public class Client extends Activity {
         ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER,
         ALLJOYN_SESSIONLOST_LINK_TIMEOUT,
         ALLJOYN_SESSIONLOST_REASON_OTHER};
+
     private SessionListener mSessionListener = new SessionListener() {
         @Override
         public void sessionLost(int sessionId, int reason) {
@@ -417,54 +420,74 @@ public class Client extends Activity {
     private void executeOpen(Set<String> doors) {
         for (String doorName : doors) {
             addListEntry("open " + doorName);
-            try {
-                Door door = mDoorSessionManager.getProxyDoorObject(doorName);
-                door.open();
-            } catch (Exception e) {
-                logException(String.format("Failed to open door %s",doorName), e);
-                mDoorSessionManager.stop(doorName);
-            }
+            mDoorSessionManager.getProxyDoorObject(doorName, new ResponseListener() {
+                @Override
+                public void response(String doorName, Door door, Exception fail) {
+                    try {
+                        if (fail != null) throw fail;
+                        door.open();
+                    } catch (Exception e) {
+                        logException(String.format("Failed to open door %s",doorName), e);
+                        mDoorSessionManager.stop(doorName);
+                    }
+                }
+            });
         }
     }
 
     private void executeClose(Set<String> doors) {
         for (String doorName : doors) {
             addListEntry("close " + doorName);
-            try {
-                Door door = mDoorSessionManager.getProxyDoorObject(doorName);
-                door.close();
-            } catch (Exception e) {
-                logException(String.format("Failed to close door %s",doorName), e);
-                mDoorSessionManager.stop(doorName);
-            }
+            mDoorSessionManager.getProxyDoorObject(doorName, new ResponseListener() {
+                @Override
+                public void response(String doorName, Door door, Exception fail) {
+                    try {
+                        if (fail != null) throw fail;
+                        door.close();
+                    } catch (Exception e) {
+                        logException(String.format("Failed to close door %s",doorName), e);
+                        mDoorSessionManager.stop(doorName);
+                    }
+                }
+            });
         }
     }
 
     private void executeGetState(Set<String> doors) {
         for (String doorName : doors) {
-            try {
-                Door door = mDoorSessionManager.getProxyDoorObject(doorName);
-                String state = door.getState() ? " is open" : " is closed";
-                addListEntry(doorName + state);
-            } catch (Exception e) {
-                addListEntry(doorName + " state is unknown");
-                logException(String.format("Failed to get state of door %s (property call)",doorName), e);
-                mDoorSessionManager.stop(doorName);
-            }
+            mDoorSessionManager.getProxyDoorObject(doorName, new ResponseListener() {
+                @Override
+                public void response(String doorName, Door door, Exception fail) {
+                    try {
+                        if (fail != null) throw fail;
+                        String state = door.getState() ? " is open" : " is closed";
+                        addListEntry(doorName + state);
+                    } catch (Exception e) {
+                        addListEntry(doorName + " state is unknown");
+                        logException(String.format("Failed to get state of door %s (property call)", doorName), e);
+                        mDoorSessionManager.stop(doorName);
+                    }
+                }
+            });
         }
     }
 
     private void executeGetStateM(Set<String> doors) {
         for (String doorName : doors) {
-            try {
-                Door door = mDoorSessionManager.getProxyDoorObject(doorName);
-                String state = door.getStateM() ? " is open" : " is closed";
-                addListEntry(doorName + state);
-            } catch (Exception e) {
-                addListEntry(doorName + " state is unknown");
-                logException(String.format("Failed to get state of door %s (method call)",doorName), e);
-                mDoorSessionManager.stop(doorName);
-            }
+            mDoorSessionManager.getProxyDoorObject(doorName, new ResponseListener() {
+                @Override
+                public void response(String doorName, Door door, Exception fail) {
+                    try {
+                        if (fail != null) throw fail;
+                        String state = door.getStateM() ? " is open" : " is closed";
+                        addListEntry(doorName + state);
+                    } catch (Exception e) {
+                        addListEntry(doorName + " state is unknown");
+                        logException(String.format("Failed to get state of door %s (method call)", doorName), e);
+                        mDoorSessionManager.stop(doorName);
+                    }
+                }
+            });
         }
     }
 

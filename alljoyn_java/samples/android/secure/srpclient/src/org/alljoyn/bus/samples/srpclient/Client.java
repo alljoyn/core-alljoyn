@@ -39,6 +39,7 @@ import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
 import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.OnJoinSessionListener;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.SessionListener;
 import org.alljoyn.bus.SessionOpts;
@@ -290,13 +291,13 @@ public class Client extends Activity {
 
     class BusHandler extends Handler {
         private static final String SERVICE_NAME = "org.alljoyn.bus.samples.secure";
-        private static final short CONTACT_PORT=42;
+        private static final short CONTACT_PORT = 42;
 
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private SecureInterface mSecureInterface;
 
-        private int     mSessionId;
+        private int mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
 
@@ -373,11 +374,11 @@ public class Client extends Activity {
                 break;
             }
 
-            case (JOIN_SESSION): {
+            case JOIN_SESSION: {
                 /*
-                 * If discovery is currently being stopped don't join to any other sessions.
+                 * If session is already connected or discovery is currently being stopped, don't join to any other sessions.
                  */
-                if (mIsStoppingDiscovery) {
+                if (mIsConnected || mIsStoppingDiscovery) {
                     break;
                 }
 
@@ -389,42 +390,49 @@ public class Client extends Activity {
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
-                short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
-                Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
 
-                Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
+                Status status = mBus.joinSession((String) msg.obj, CONTACT_PORT, sessionOpts, new SessionListener() {
                     @Override
                     public void sessionLost(int sessionId, int reason) {
                         mIsConnected = false;
                         logInfo(String.format("MyBusListener.sessionLost(sessionId = %d, reason = %d)", sessionId, reason));
                         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
                     }
-                });
-                logStatus("BusAttachment.joinSession()", status);
+                /* This is the asynchronous callback, invoked from AllJoyn when the join session attempt has completed. */
+                }, new OnJoinSessionListener() {
+                    @Override
+                    public void onJoinSession(Status status, int sessionId, SessionOpts opts, Object context) {
+                        logStatus("BusAttachment.joinSession() - sessionId: " + sessionId, status);
+                        mIsConnected = (status == Status.OK || status == Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED);
 
-                if (status == Status.OK) {
-                    /*
-                     * To communicate with an AllJoyn object, we create a ProxyBusObject.
-                     * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
-                     *
-                     * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
-                     * "/SimpleService", uses sessionID of CONTACT_PORT, and implements the SimpleInterface.
-                     */
-                    mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
-                                                        "/SecureService",
-                                                        sessionId.value,
-                                                        new Class[] { SecureInterface.class });
+                        if (status == Status.OK) {
+                            /*
+                             * To communicate with an AllJoyn object, we create a ProxyBusObject.
+                             * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
+                             *
+                             * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
+                             * "/SecureService", uses sessionID of CONTACT_PORT, and implements the SecureInterface.
+                             */
+                            mProxyObj = mBus.getProxyBusObject(SERVICE_NAME,
+                                    "/SecureService",
+                                    sessionId,
+                                    new Class[] { SecureInterface.class });
 
-                    /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-                    mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
+                            /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+                            mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
 
-                    mSessionId = sessionId.value;
-                    mIsConnected = true;
-                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
-                }
+                            mSessionId = sessionId;
+                            mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                        }
+                    }
+                }, null);
+
+                mIsConnected = (status == Status.OK || status == Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED);
+                logStatus("BusAttachment.joinSession() requested", status);
                 break;
             }
+
             case DISCONNECT: {
                 mIsStoppingDiscovery = true;
                 if (mIsConnected) {
