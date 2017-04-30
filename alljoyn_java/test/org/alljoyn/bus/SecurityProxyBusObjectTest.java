@@ -213,12 +213,6 @@ public class SecurityProxyBusObjectTest extends TestCase {
 
     private UUID managerGuid;
 
-    private AuthListener defaultAuthListener = new AuthListener() {
-        public boolean requested(String mechanism, String peerName, int count, String userName,
-                      AuthRequest[] requests) { return true; }
-        public void completed(String mechanism, String peerName, boolean authenticated) {}
-    };
-
     private ApplicationStateListener appStateListener = new ApplicationStateListener() {
         public void state(String busName, KeyInfoNISTP256 publicKeyInfo, PermissionConfigurator.ApplicationState state) {
             stateMap.put(busName, state);
@@ -317,16 +311,14 @@ public class SecurityProxyBusObjectTest extends TestCase {
     }
 
     public void testProxyMethodWithoutSecurityMgmt() throws Exception {
-        peer1Bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("peer1Bus", "ks").getAbsolutePath(),
-                false,
-                null);
-        peer2Bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("peer2Bus", "ks").getAbsolutePath(),
-                false,
-                null);
+        SecurityTestHelper.registerAuthListener(peer1Bus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
+        SecurityTestHelper.registerAuthListener(peer2Bus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
 
         // bind peer2 port
         assertEquals(Status.OK, peer2Bus.bindSessionPort(defaultSessionPort, defaultSessionOpts, new SessionPortListenerImpl()));
@@ -368,21 +360,18 @@ public class SecurityProxyBusObjectTest extends TestCase {
     }
 
     public void testProxyMethodWithSecurityMgmt() throws Exception {
-        securityManagerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("secManBus", "ks").getAbsolutePath(),
-                false,
-                null);
-        peer1Bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("peer1Bus", "ks").getAbsolutePath(),
-                false,
-                null);
-        peer2Bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("peer2Bus", "ks").getAbsolutePath(),
-                false,
-                null);
+        SecurityTestHelper.registerAuthListener(securityManagerBus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
+        SecurityTestHelper.registerAuthListener(peer1Bus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
+        SecurityTestHelper.registerAuthListener(peer2Bus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
 
         // bind ports
         assertEquals(Status.OK, securityManagerBus.bindSessionPort(
