@@ -85,14 +85,20 @@ public class SecurityApplicationProxyTest extends TestCase {
     public void setUp() throws Exception {
         busAttachment = new BusAttachment("PermissionConfiguratorTest");
         busAttachment.connect();
-        registerAuthListener(busAttachment);
+        SecurityTestHelper.registerAuthListener(busAttachment,
+			SecurityTestHelper.AUTH_NULL +
+			" " +
+			SecurityTestHelper.AUTH_ECDSA);
 
         permissionConfigurator = busAttachment.getPermissionConfigurator();
         permissionConfigurator.setManifestTemplateFromXml(defaultManifestTemplate);
 
         peer1Bus = new BusAttachment("peer1Bus");
         peer1Bus.connect();
-        registerAuthListener(peer1Bus);
+        SecurityTestHelper.registerAuthListener(peer1Bus,
+			SecurityTestHelper.AUTH_NULL +
+			" " +
+			SecurityTestHelper.AUTH_ECDSA);
         peer1Bus.getPermissionConfigurator().setManifestTemplateFromXml(defaultManifestTemplate);
 
         defaultSessionPort = new Mutable.ShortValue(PORT);
@@ -108,27 +114,6 @@ public class SecurityApplicationProxyTest extends TestCase {
         peer1Bus.disconnect();
         peer1Bus.release();
         peer1Bus = null;
-    }
-
-    private Status registerAuthListener(BusAttachment bus) throws Exception {
-        Status status = Status.OK;
-        if (System.getProperty("os.name").startsWith("Windows")) {
-            status = bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", mAuthListener, null, false, pclistener);
-        } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
-            /*
-             * on some Android devices File.createTempFile trys to create a file in
-             * a location we do not have permission to write to.  Resulting in a
-             * java.io.IOException: Permission denied error.
-             * This code assumes that the junit tests will have file IO permission
-             * for /data/data/org.alljoyn.bus
-             */
-            status = bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", mAuthListener,
-                            "/data/data/org.alljoyn.bus/files/alljoyn.ks", false, pclistener);
-        } else {
-            status = bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", mAuthListener,
-                            File.createTempFile(bus.getUniqueName().replaceAll(":", ""), "ks").getAbsolutePath(), false, pclistener);
-        }
-        return status;
     }
 
     public void testGetters() throws Exception {
@@ -377,30 +362,6 @@ public class SecurityApplicationProxyTest extends TestCase {
         sap.resetPolicy();
     }
 
-    private boolean factoryReset = false;
-    private boolean policyChanged = false;
-    private boolean startManagement = false;
-    private boolean endManagement = false;
-    private PermissionConfigurationListener pclistener = new PermissionConfigurationListener() {
-
-        public Status factoryReset() {
-            factoryReset = true;
-            return Status.OK;
-        }
-
-        public void policyChanged() {
-            policyChanged = true;
-        }
-
-        public void startManagement() {
-            startManagement = true;
-        }
-
-        public void endManagement() {
-            endManagement = true;
-        }
-    };
-
     public class SessionPortListenerImpl extends SessionPortListener {
         public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts opts) {
             return true;
@@ -408,15 +369,5 @@ public class SecurityApplicationProxyTest extends TestCase {
 
         public void sessionJoined(short sessionPort, int id, String joiner) {}
     }
-
-    private AuthListener mAuthListener = new AuthListener() {
-        @Override
-        public boolean requested(String mech, String authPeer, int count, String userName, AuthRequest[] requests) {
-            return true;
-        }
-
-        @Override
-        public void completed(String mech, String peer, boolean authenticated) {}
-    };
 }
 
