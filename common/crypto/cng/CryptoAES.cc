@@ -58,8 +58,8 @@ using namespace qcc;
 
 #define QCC_MODULE "CRYPTO"
 
-/* definition of CryptoAES_BLOCK_LEN */
-const size_t Crypto_AES::BLOCK_LEN;
+/* declaration of CryptoAES_BLOCK_LEN */
+extern const size_t Crypto_AES::BLOCK_LEN;
 
 struct Crypto_AES::KeyState {
   public:
