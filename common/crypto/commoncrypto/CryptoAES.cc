@@ -70,8 +70,8 @@ static void Trace(const char* tag, void* data, size_t len)
 #define Trace(x, y, z)
 #endif
 
-/* definition of CryptoAES_BLOCK_LEN */
-const size_t Crypto_AES::BLOCK_LEN;
+/* declaration of CryptoAES_BLOCK_LEN */
+extern const size_t Crypto_AES::BLOCK_LEN;
 
 struct Crypto_AES::KeyState {
     KeyBlob* key;

@@ -74,8 +74,8 @@ static void Trace(const char* tag, void* data, size_t len)
 #endif
 
 const int MAX_SCHEDULE_LEN = 48;
-/* definition of CryptoAES_BLOCK_LEN */
-const size_t Crypto_AES::BLOCK_LEN;
+/* declaration of CryptoAES_BLOCK_LEN */
+extern const size_t Crypto_AES::BLOCK_LEN;
 
 struct Crypto_AES::KeyState {
     uint32_t fkey[MAX_SCHEDULE_LEN];
