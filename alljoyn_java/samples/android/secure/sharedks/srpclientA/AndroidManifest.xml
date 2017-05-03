@@ -31,8 +31,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.alljoyn.bus.samples.sharedks.client.a"
     android:sharedUserId="org.alljoyn.bus.sample.centralks"
-    android:versionCode="16100097"
-    android:versionName="16.10.00a">
+    android:versionCode="16100100"
+    android:versionName="16.10.01">
     <uses-sdk android:minSdkVersion="16" />
 
     <!-- Permission required to use the TCP transport -->

@@ -38,8 +38,8 @@
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION    16,10,0,97
- PRODUCTVERSION 16,10,0,97
+ FILEVERSION    16,10,01,00
+ PRODUCTVERSION 16,10,01,00
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -56,13 +56,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "AllSeen Alliance."
             VALUE "FileDescription", L"AllJoyn browser plugin"
-            VALUE "FileVersion", "16.10.00a"
+            VALUE "FileVersion", "16.10.01"
             VALUE "InternalName", "npalljoyn"
             VALUE "LegalCopyright", "Copyright AllSeen Alliance."
             VALUE "MIMEType", "application/x-alljoyn"
             VALUE "OriginalFilename", "npalljoyn.dll"
             VALUE "ProductName", "AllJoyn"
-            VALUE "ProductVersion", "16.10.00a"
+            VALUE "ProductVersion", "16.10.01"
         END
     END
     BLOCK "VarFileInfo"
