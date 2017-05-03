@@ -58,8 +58,6 @@ using namespace qcc;
 
 #define QCC_MODULE "CRYPTO"
 
-/* definition of CryptoAES_BLOCK_LEN */
-const size_t Crypto_AES::BLOCK_LEN;
 
 struct Crypto_AES::KeyState {
   public:
@@ -102,7 +100,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     BCRYPT_KEY_DATA_BLOB_HEADER* kbh = NULL;
 
     // We depend on this being true
-    QCC_ASSERT(Crypto_AES::BLOCK_LEN == 16);
+    QCC_ASSERT(AES_BLOCK_LEN == 16);
 
     if (mode == CCM) {
         if (!cngCache.ccmHandle) {
@@ -179,7 +177,7 @@ QStatus Crypto_AES::Encrypt(const Block* in, Block* out, uint32_t numBlocks)
     if (mode != ECB_ENCRYPT) {
         return ER_CRYPTO_ERROR;
     }
-    ULONG len = numBlocks * Crypto_AES::BLOCK_LEN;
+    ULONG len = numBlocks * AES_BLOCK_LEN;
     ULONG clen;
     if (!BCRYPT_SUCCESS(BCryptEncrypt(keyState->handle, static_cast<PUCHAR>(const_cast<uint8_t*>(&in->data[0])), len, NULL, NULL, 0, static_cast<PUCHAR>(&out->data[0]), len, &clen, 0))) {
         return ER_CRYPTO_ERROR;
@@ -204,14 +202,14 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     /*
      * Check for a partial final block
      */
-    size_t partial = len % Crypto_AES::BLOCK_LEN;
+    size_t partial = len % AES_BLOCK_LEN;
     Block inBlock(in, 16);
     if (partial) {
         numBlocks--;
         status = Encrypt(&inBlock, out, numBlocks);
         if (status == ER_OK) {
             Block padBlock;
-            memcpy(padBlock.data, static_cast<const uint8_t*>(in) + (numBlocks * Crypto_AES::BLOCK_LEN), partial);
+            memcpy(padBlock.data, static_cast<const uint8_t*>(in) + (numBlocks * AES_BLOCK_LEN), partial);
             status = Encrypt(&padBlock, out + numBlocks, 1);
         }
     } else {
