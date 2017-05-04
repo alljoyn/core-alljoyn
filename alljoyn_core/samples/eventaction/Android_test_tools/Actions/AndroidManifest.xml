@@ -30,8 +30,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.action.tester"
-    android:versionCode="16100097"
-    android:versionName="16.10.00a">
+    android:versionCode="16100100"
+    android:versionName="16.10.01">
 
     <uses-sdk android:minSdkVersion="16" />
 
