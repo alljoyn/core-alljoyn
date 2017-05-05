@@ -31,9 +31,6 @@ package org.alljoyn.bus;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.Files;
 
 public class SecurityTestHelper {
     public static final String AUTH_NULL = "ALLJOYN_ECDHE_NULL";
@@ -66,15 +63,13 @@ public class SecurityTestHelper {
         if (System.getProperty("os.name").startsWith("Windows")) {
             String path = System.getenv("LOCALAPPDATA");
             /*
-             * Copied /.alljoyn_secure_keystore/ from
-             * GetDefaultKeyStoreFileName
-             * in core KeyStoreListenerFactory.cc
+             * Copied /.alljoyn_secure_keystore/ from GetDefaultKeyStoreFileName in core KeyStoreListenerFactory.cc
              */
-            Path baseDir = FileSystems.getDefault().getPath(path + "/.alljoyn_secure_keystore/");
-            if (Files.notExists(baseDir)) {
-                Files.createDirectory(baseDir);
+            File baseDir = new File(path + "/.alljoyn_secure_keystore/");
+            if (!baseDir.exists()) {
+                baseDir.mkdir();
             }
-            File file = Files.createTempFile(baseDir, bus.getUniqueName().replaceAll(":",""), ".ks").toFile();
+            File file = File.createTempFile(bus.getUniqueName().replaceAll(":",""), ".ks", baseDir);
             file.deleteOnExit();
             status = bus.registerAuthListener(auth_mech, mAuthListener, file.getName(), false, pclistener);
         } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
