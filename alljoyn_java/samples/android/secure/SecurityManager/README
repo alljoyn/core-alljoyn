@@ -1,0 +1,41 @@
+This is an Android Studio project. In order to
+run this project, the AllJoyn 'jar' and 'so'
+files must be added.
+
+Add the following jar files to the
+app/libs/ folder:
+   alljoyn.jar
+
+Add the following shared object files to the
+app/src/main/jniLibs/armeabi/ folder:
+   liballjoyn_java.so
+
+
+This is the Security Manager app. It is used with
+the Secure Door Service app and the Secure Door
+Client app.
+
+Get started with security manager as follows:
+1. Run the Security Manager
+
+2. Run the secure door client and service.
+
+3. The security manager should display that it
+   noticed two new, unclaimed apps.
+
+4. Use the security manager to claim both
+   applications, by clicking on the apps.
+
+5. Install a membership certificate on the client
+   by long-clicking the client app and then
+   clicking install membership.
+
+6. Install a policy on the service to allow access
+   to members by long-clicking the service app and
+   then clicking install policy.
+
+Now you should be able to use the client and
+service apps to talk to each other.
+
+To go through this flow again, remove
+~/.alljoyn_keystore/ before beginning.
