@@ -25,7 +25,6 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
- *
  ******************************************************************************/
 
 #include <jni.h>
@@ -1002,6 +1001,14 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getMe
         return NULL;
     }
 
+    jfieldID fidKeyId = jenv->GetFieldID(CLS_KeyInfoNISTP256, "m_keyId", "[B");
+
+    if (!fidKeyId) {
+        QCC_LogError(ER_FAIL, ("%s: Can't find keyId field in KeyInfoNISTP256", __FUNCTION__));
+        return NULL;
+    }
+
+
     std::vector<String> serial;
     std::vector<KeyInfoNISTP256> retKeyInfo;
     QStatus status = pconfPtr->GetMembershipSummaries(serial, retKeyInfo);
@@ -1026,6 +1033,9 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getMe
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
             return NULL;
         }
+
+        jbyteArray jkeyId = ToJByteArray(retKeyInfo[i].GetKeyId(), retKeyInfo[i].GetKeyIdLen());
+        jenv->SetObjectField(jretKeyInfo, fidKeyId, jkeyId);
 
         jenv->CallVoidMethod(jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
         if (jenv->ExceptionCheck()) {

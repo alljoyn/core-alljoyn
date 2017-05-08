@@ -34,8 +34,6 @@ import static org.alljoyn.bus.Assert.*;
 import java.lang.InterruptedException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
-import java.io.File;
-import java.util.Arrays;
 
 import org.alljoyn.bus.common.KeyInfoNISTP256;
 import org.alljoyn.bus.common.CertificateX509;
@@ -72,8 +70,6 @@ public class PermissionConfiguratorTest extends TestCase {
     "</node>" +
     "</manifest>";
 
-    private static final String AUTH_NULL = "ALLJOYN_ECDHE_NULL";
-
     public void setUp() throws Exception {
         busAttachment = new BusAttachment("PermissionConfiguratorTest");
         busAttachment.connect();
@@ -81,7 +77,7 @@ public class PermissionConfiguratorTest extends TestCase {
 
         peer1Bus = new BusAttachment("peer1Bus");
         peer1Bus.connect();
-        registerAuthListener(peer1Bus);
+        SecurityTestHelper.registerAuthListener(peer1Bus, pclistener);
         pcPeer1 = peer1Bus.getPermissionConfigurator();
     }
 
@@ -90,27 +86,6 @@ public class PermissionConfiguratorTest extends TestCase {
         busAttachment.release();
         busAttachment = null;
         permissionConfigurator = null;
-    }
-
-    private Status registerAuthListener(BusAttachment bus) throws Exception {
-        Status status = Status.OK;
-        if (System.getProperty("os.name").startsWith("Windows")) {
-            status = bus.registerAuthListener(AUTH_NULL, null, null, false, pclistener);
-        } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
-            /*
-             * on some Android devices File.createTempFile trys to create a file in
-             * a location we do not have permission to write to.  Resulting in a
-             * java.io.IOException: Permission denied error.
-             * This code assumes that the junit tests will have file IO permission
-             * for /data/data/org.alljoyn.bus
-             */
-            status = bus.registerAuthListener(AUTH_NULL, null,
-                            "/data/data/org.alljoyn.bus/files/alljoyn.ks", false, pclistener);
-        } else {
-            status = bus.registerAuthListener(AUTH_NULL, null,
-                            File.createTempFile(bus.getUniqueName().replaceAll(":", ""), "ks").getAbsolutePath(), false, pclistener);
-        }
-        return status;
     }
 
     public void testError() throws Exception {
@@ -124,12 +99,12 @@ public class PermissionConfiguratorTest extends TestCase {
     }
 
     public void testNotClaimable() throws Exception {
-        assertEquals(Status.OK, registerAuthListener(busAttachment));
+        assertEquals(Status.OK, SecurityTestHelper.registerAuthListener(busAttachment));
         assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, permissionConfigurator.getApplicationState());
     }
 
     public void testSettersAndGetters() throws Exception {
-        assertEquals(Status.OK, registerAuthListener(busAttachment));
+        assertEquals(Status.OK, SecurityTestHelper.registerAuthListener(busAttachment));
 
         permissionConfigurator.setManifestTemplateFromXml(defaultManifestTemplate);
 

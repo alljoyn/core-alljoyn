@@ -31,10 +31,12 @@ echo_help()
 {
   echo "Usage: $0 [options...]"
   echo " CRYPTO=crypto_module_name         Build AllJoyn Core with specific crypto module"
+  echo " DOCS=docs_type                    Build AllJoyn Core documentation"
   echo " -h, --help                        Print help (this message)"
 }
 
 CRYPTO=builtin
+DOCS=none
 
 # Process command line arguments
 for i in "$@"
@@ -46,6 +48,10 @@ case $i in
     ;;
   CRYPTO=*)
     CRYPTO="${i#*=}"
+    shift
+    ;;
+  DOCS=*)
+    DOCS="${i#*=}"
     shift
     ;;
   *)
@@ -70,12 +76,12 @@ set -e
 
 export CONFIGURATION=release
 export PLATFORM_NAME=iphoneos
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS DOCS=$DOCS
 export PLATFORM_NAME=iphonesimulator
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR DOCS=$DOCS
 
 export CONFIGURATION=debug
 export PLATFORM_NAME=iphoneos
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS DOCS=$DOCS
 export PLATFORM_NAME=iphonesimulator
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR DOCS=$DOCS

@@ -158,16 +158,8 @@ public class SecurityClaimApplicationTest extends TestCase {
         return identityCertificate;
     }
 
-    private AuthListener defaultAuthListener = new AuthListener() {
-        public boolean requested(String mechanism, String peerName, int count, String userName,
-                      AuthRequest[] requests) { return true; }
-        public void completed(String mechanism, String peerName, boolean authenticated) {}
-    };
-
     public void testIsUnclaimableByDefault() throws BusException, IOException {
-        securityManagerBus.registerAuthListener("ALLJOYN_ECDHE_NULL",
-                defaultAuthListener,
-                File.createTempFile("secManBus", "ks").getAbsolutePath());
+        SecurityTestHelper.registerAuthListener(securityManagerBus);
 
         SecurityApplicationProxy saWithSecurityManager = new SecurityApplicationProxy(
                 securityManagerBus,
@@ -176,9 +168,7 @@ public class SecurityClaimApplicationTest extends TestCase {
         PermissionConfigurator.ApplicationState applicationStateSecurityManager = saWithSecurityManager.getApplicationState();
         assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, applicationStateSecurityManager);
 
-        peer1Bus.registerAuthListener("ALLJOYN_ECDHE_NULL",
-                defaultAuthListener,
-                File.createTempFile("peer1Bus", "ks").getAbsolutePath());
+        SecurityTestHelper.registerAuthListener(peer1Bus);
 
         SecurityApplicationProxy saWithPeer1 = new SecurityApplicationProxy(securityManagerBus,
                 peer1Bus.getUniqueName(),
@@ -186,9 +176,7 @@ public class SecurityClaimApplicationTest extends TestCase {
         PermissionConfigurator.ApplicationState applicationStatePeer1 = saWithPeer1.getApplicationState();
         assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, applicationStatePeer1);
 
-        peer2Bus.registerAuthListener("ALLJOYN_ECDHE_NULL",
-                defaultAuthListener,
-                File.createTempFile("peer2Bus", "ks").getAbsolutePath());
+        SecurityTestHelper.registerAuthListener(peer2Bus);
 
         SecurityApplicationProxy saWithPeer2 = new SecurityApplicationProxy(securityManagerBus, peer2Bus.getUniqueName(), 0);
         PermissionConfigurator.ApplicationState applicationStatePeer2 = saWithPeer2.getApplicationState();
@@ -236,9 +224,7 @@ public class SecurityClaimApplicationTest extends TestCase {
     public void testClaim_using_ECDHE_NULL_session_successful() throws Exception, IOException {
         securityManagerBus.registerApplicationStateListener(claim_AppStateListener);
 
-        securityManagerBus.registerAuthListener("ALLJOYN_ECDHE_NULL",
-                defaultAuthListener,
-                File.createTempFile("secManBus", "ks").getAbsolutePath());
+        SecurityTestHelper.registerAuthListener(securityManagerBus);
 
         /* The State signal is only emitted if manifest template is installed */
         securityManagerBus.getPermissionConfigurator().setManifestTemplateFromXml(MANIFEST_TEMPLATE);
@@ -253,9 +239,7 @@ public class SecurityClaimApplicationTest extends TestCase {
 
         stateChanged = false;
 
-        peer1Bus.registerAuthListener("ALLJOYN_ECDHE_NULL",
-                defaultAuthListener,
-                File.createTempFile("peer1Bus", "ks").getAbsolutePath());
+        SecurityTestHelper.registerAuthListener(peer1Bus);
 
         /* The State signal is only emitted if manifest template is installed */
         peer1Bus.getPermissionConfigurator().setManifestTemplateFromXml(MANIFEST_TEMPLATE);
@@ -340,16 +324,14 @@ public class SecurityClaimApplicationTest extends TestCase {
      *     are preserved and are same as before.
      */
     public void test_get_application_state_signal_for_claimed_then_reset_peer() throws BusException, IOException {
-        securityManagerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("secManBus", "ks").getAbsolutePath(),
-                false,
-                null);
-        peer1Bus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
-                defaultAuthListener,
-                File.createTempFile("peer1Bus", "ks").getAbsolutePath(),
-                false,
-                null);
+        SecurityTestHelper.registerAuthListener(securityManagerBus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
+        SecurityTestHelper.registerAuthListener(peer1Bus,
+                SecurityTestHelper.AUTH_NULL +
+                " " +
+                SecurityTestHelper.AUTH_ECDSA);
 
         SecurityApplicationProxy sapWithPeer1 = new SecurityApplicationProxy(securityManagerBus, peer1Bus.getUniqueName(), 0);
         SecurityApplicationProxy sapWithManager = new SecurityApplicationProxy(securityManagerBus, securityManagerBus.getUniqueName(), 0);

@@ -67,6 +67,19 @@ public class BusNameItem {
     	this.isFound = isFound;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BusNameItem that = (BusNameItem) o;
+        return busName != null ? busName.equals(that.busName) : that.busName == null;
+    }
+
+    @Override
+    public int hashCode() {
+        return busName != null ? busName.hashCode() : 0;
+    }
+
     private String busName;
     private int sessionId;
     private boolean isFound;

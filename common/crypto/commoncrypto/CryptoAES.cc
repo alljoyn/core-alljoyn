@@ -37,7 +37,12 @@
 
 #include <algorithm>
 #include <ctype.h>
-#include <math.h>
+/* due to a change in gcc6, cmath must be included now */
+#if defined(__GNUC__) && (__GNUC__ >= 6)
+ #include <cmath>
+#else
+ #include <math.h>
+#endif
 
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
@@ -64,9 +69,6 @@ static void Trace(const char* tag, void* data, size_t len)
 #else
 #define Trace(x, y, z)
 #endif
-
-/* definition of CryptoAES_BLOCK_LEN */
-const size_t Crypto_AES::BLOCK_LEN;
 
 struct Crypto_AES::KeyState {
     KeyBlob* key;
@@ -132,14 +134,14 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     /*
      * Check for a partial final block
      */
-    size_t partial = len %  Crypto_AES::BLOCK_LEN;
+    size_t partial = len %  AES_BLOCK_LEN;
     Block inBlock(in, 16);
     if (partial) {
         --numBlocks;
         status = Encrypt(&inBlock, out, numBlocks);
         if (status == ER_OK) {
             Block padBlock;
-            memcpy(padBlock.data, static_cast<const uint8_t*>(in) + (numBlocks * Crypto_AES::BLOCK_LEN), partial);
+            memcpy(padBlock.data, static_cast<const uint8_t*>(in) + (numBlocks * AES_BLOCK_LEN), partial);
             status = Encrypt(&padBlock, out + numBlocks, 1);
         }
     } else {
@@ -273,7 +275,7 @@ static QStatus Compute_CCM_AuthField(KeyBlob* key, Crypto_AES::Block& T, uint8_t
             return status;
         }
         Trace("After AES: ", T.data, sizeof(T.data));
-        while (addLen >= Crypto_AES::BLOCK_LEN) {
+        while (addLen >= AES_BLOCK_LEN) {
             status = CryptorUpdate(cryptor, addData, kCCBlockSizeAES128, T.data, kCCBlockSizeAES128, &dataMoved);
             if (status != ER_OK) {
                 return status;
@@ -296,7 +298,7 @@ static QStatus Compute_CCM_AuthField(KeyBlob* key, Crypto_AES::Block& T, uint8_t
      * Continue computing CBC-MAC over the message data.
      */
     if (mLen) {
-        while (mLen >= Crypto_AES::BLOCK_LEN) {
+        while (mLen >= AES_BLOCK_LEN) {
             status = CryptorUpdate(cryptor, mData, kCCBlockSizeAES128, T.data, kCCBlockSizeAES128, &dataMoved);
             if (status != ER_OK) {
                 return status;

@@ -36,6 +36,7 @@ import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
 import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.OnJoinSessionListener;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.SessionListener;
 import org.alljoyn.bus.SessionOpts;
@@ -261,7 +262,6 @@ public class PropertiesClient extends Activity {
      */
     public class GetPropertiesListener implements View.OnClickListener {
         public void onClick(View v) {
-
             mBusHandler.sendEmptyMessage(BusHandler.GET_BACKGROUND_COLOR_PROPERTY);
             mBusHandler.sendEmptyMessage(BusHandler.GET_TEXT_SIZE_PROPERTY);
         }
@@ -282,7 +282,6 @@ public class PropertiesClient extends Activity {
             msg.arg1 = mTextSize;
             mBusHandler.sendMessage(msg);
         }
-
     }
 
     /*
@@ -349,11 +348,11 @@ public class PropertiesClient extends Activity {
         private ProxyBusObject mProxyObj;
         private PropertiesInterface mPropertiesInterface;
 
-        private int     mSessionId;
+        private int mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
 
-        private static final short CONTACT_PORT=42;
+        private static final short CONTACT_PORT = 42;
 
         public BusHandler(Looper looper) {
             super(looper);
@@ -364,7 +363,7 @@ public class PropertiesClient extends Activity {
 
         public void handleMessage(Message msg) {
             switch(msg.what) {
-            case (CONNECT): {
+            case CONNECT: {
                 org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
 
@@ -380,7 +379,7 @@ public class PropertiesClient extends Activity {
                          * It is possible to join multiple session however joining multiple
                          * sessions is not shown in this sample.
                          */
-                        if(!mIsConnected){
+                        if (!mIsConnected) {
                             Message msg = obtainMessage(JOIN_SESSION, name);
                             sendMessage(msg);
                         }
@@ -403,11 +402,11 @@ public class PropertiesClient extends Activity {
                 }
                 break;
             }
-            case (JOIN_SESSION): {
+            case JOIN_SESSION: {
                 /*
-                 * If discovery is currently being stopped don't join to any other sessions.
+                 * If session already connected or discovery is currently being stopped, don't join to any other sessions.
                  */
-                if (mIsStoppingDiscovery) {
+                if (mIsConnected || mIsStoppingDiscovery) {
                     break;
                 }
 
@@ -419,33 +418,40 @@ public class PropertiesClient extends Activity {
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
-                short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
-                Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
 
-                Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
+                Status status = mBus.joinSession((String) msg.obj, CONTACT_PORT, sessionOpts, new SessionListener() {
                     @Override
                     public void sessionLost(int sessionId, int reason) {
                         mIsConnected = false;
                         logInfo(String.format("MyBusListener.sessionLost(sessionId = %d, reason = %d)", sessionId,reason));
                         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
                     }
-                });
-                logStatus("BusAttachment.joinSession()", status);
-                if (status == Status.OK) {
-                    mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
-                                                        "/testProperties",
-                                                        sessionId.value,
-                                                        new Class<?>[] { PropertiesInterface.class });
+                /* This is the asynchronous callback, invoked from AllJoyn when the join session attempt has completed. */
+                }, new OnJoinSessionListener() {
+                    @Override
+                    public void onJoinSession(Status status, int sessionId, SessionOpts opts, Object context) {
+                        logStatus("BusAttachment.joinSession() - sessionId: " + sessionId, status);
+                        mIsConnected = (status == Status.OK || status == Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED);
 
-                    mPropertiesInterface = mProxyObj.getInterface(PropertiesInterface.class);
-                    mSessionId = sessionId.value;
-                    mIsConnected = true;
-                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
-                }
+                        if (status == Status.OK) {
+                            mProxyObj = mBus.getProxyBusObject(SERVICE_NAME,
+                                    "/testProperties",
+                                    sessionId,
+                                    new Class<?>[]{PropertiesInterface.class});
+
+                            mPropertiesInterface = mProxyObj.getInterface(PropertiesInterface.class);
+                            mSessionId = sessionId;
+                            mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                        }
+                    }
+                }, null);
+
+                mIsConnected = (status == Status.OK || status == Status.ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED);
+                logStatus("BusAttachment.joinSession() requested", status);
                 break;
             }
-            case (DISCONNECT): {
+            case DISCONNECT: {
                 mIsStoppingDiscovery = true;
                 if (mIsConnected) {
                     Status status = mBus.leaveSession(mSessionId);
@@ -455,7 +461,7 @@ public class PropertiesClient extends Activity {
                 getLooper().quit();
                 break;
             }
-            case (GET_BACKGROUND_COLOR_PROPERTY): {
+            case GET_BACKGROUND_COLOR_PROPERTY: {
                 if (!mIsConnected) {
                     break;
                 }
@@ -466,7 +472,7 @@ public class PropertiesClient extends Activity {
                 }
                 break;
             }
-            case (SET_BACKGROUND_COLOR_PROPERTY): {
+            case SET_BACKGROUND_COLOR_PROPERTY: {
                 if (!mIsConnected) {
                     break;
                 }
@@ -478,7 +484,7 @@ public class PropertiesClient extends Activity {
                 }
                 break;
             }
-            case (GET_TEXT_SIZE_PROPERTY): {
+            case GET_TEXT_SIZE_PROPERTY: {
                 if (!mIsConnected) {
                     break;
                 }
@@ -492,7 +498,7 @@ public class PropertiesClient extends Activity {
                 }
                 break;
             }
-            case (SET_TEXT_SIZE_PROPERTY): {
+            case SET_TEXT_SIZE_PROPERTY: {
                 if (!mIsConnected) {
                     break;
                 }

@@ -79,36 +79,39 @@ static void CDECL_CALL SigIntHandler(int sig)
     s_interrupt = QCC_TRUE;
 }
 
+void AJ_CALL my_joinsessioncb(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context)
+{
+    QCC_UNUSED(opts);
+    QCC_UNUSED(context);
+    if (ER_OK == status) {
+        printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+        s_sessionId = sessionId;
+        s_joinComplete = QCC_TRUE;
+    } else {
+        printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+    }
+}
+
 /* FoundAdvertisedName callback */
 void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     QCC_UNUSED(context);
     printf("found_advertised_name(name=%s, prefix=%s, transport=0x%x)\n", name, namePrefix, (unsigned int)transport);
 
-    /*
-     * The access to global variable s_joinInitiated is serialized across multiple found_advertised_name callbacks
-     * by accessing it only before calling alljoyn_busattachment_enableconcurrentcallbacks.
-     */
     if ((QCC_FALSE == s_joinInitiated) && (0 == strcmp(name, OBJECT_NAME))) {
         /* We found a remote bus that is advertising basic service's well-known name, so connect to it */
         alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
-
         if (NULL != opts) {
             QStatus status;
             s_joinInitiated = QCC_TRUE;
 
-            /* alljoyn_busattachment_joinsession might block for a while, so allow other callbacks to run in parallel with it */
-            alljoyn_busattachment_enableconcurrentcallbacks(s_msgBus);
-            status = alljoyn_busattachment_joinsession(s_msgBus, name, SERVICE_PORT, NULL, &s_sessionId, opts);
+            printf("calling alljoyn_busattachment_joinsessionasync...\n");
+            status = alljoyn_busattachment_joinsessionasync(s_msgBus, name, SERVICE_PORT, NULL, opts, &my_joinsessioncb, NULL);
 
             if (ER_OK != status) {
-                printf("alljoyn_busattachment_joinsession failed (status=%s)\n", QCC_StatusText(status));
-            } else {
-                printf("alljoyn_busattachment_joinsession SUCCESS (Session id=%u)\n", (unsigned int)s_sessionId);
+                printf("alljoyn_busattachment_joinsessionasync failed (status=%s)\n", QCC_StatusText(status));
             }
-
             alljoyn_sessionopts_destroy(opts);
-            s_joinComplete = QCC_TRUE;
         }
     }
 }
@@ -280,14 +283,14 @@ int CDECL_CALL main(int argc, char** argv)
     }
 
     /* Deallocate bus */
-    if (s_msgBus) {
+    if (s_msgBus != NULL) {
         alljoyn_busattachment deleteMe = s_msgBus;
         s_msgBus = NULL;
         alljoyn_busattachment_destroy(deleteMe);
     }
 
     /* Deallocate bus listener */
-    if (s_busListener) {
+    if (s_busListener != NULL) {
         alljoyn_buslistener_destroy(s_busListener);
     }
 

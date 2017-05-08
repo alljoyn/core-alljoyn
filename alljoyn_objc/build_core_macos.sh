@@ -31,10 +31,12 @@ echo_help()
 {
   echo "Usage: $0 [options...]"
   echo " CRYPTO=crypto_module_name         Build AllJoyn Core with specific crypto module"
+  echo " DOCS=docs_type                    Build AllJoyn Core documentation"
   echo " -h, --help                        Print help (this message)"
 }
 
 CRYPTO=builtin
+DOCS=none
 
 # Process command line arguments
 for i in "$@"
@@ -46,6 +48,10 @@ case $i in
     ;;
   CRYPTO=*)
     CRYPTO="${i#*=}"
+    shift
+    ;;
+  DOCS=*)
+    DOCS="${i#*=}"
     shift
     ;;
   *)
@@ -67,5 +73,5 @@ echo "CPU_NUM: $CPU_NUM"
 set -e
 
 export PLATFORM_NAME=macosx
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS DOCS=$DOCS
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS DOCS=$DOCS
