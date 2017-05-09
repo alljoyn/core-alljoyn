@@ -581,7 +581,10 @@ TEST_F(CredentialAccessorTest, TwoKeysWithTheSameGUID)
 
 #if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN) && defined(QCC_OS_GROUP_POSIX)
 
-/** A 32-bit Big-Endian KeyStore for OpenWRT testing **/
+/** A 32-bit Big-Endian KeyStore for OpenWRT testing
+ *  ASACore-3595: this string does not work, we are turning
+ *  off this test for Big-endian platforms.
+ */
 static const char Rev0X103KeyStore[] = {
     "vWgQBOe83hKtREtXdBd0T4F01rvtgLa/2Z3pQIX07md1WWAa9GfwU0gqFZHV"
     "TCMiykz4haBMt1pHSCE242zBPB/FDR0FcVS11djxcAnRu0RTAUHy/Ovm/i/p"
@@ -649,6 +652,13 @@ static const char Rev0X103KeyStorePwd[] = {
     "L3VzcjIvcGhpbG4vQ3JlZGVudGlhbEFjY2Vzc29yVGVzdA=="
 };
 
+/*
+ * Only perform this test if the target platform is Little-Endian. As it was mentioned above
+ * to generate a Base-encoded Keystore string requires significant amount of reverse
+ * engineering with very little value. Also in reality the Keystore is generated and read
+ * with the same endianess.
+ */
+#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
 class CompatibleCredentialAccessorTest : public CredentialAccessorTest {
   public:
 
@@ -680,5 +690,5 @@ TEST_F(CompatibleCredentialAccessorTest, LoadOldFormat)
     ASSERT_TRUE(memcmp(localKb.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original local KB";
 
 }
-
+#endif
 #endif
