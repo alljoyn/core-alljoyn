@@ -950,10 +950,12 @@ TEST_P(DaemonRouterTest, PushMessage)
     const bool senderAllowsRemote = senderEp->AllowRemoteMessages();
     const bool senderIsRemote = (senderIsB2b || senderIsVirtual);
     const bool senderIsLocal = !senderIsRemote;
+    const bool senderEpTypeIsLocal = (senderInfo->type == ENDPOINT_TYPE_LOCAL);
 
-    const bool senderDenied = msgIsError ? (errorName == TEST_ERROR_SENDER_DENIED) : (testMember == TEST_MEMBER_SENDER_DENIED);
-    const bool receiverDenied = msgIsError ? (errorName == TEST_ERROR_RECEIVER_DENIED) : (testMember == TEST_MEMBER_RECEIVER_DENIED);
-
+    const bool senderDenied = (msgIsError ? (errorName == TEST_ERROR_SENDER_DENIED) : (testMember == TEST_MEMBER_SENDER_DENIED)) && (!senderEpTypeIsLocal);
+    const bool receiverDeniedPre = msgIsError ? (errorName == TEST_ERROR_RECEIVER_DENIED) : (testMember == TEST_MEMBER_RECEIVER_DENIED);
+    bool receiverDenied = receiverDeniedPre;
+    bool allReceiversDenied = receiverDenied;
     bool destAllowsRemote = false;
 
     bool policyError = false;
@@ -969,6 +971,7 @@ TEST_P(DaemonRouterTest, PushMessage)
         const bool epAllowsRemote = ep->AllowRemoteMessages();
         const bool epIsRemote = (epIsB2b || epIsVirtual);
         const bool epIsLocal = !epIsRemote;
+        const bool epTypeIsLocal = (epInfo->type == ENDPOINT_TYPE_LOCAL);
         const bool epIsInSession = (msgIsSessioncast && (epInfo->id == sessionId));
         const bool localDelivery = (senderIsLocal && epIsLocal);
 
@@ -979,6 +982,12 @@ TEST_P(DaemonRouterTest, PushMessage)
         if (epIsDest) {
             destEp = ep;
             destAllowsRemote = epAllowsRemote;
+            receiverDenied = (receiverDeniedPre && (!epTypeIsLocal));
+        } else {
+            if (msgIsBroadcast || msgIsSessioncast) {
+                receiverDenied = receiverDeniedPre && (!epTypeIsLocal);
+                allReceiversDenied &= receiverDenied;
+            }
         }
 
         /*
@@ -993,8 +1002,8 @@ TEST_P(DaemonRouterTest, PushMessage)
              * criteria.  The rest are delivered directly to endpoints rather
              * than the sessionless mechanism.
              */
-            willRxSlsRoute = msgIsSessionless && senderIsB2b && (epIsDest || !msgIsUnicast);
-            willRxSlsPush = !willRxSlsRoute && msgIsSessionless && msgIsBroadcast && epInfo->slsMatchRule;
+            willRxSlsRoute = msgIsSessionless && senderIsB2b && (epIsDest || !msgIsUnicast) && epAllowsRemote;
+            willRxSlsPush = !willRxSlsRoute && msgIsSessionless && msgIsBroadcast && epInfo->slsMatchRule && epAllowsRemote;
 
             if (!willRxSlsRoute && !willRxSlsPush) {
                 if (epIsDest) {
@@ -1068,15 +1077,6 @@ TEST_P(DaemonRouterTest, PushMessage)
                      * messages, and the sender is not the destination.
                      */
                     willRxNorm = willRxNorm || (!localDelivery && epAllowsRemote && (senderEp != ep));
-
-                    /*
-                     * PushMessage() bug - all session members get messages
-                     * regardless of AllowRemote, provided the sender is not the
-                     * dest or the sender self-joined.  ASACORE-1609 will
-                     * address this.
-                     */
-                    willRxNorm = willRxNorm || ((senderEp != ep) || (((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL)) && selfJoin));
-
                 }
             }
         }
@@ -1094,6 +1094,7 @@ TEST_P(DaemonRouterTest, PushMessage)
         if (epIsDest) {
             ASSERT_TRUE(ep->IsValid()) << "Should never happen.  The " << ep << "  is INVALID";
         }
+
     }
 
     /*
@@ -1116,11 +1117,31 @@ TEST_P(DaemonRouterTest, PushMessage)
     ASSERT_NE(ER_INVALID_DATA, pushMessageStatus) << "Should never happen.  Please fix bug in test code for invalid msg sent: " << msg->ToString();
 
     QStatus expectedStatus = ER_OK;
-    if (policyError) {
-        expectedStatus = ER_BUS_POLICY_VIOLATION;
-    } else if (noRoute) {
-        expectedStatus = ER_BUS_NO_ROUTE;
+
+    /*
+     * policyError is not always the accurate expectation, since the receiverDenied could be updated in eachinteration
+     * in the loop for each endpoint, and in the following situations, it should not be expected:
+     *
+     * 1. if msgIsSessionless && senderIsB2b, SessionlessObj's RouteSessionlessMessage will transport the message, which is a void function; or
+     *    if msgIsSessionless && msgIsBroadcast,  SessionlessObj's PushMessage will transport the message, which either returns ER_OK or ER_FAIL
+     *    Therefore, we should not expect ER_BUS_POLICY_VIOLATION nor ER_BUS_NO_ROUTE
+     *
+     * 2. if msgIsBroadcast, for SendSignalsCast test cases, the destnation would be all EPs including local EP where policyDB rules does not
+     *    apply to (allReceiversDenied flag is to mark this case), therefore unless the explicit verdicts of senderDenied and noRoute hold, the
+     *    returned status should be ER_OK.
+     */
+    if (msgIsSessionless  && (senderIsB2b || msgIsBroadcast)) {
+        expectedStatus = ER_OK;
+    } else if (msgIsBroadcast && !senderDenied && receiverDenied && !allReceiversDenied && !noRoute) {
+        expectedStatus = ER_OK;
+    } else {
+        if (policyError) {
+            expectedStatus = ER_BUS_POLICY_VIOLATION;
+        } else if (noRoute) {
+            expectedStatus = ER_BUS_NO_ROUTE;
+        }
     }
+
     EXPECT_EQ(expectedStatus, pushMessageStatus) << (msgIsSessionless ? "Sessionless " : "Normal ")
                                                  << testMsg->GetOrigType()
                                                  << (replyIsExpected ? " (reply expected)" : "")
@@ -1207,6 +1228,7 @@ INSTANTIATE_TEST_CASE_P(SendSignalsDirect,
  *                          endpoints are part of)
  * Message Flags:           <none>, SessionLess, GlobalBroadcast
  * Interface Member Name:   Used for testing policy rules
+ * Signal flags:            <none>, Sessionless Only, Self join
  */
 INSTANTIATE_TEST_CASE_P(SendSignalsCast,
                         DaemonRouterTest,
