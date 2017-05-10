@@ -7,7 +7,7 @@ android {
     defaultConfig {
         applicationId "org.alljoyn.bus.samples.securedoorclient"
         minSdkVersion 16
-        targetSdkVersion 18
+        targetSdkVersion 22
     }
 
     buildTypes {

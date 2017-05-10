@@ -28,6 +28,7 @@
 */
 package org.alljoyn.bus.samples.securedoorservice;
 
+import android.content.Context;
 import android.util.Log;
 import android.os.Environment;
 
@@ -53,8 +54,8 @@ public class MyAboutData implements AboutDataListener {
     private UUID uuid;
     private File uuid_storage;
 
-    public MyAboutData() {
-        uuid_storage = new File(Environment.getExternalStorageDirectory().getAbsoluteFile(), FILE_NAME);
+    public MyAboutData(Context context) {
+        uuid_storage = new File(context.getFileStreamPath(FILE_NAME).getAbsolutePath());
 
         FileOutputStream out_uuid = null;
         try {

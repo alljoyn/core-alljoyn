@@ -481,6 +481,7 @@ public class ContactsClient extends Activity {
 
             // Call AddressBookInterface.getAllContactNames and send the result to the UI handler
             case GET_ALL_CONTACT_NAMES: {
+                if (mAddressBookInterface == null) break;
                 try {
                     NameId[] reply = mAddressBookInterface.getAllContactNames();
                     Message replyMsg = mHandler.obtainMessage(MESSAGE_DISPLAY_ALL_CONTACTS, (Object) reply);
