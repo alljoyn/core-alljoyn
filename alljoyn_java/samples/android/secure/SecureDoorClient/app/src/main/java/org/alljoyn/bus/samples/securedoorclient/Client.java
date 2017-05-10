@@ -49,7 +49,6 @@ import org.alljoyn.bus.common.KeyInfoNISTP256;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -288,7 +287,7 @@ public class Client extends Activity {
                  */
                 status = mBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
                             mAuthListener,
-                            Environment.getExternalStorageDirectory().getAbsolutePath() + "/alljoyn.ks",
+                            getFileStreamPath("alljoyn_keystore").getAbsolutePath(), // uses private file area associated with app package
                             false,
                             mPcListener);
                 if (status != Status.OK) {
@@ -366,9 +365,11 @@ public class Client extends Activity {
             case DESTROY: {
                 Log.i(TAG, "destroy");
                 stop();
-                mBus.unregisterApplicationStateListener(mAppStateListener);
-                mBus.disconnect();
-                mBus.release();
+                if (mBus != null) {
+                    mBus.unregisterApplicationStateListener(mAppStateListener);
+                    mBus.disconnect();
+                    mBus.release();
+                }
                 mBusHandler.getLooper().quit();
                 break;
             }
@@ -382,8 +383,10 @@ public class Client extends Activity {
         /* Stop listen for announcements from the service, and stop the session manager. */
         private void stop() {
             if (mDoorSessionManager != null) mDoorSessionManager.stop();
-            if (mDoorAboutListener != null) mBus.unregisterAboutListener(mDoorAboutListener);
-            mBus.cancelWhoImplements(new String[] {Door.DOOR_INTF_NAME});
+            if (mBus != null) {
+                if (mDoorAboutListener != null) mBus.unregisterAboutListener(mDoorAboutListener);
+                mBus.cancelWhoImplements(new String[]{Door.DOOR_INTF_NAME});
+            }
             mDoorSessionManager = null;
             mDoorAboutListener = null;
         }
