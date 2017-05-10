@@ -47,7 +47,6 @@ import org.alljoyn.bus.common.KeyInfoNISTP256;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -240,7 +239,7 @@ public class Service extends Activity {
                  */
                 status = mBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
                         mAuthListener,
-                        Environment.getExternalStorageDirectory().getAbsolutePath() + "/alljoyn.ks",
+                        getFileStreamPath("alljoyn_keystore").getAbsolutePath(), // uses private file area associated with app package
                         false,
                         mPcListener);
                 if (status != Status.OK) {
@@ -296,7 +295,7 @@ public class Service extends Activity {
                  * Using about announcements to be discovered by the security manager.
                  */
                 AboutObj aboutObj = new AboutObj(mBus);
-                status = aboutObj.announce(contactPort.value, new MyAboutData());
+                status = aboutObj.announce(contactPort.value, new MyAboutData(Service.this));
                 logStatus("announce()", status);
                 if (status != Status.OK) {
                     finish();
@@ -309,10 +308,12 @@ public class Service extends Activity {
             /* Release all resources acquired in connect. */
             case DISCONNECT: {
                 Log.i(TAG, "quit");
-                mBus.unregisterApplicationStateListener(mAppStateListener);
-                mBus.unregisterBusObject(mDoorService);
-                mBus.disconnect();
-                mBus.release();
+                if (mBus != null) {
+                    mBus.unregisterApplicationStateListener(mAppStateListener);
+                    mBus.unregisterBusObject(mDoorService);
+                    mBus.disconnect();
+                    mBus.release();
+                }
                 mBusHandler.getLooper().quit();
                 break;
             }

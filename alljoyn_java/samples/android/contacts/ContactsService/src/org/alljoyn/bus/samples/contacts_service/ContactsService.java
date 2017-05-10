@@ -35,13 +35,16 @@ package org.alljoyn.bus.samples.contacts_service;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
+import org.alljoyn.bus.ErrorReplyBusException;
 import org.alljoyn.bus.SessionPortListener;
 import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.Mutable;
 import org.alljoyn.bus.SessionOpts;
 import org.alljoyn.bus.Status;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
@@ -49,6 +52,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.ContactsContract;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -112,7 +116,7 @@ public class ContactsService extends Activity {
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
         mBusHandler = new BusHandler(busThread.getLooper());
-        mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
+        verifyPermissionsAndConnect();
     }
 
 
@@ -152,176 +156,194 @@ public class ContactsService extends Activity {
          * return the filled in contact container.
          */
         public Contact getContact(String name, int userId) throws BusException {
-            Contact contact = new Contact();
-            contact.name = name;
+            try {
+                Contact contact = new Contact();
+                contact.name = name;
 
-            String contactId = Integer.toString(userId);
-            if (contactId != null) {
-                /*
-                 * Get all the contact details of type PHONE for the contact
-                 */
-                String where = ContactsContract.Data.CONTACT_ID + " = " + contactId + " AND " +
-                        ContactsContract.Data.MIMETYPE + " = '" +
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
-                Cursor dataCursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI,
-                                                               null, where, null, null);
+                String contactId = Integer.toString(userId);
+                if (contactId != null) {
+                    /*
+                     * Get all the contact details of type PHONE for the contact
+                     */
+                    String where = ContactsContract.Data.CONTACT_ID + " = " + contactId + " AND " +
+                            ContactsContract.Data.MIMETYPE + " = '" +
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
+                    Cursor dataCursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI,
+                            null, where, null, null);
 
-                int phoneIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER);
-                int typeIdx  = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.TYPE);
-                int labelIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.LABEL);
-                int count = dataCursor.getCount();
-                if ( count > 0){
-                    contact.setPhoneCount(count);
-                    if (dataCursor.moveToFirst()) {
-                        do {
-                            contact.phone[dataCursor.getPosition()].number = dataCursor.getString(phoneIdx);
+                    int phoneIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER);
+                    int typeIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.TYPE);
+                    int labelIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.LABEL);
+                    int count = dataCursor.getCount();
+                    if (count > 0) {
+                        contact.setPhoneCount(count);
+                        if (dataCursor.moveToFirst()) {
+                            do {
+                                contact.phone[dataCursor.getPosition()].number = dataCursor.getString(phoneIdx);
+                                /*
+                                 * If a number was not returned fill in the value
+                                 * with an empty string.  AllJoyn will not allow
+                                 * a null if a string is expected.
+                                 */
+                                if (contact.phone[dataCursor.getPosition()].number == null) {
+                                    contact.phone[dataCursor.getPosition()].number = "";
+                                }
+                                contact.phone[dataCursor.getPosition()].type = dataCursor.getInt(typeIdx);
+
+                                contact.phone[dataCursor.getPosition()].label = dataCursor.getString(labelIdx);
+                                if (contact.phone[dataCursor.getPosition()].label == null) {
+                                    contact.phone[dataCursor.getPosition()].label = "";
+                                }
+                            } while (dataCursor.moveToNext());
+                        } else {
                             /*
-                             * If a number was not returned fill in the value
-                             * with an empty string.  AllJoyn will not allow
-                             * a null if a string is expected.
+                             * If for some reason we are unable to move the dataCursor to the first element
+                             * fill in all contacts with a default empty value.
                              */
-                            if (contact.phone[dataCursor.getPosition()].number == null) {
-                                contact.phone[dataCursor.getPosition()].number = "";
+                            for (int i = 0; i < count; i++) {
+                                contact.phone[i].number = "";
+                                contact.phone[i].type = 0;
+                                contact.phone[i].label = "";
                             }
-                            contact.phone[dataCursor.getPosition()].type = dataCursor.getInt(typeIdx);
-
-                            contact.phone[dataCursor.getPosition()].label = dataCursor.getString(labelIdx);
-                            if (contact.phone[dataCursor.getPosition()].label == null) {
-                                contact.phone[dataCursor.getPosition()].label = "";
-                            }
-                        } while(dataCursor.moveToNext());
+                        }
                     } else {
                         /*
-                         * If for some reason we are unable to move the dataCursor to the first element
-                         * fill in all contacts with a default empty value.
+                         * We must have at lease one contact.
                          */
-                        for (int i = 0; i < count; i++) {
-                            contact.phone[i].number = "";
-                            contact.phone[i].type = 0;
-                            contact.phone[i].label = "";
-                        }
+                        contact.setPhoneCount(1);
+                        contact.phone[0].number = "";
+                        contact.phone[0].type = 0;
+                        contact.phone[0].label = "";
                     }
-                } else {
+
+                    dataCursor.close();
+
                     /*
-                     * We must have at lease one contact.
+                     * Get all the contact details of type EMAIL for the contact
                      */
-                    contact.setPhoneCount(1);
-                    contact.phone[0].number = "";
-                    contact.phone[0].type = 0;
-                    contact.phone[0].label = "";
-                }
-
-                dataCursor.close();
-
-                /*
-                 * Get all the contact details of type EMAIL for the contact
-                 */
-                where = ContactsContract.Data.CONTACT_ID + " = " + contactId + " AND " +
-                        ContactsContract.Data.MIMETYPE + " = '" +
-                        ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE + "'";
-                dataCursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI, null, where, null, null);
-                int addressIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.DATA);
-                typeIdx  = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.TYPE);
-                labelIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.LABEL);
-                count = dataCursor.getCount();
-                if (count > 0) {
-                    contact.setEmailCount(count);
-                    if (dataCursor.moveToFirst()) {
-                        do {
-                            contact.email[dataCursor.getPosition()].address = dataCursor.getString(addressIdx);
-                            /*
-                             * If an email was not returned fill in the value
-                             * with an empty string.  AllJoyn will not allow
-                             * a null value if a string is expected.
-                             */
-                            if (contact.email[dataCursor.getPosition()].address == null) {
-                                contact.email[dataCursor.getPosition()].address = "";
+                    where = ContactsContract.Data.CONTACT_ID + " = " + contactId + " AND " +
+                            ContactsContract.Data.MIMETYPE + " = '" +
+                            ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE + "'";
+                    dataCursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI, null, where, null, null);
+                    int addressIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.DATA);
+                    typeIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.TYPE);
+                    labelIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.LABEL);
+                    count = dataCursor.getCount();
+                    if (count > 0) {
+                        contact.setEmailCount(count);
+                        if (dataCursor.moveToFirst()) {
+                            do {
+                                contact.email[dataCursor.getPosition()].address = dataCursor.getString(addressIdx);
+                                /*
+                                 * If an email was not returned fill in the value
+                                 * with an empty string.  AllJoyn will not allow
+                                 * a null value if a string is expected.
+                                 */
+                                if (contact.email[dataCursor.getPosition()].address == null) {
+                                    contact.email[dataCursor.getPosition()].address = "";
+                                }
+                                contact.email[dataCursor.getPosition()].type = dataCursor.getInt(typeIdx);
+                                contact.email[dataCursor.getPosition()].label = dataCursor.getString(labelIdx);
+                                if (contact.email[dataCursor.getPosition()].label == null) {
+                                    contact.email[dataCursor.getPosition()].label = "";
+                                }
+                            } while (dataCursor.moveToNext());
+                        } else {
+                            for (int i = 0; i < count; i++) {
+                                contact.email[i].address = "";
+                                contact.email[i].type = 0;
+                                contact.email[i].label = "";
                             }
-                            contact.email[dataCursor.getPosition()].type = dataCursor.getInt(typeIdx);
-                            contact.email[dataCursor.getPosition()].label = dataCursor.getString(labelIdx);
-                            if (contact.email[dataCursor.getPosition()].label == null) {
-                                contact.email[dataCursor.getPosition()].label = "";
-                            }
-                        } while(dataCursor.moveToNext());
+                        }
                     } else {
-                        for (int i = 0; i < count; i++){
-                            contact.email[i].address = "";
-                            contact.email[i].type = 0;
-                            contact.email[i].label = "";
-                        }
+                        /*
+                         * We must have at lease one email.
+                         */
+                        contact.setEmailCount(1);
+                        contact.email[0].address = "";
+                        contact.email[0].type = 0;
+                        contact.email[0].label = "";
                     }
-                } else {
-                    /*
-                     * We must have at lease one email.
-                     */
-                    contact.setEmailCount(1);
-                    contact.email[0].address = "";
-                    contact.email[0].type = 0;
-                    contact.email[0].label = "";
+                    dataCursor.close();
                 }
-                dataCursor.close();
+
+                String action = String.format("Information about %s sent to Client", contact.name);
+                Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
+                mHandler.sendMessage(msg);
+                Log.i(TAG, action);
+
+                return contact;
+            } catch (Exception ex) {
+                String action = String.format("Failed to send information about %s to Client - %s", name, ex.getMessage());
+                Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
+                mHandler.sendMessage(msg);
+                Log.e(TAG, action, ex);
+
+                throw new ErrorReplyBusException(ex.getMessage());
             }
-
-            String action = String.format("Information about %s sent to Client", contact.name);
-            Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
-            mHandler.sendMessage(msg);
-            Log.i(TAG, action);
-
-            return contact;
         }
 
         /*
          * Get the DISPLAY NAME of every single user
          */
-        public NameId[] getAllContactNames() {
-            Log.i(TAG, String.format("Client requested a list of contacts"));
-            /*
-             * Get a cursor over every aggregated contact.  Sort the data in
-             * ascending order based on the display name.
-             */
-            Cursor cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI, null, null, null,
-                                                       ContactsContract.Contacts.DISPLAY_NAME + " ASC");
-
-            /*
-             * Let the activity manage the cursor lifecycle.
-             */
-            startManagingCursor(cursor);
-
-            /*
-             * Use the convenience properties to get the index of the columns.
-             */
-            int nameIdx = cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME);
-            int idIdx   = cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID);
-
-            NameId[] result;
-            int count = cursor.getCount();
-            if (count > 0) {
-                result = new NameId[cursor.getCount()];
-                if (cursor.moveToFirst()) {
-                    do {
-                        result[cursor.getPosition()] = new NameId();
-                        result[cursor.getPosition()].displayName = cursor.getString(nameIdx);
-                        result[cursor.getPosition()].userId = cursor.getInt(idIdx);
-                    } while(cursor.moveToNext());
-                }
-            } else {
+        public NameId[] getAllContactNames() throws BusException {
+            try {
+                Log.i(TAG, String.format("Client requested a list of contacts"));
                 /*
-                 * we must have at lease one value
+                 * Get a cursor over every aggregated contact.  Sort the data in
+                 * ascending order based on the display name.
                  */
-                result = new NameId[1];
-                result[0] = new NameId();
-                result[0].displayName = "";
-                result[0].userId = 0;
+                Cursor cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI, null, null, null,
+                        ContactsContract.Contacts.DISPLAY_NAME + " ASC");
+
+                /*
+                 * Let the activity manage the cursor lifecycle.
+                 */
+                startManagingCursor(cursor);
+
+                /*
+                 * Use the convenience properties to get the index of the columns.
+                 */
+                int nameIdx = cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME);
+                int idIdx = cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID);
+
+                NameId[] result;
+                int count = cursor.getCount();
+                if (count > 0) {
+                    result = new NameId[cursor.getCount()];
+                    if (cursor.moveToFirst()) {
+                        do {
+                            result[cursor.getPosition()] = new NameId();
+                            result[cursor.getPosition()].displayName = cursor.getString(nameIdx);
+                            result[cursor.getPosition()].userId = cursor.getInt(idIdx);
+                        } while (cursor.moveToNext());
+                    }
+                } else {
+                    /*
+                     * we must have at lease one value
+                     */
+                    result = new NameId[1];
+                    result[0] = new NameId();
+                    result[0].displayName = "";
+                    result[0].userId = 0;
+                }
+
+                stopManagingCursor(cursor);
+
+                String action = String.format("Sending list of %d contacts to Client", count);
+                Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
+                mHandler.sendMessage(msg);
+
+                Log.i(TAG, action);
+                return result;
+            } catch (Exception ex) {
+                String action = String.format("Failed to send list of contacts to Client - %s", ex.getMessage());
+                Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
+                mHandler.sendMessage(msg);
+                Log.e(TAG, action, ex);
+
+                throw new ErrorReplyBusException(ex.getMessage());
             }
-
-            stopManagingCursor(cursor);
-
-            String action = String.format("Sending list of %d contacts to Client", count);
-            Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
-            mHandler.sendMessage(msg);
-
-            Log.i(TAG, action);
-            return result;
         }
     }
 
@@ -410,8 +432,10 @@ public class ContactsService extends Activity {
             }
 
             case DISCONNECT: {
-                mBus.unregisterBusObject(mService);
-                mBus.disconnect();
+                if (mBus != null) {
+                    mBus.unregisterBusObject(mService);
+                    mBus.disconnect();
+                }
                 mBusHandler.getLooper().quit();
                 break;
             }
@@ -432,4 +456,51 @@ public class ContactsService extends Activity {
             Log.e(TAG, log);
         }
     }
+
+    /**
+     * Checks if the app has permission to access device contacts.
+     * If the app does not have permission then the user will be prompted to grant permissions.
+     *
+     * Note: From API 23+(6.0) you need to request the read/write permissions even if they are
+     *       already in your manifest (known as Requesting Permissions at Run Time).
+     */
+    public void verifyPermissionsAndConnect() {
+        final int REQUEST_ACCESS_CONTACTS = 1;
+        final String[] PERMISSIONS = {Manifest.permission.READ_CONTACTS};
+
+        /* Check if we have permission to access contacts. If not, then prompt the user for permission. */
+        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_ACCESS_CONTACTS);
+        } else {
+            mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
+        }
+    }
+
+    /**
+     * Callback for the result from requesting permissions. This method is invoked for every call
+     * on requestPermissions(android.app.Activity, String[], int).
+     *
+     * @param requestCode The request code passed in requestPermissions (android.app.Activity, String[], int)
+     * @param permissions The requested permissions. Never null.
+     * @param grantResults The grant results for the corresponding permissions
+     *          which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
+     */
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        boolean isGranted = (grantResults.length > 0);
+
+        for (int grantResult : grantResults) {
+            if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                isGranted = false;
+                break;
+            }
+        }
+
+        if (isGranted) {
+            mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
+        } else {
+            finish();
+        }
+    }
+
 }
