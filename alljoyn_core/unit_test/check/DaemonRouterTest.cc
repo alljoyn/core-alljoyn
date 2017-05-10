@@ -950,9 +950,11 @@ TEST_P(DaemonRouterTest, PushMessage)
     const bool senderAllowsRemote = senderEp->AllowRemoteMessages();
     const bool senderIsRemote = (senderIsB2b || senderIsVirtual);
     const bool senderIsLocal = !senderIsRemote;
+    const bool senderEpTypeIsLocal = (senderInfo->type == ENDPOINT_TYPE_LOCAL);
 
-    const bool senderDenied = msgIsError ? (errorName == TEST_ERROR_SENDER_DENIED) : (testMember == TEST_MEMBER_SENDER_DENIED);
-    const bool receiverDenied = msgIsError ? (errorName == TEST_ERROR_RECEIVER_DENIED) : (testMember == TEST_MEMBER_RECEIVER_DENIED);
+    const bool senderDenied = (msgIsError ? (errorName == TEST_ERROR_SENDER_DENIED) : (testMember == TEST_MEMBER_SENDER_DENIED)) && (!senderEpTypeIsLocal);
+    const bool receiverDeniedPre = msgIsError ? (errorName == TEST_ERROR_RECEIVER_DENIED) : (testMember == TEST_MEMBER_RECEIVER_DENIED);
+    bool receiverDenied = receiverDeniedPre;
 
     bool destAllowsRemote = false;
 
@@ -969,6 +971,7 @@ TEST_P(DaemonRouterTest, PushMessage)
         const bool epAllowsRemote = ep->AllowRemoteMessages();
         const bool epIsRemote = (epIsB2b || epIsVirtual);
         const bool epIsLocal = !epIsRemote;
+        const bool epTypeIsLocal = (epInfo->type == ENDPOINT_TYPE_LOCAL);
         const bool epIsInSession = (msgIsSessioncast && (epInfo->id == sessionId));
         const bool localDelivery = (senderIsLocal && epIsLocal);
 
@@ -979,6 +982,7 @@ TEST_P(DaemonRouterTest, PushMessage)
         if (epIsDest) {
             destEp = ep;
             destAllowsRemote = epAllowsRemote;
+            receiverDenied = (receiverDeniedPre && (!epTypeIsLocal));
         }
 
         /*
@@ -1094,6 +1098,7 @@ TEST_P(DaemonRouterTest, PushMessage)
         if (epIsDest) {
             ASSERT_TRUE(ep->IsValid()) << "Should never happen.  The " << ep << "  is INVALID";
         }
+
     }
 
     /*
