@@ -767,7 +767,7 @@ static JavaVM* jvm = NULL;
 /** java/lang cached items - these are guaranteed to be loaded at all times. */
 static jclass CLS_Integer = NULL;
 static jclass CLS_Object = NULL;
-static jclass CLS_String = NULL;
+jclass CLS_String = NULL;
 
 /** org/alljoyn/bus */
 jclass CLS_BusException = NULL;
