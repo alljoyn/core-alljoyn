@@ -181,7 +181,7 @@ class IpNameService {
      * @brief Set the Callback for notification of network interface events.
      */
     void SetNetworkEventCallback(TransportMask transportMask,
-                                 Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb);
+                                 Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>* cb);
 
     void RegisterListener(IpNameServiceListener& listener);
 
