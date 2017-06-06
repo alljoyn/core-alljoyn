@@ -538,7 +538,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DoStopListen(qcc::String& listenSpec);
 
-    void QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>&);
+    void QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>&, bool);
 
     /**
      * @internal
@@ -580,7 +580,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     class NetworkEventCallback {
       public:
         NetworkEventCallback(UDPTransport& transport) : m_transport(transport) { }
-        void Handler(const std::multimap<qcc::String, qcc::IPAddress>&);
+        void Handler(const std::multimap<qcc::String, qcc::IPAddress>&, bool);
       private:
         /* Private assigment operator - does nothing */
         NetworkEventCallback operator=(const NetworkEventCallback&);
@@ -814,6 +814,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DisableAdvertisementInstance(ListenRequest& listenRequest);
     void EnableDiscoveryInstance(ListenRequest& listenRequest);
     void DisableDiscoveryInstance(ListenRequest& listenRequest);
+    void HandleInterfaceDownEvent(const qcc::String& iface);
     void HandleNetworkEventInstance(ListenRequest& listenRequest);
     void UpdateDynamicScoreInstance(ListenRequest& listenRequest);
 

@@ -362,7 +362,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_timer(0), m_tDuration(DEFAULT_DURATION), m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
     m_modulus(QUESTION_MODULUS), m_retries(ArraySize(RETRY_INTERVALS)),
     m_loopback(false), m_broadcast(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
-    m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
+    m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false), m_interfaceDownDetected(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_ipv6UnicastSockFd(qcc::INVALID_SOCKET_FD),
     m_unicastEvent(NULL), m_unicast6Event(NULL),
@@ -1163,6 +1163,10 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     //
     ClearLiveInterfaces();
 
+#if defined(QCC_OS_LINUX)
+    std::vector<qcc::String> closedInterfaces;
+#endif
+
     //
     // If m_enable is false, we need to make sure that no packets are sent
     // and no sockets are listening for connections.  This is for Android
@@ -1229,11 +1233,11 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         QCC_ASSERT(entries[i].m_name.size());
         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Checking out interface %s", entries[i].m_name.c_str()));
 
-        //
-        // We are never interested in interfaces that are not UP.
-        //
         if ((entries[i].m_flags & qcc::IfConfigEntry::UP) == 0) {
             QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): not UP"));
+#if defined(QCC_OS_LINUX)
+            closedInterfaces.push_back(entries[i].m_name);
+#endif
             continue;
         }
 
@@ -1337,7 +1341,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                     //
                     if ((m_requestedInterfaces[j][k].m_interfaceName.size() == 0) && AddrMatches(m_requestedInterfaces[j][k].m_interfaceAddr, entries[i].m_addr)) {
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface address "
-                                       "\"%s\" for transport %d.", entries[i].m_addr.c_str(), i));
+                                       "\"%s\" for transport %d.", entries[i].m_addr.c_str(), j));
                         useEntry = true;
                         break;
                     }
@@ -1534,20 +1538,54 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
             processAnyTransport = true;
         }
     }
-    if (processAnyTransport) {
-        m_packetScheduler.Alert();
-    }
 
-    if (m_refreshAdvertisements) {
-        QCC_DbgHLPrintf(("Now refreshing advertisements on interface event"));
+    bool refreshAdvertisements = m_refreshAdvertisements;
+    if (refreshAdvertisements) {
         m_timer = m_tRetransmit + 1;
         m_networkChangeScheduleCount = 0;
-        std::multimap<qcc::String, qcc::IPAddress> ifMap;
         for (std::set<uint32_t>::const_iterator it = networkEvents.begin(); it != networkEvents.end(); it++) {
             m_networkEvents.insert(*it);
         }
-        m_packetScheduler.Alert();
         m_refreshAdvertisements = false;
+    }
+#if defined(QCC_OS_LINUX)
+    /*
+     * This is fix for ASACORE-3485. This fix is applicable for name service which
+     * is set to listen on fixed interface or fixed IP address.
+     * On Windows when interface is disabled then it is missing on the list received
+     * from the call to qcc::IfConfig(...). We could try to find out which interaface
+     * is down based on diff between list from qcc::IfConfig(...) and what we have on
+     * m_requestedInterfaces. This is however weak as name service may be misconfigured
+     * and m_requestedInterfaces can contain non existing interface name or IP address
+     * and besides that, this approach would cause many unnecessary calls to TCP and UDP
+     * transports to make a cleanup.
+     * For those reasons, and due to problems with testing on Android,
+     * fix for ASACORE-3485 is limited to Linux platforms.
+     */
+    if (m_interfaceDownDetected) {
+        if (!closedInterfaces.empty()) {
+            uint32_t transports[] = { TRANSPORT_INDEX_TCP, TRANSPORT_INDEX_UDP };
+            std::multimap<qcc::String, qcc::IPAddress> transportIfMap;
+            for (auto it = closedInterfaces.begin(); it != closedInterfaces.end(); it++) {
+                transportIfMap.insert(std::pair<qcc::String, qcc::IPAddress> (*it, qcc::IPAddress("0.0.0.0")));
+                QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): adding closed iface: %s", (*it).c_str()));
+            }
+            for (uint32_t& transportIndex : transports) {
+                if (!m_any[transportIndex] && (m_networkEventCallback[transportIndex] != nullptr)) {
+                    m_protect_net_callback = true;
+                    m_mutex.Unlock(MUTEX_CONTEXT);
+                    (*m_networkEventCallback[transportIndex])(transportIfMap, true);
+                    m_mutex.Lock(MUTEX_CONTEXT);
+                    m_protect_net_callback = false;
+                }
+            }
+        }
+        m_interfaceDownDetected = false;
+    }
+#endif
+    if (refreshAdvertisements || processAnyTransport) {
+        QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces() is calling m_packetScheduler.Alert(), refreshAdvertisements: %d, processAnyTransport: %d\n", refreshAdvertisements, processAnyTransport));
+        m_packetScheduler.Alert();
     }
 }
 
@@ -2372,7 +2410,7 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
 }
 
 QStatus IpNameServiceImpl::SetNetworkEventCallback(TransportMask transportMask,
-                                                   Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb)
+                                                   Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>* cb)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SetNetworkEventCallback()"));
 
@@ -2399,7 +2437,7 @@ QStatus IpNameServiceImpl::SetNetworkEventCallback(TransportMask transportMask,
         m_mutex.Lock(MUTEX_CONTEXT);
     }
 
-    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* goner = m_networkEventCallback[i];
+    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>* goner = m_networkEventCallback[i];
     m_networkEventCallback[i] = NULL;
     delete goner;
     m_networkEventCallback[i] = cb;
@@ -2449,7 +2487,7 @@ void IpNameServiceImpl::ClearNetworkEventCallbacks(void)
     // Delete any callbacks that any users of this class may have set.
     //
     for (uint32_t i = 0; i < N_TRANSPORTS; ++i) {
-        Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* goner = m_networkEventCallback[i];
+        Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>* goner = m_networkEventCallback[i];
         m_networkEventCallback[i] = NULL;
         delete goner;
     }
@@ -5365,7 +5403,7 @@ void* IpNameServiceImpl::Run(void* arg)
         // FindAdvertiseName() or AdvertiseName().  This is indicated to us by a
         // message on the m_outbound queue.
         //
-        // So there are three basic cases which cause us to rn the lazy updater:
+        // So there are three basic cases which cause us to run the lazy updater:
         //
         //     1) If m_forceLazyUpdate is true, some major configuration change
         //        has happened and we need to update no matter what.
@@ -5507,12 +5545,11 @@ void* IpNameServiceImpl::Run(void* arg)
                 NetworkEventType eventType = qcc::NetworkEventReceive(networkEventFd, networkEvents);
                 if (eventType == QCC_RTM_DELADDR) {
                     m_forceLazyUpdate = true;
-                }
-                if (eventType == QCC_RTM_NEWADDR) {
+                    m_interfaceDownDetected = true;
+                } else if (eventType == QCC_RTM_NEWADDR) {
                     m_forceLazyUpdate = true;
                     m_refreshAdvertisements = true;
-                }
-                if (eventType == QCC_RTM_SUSPEND) {
+                } else if (eventType == QCC_RTM_SUSPEND) {
                     delete networkEvent;
                     networkEvent = NULL;
                     qcc::Close(networkEventFd);
@@ -8681,8 +8718,8 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                     ifMap.insert(std::pair<qcc::String, qcc::IPAddress> (m_impl.m_liveInterfaces[i].m_interfaceName, m_impl.m_liveInterfaces[i].m_address));
 #ifndef NDEBUG
                     QCC_DbgPrintf(("IpNameServiceImpl::PacketScheduler: [iteration %u] setting address %s for interface %s", i,
-                                   m_impl.m_liveInterfaces[i].m_interfaceName.c_str(),
-                                   m_impl.m_liveInterfaces[i].m_address.ToString().c_str()));
+                                   m_impl.m_liveInterfaces[i].m_address.ToString().c_str(),
+                                   m_impl.m_liveInterfaces[i].m_interfaceName.c_str()));
 #endif
                 }
             }
@@ -8711,7 +8748,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                         if (!transportIfMap.empty()) {
                             m_impl.m_protect_net_callback = true;
                             m_impl.m_mutex.Unlock(MUTEX_CONTEXT);
-                            (*m_impl.m_networkEventCallback[transportIndex])(ifMap);
+                            (*m_impl.m_networkEventCallback[transportIndex])(ifMap, false);
                             m_impl.m_mutex.Lock(MUTEX_CONTEXT);
                             m_impl.m_protect_net_callback = false;
                         }
@@ -8766,8 +8803,8 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                         ifMap.insert(std::pair<qcc::String, qcc::IPAddress> (m_impl.m_liveInterfaces[i].m_interfaceName, m_impl.m_liveInterfaces[i].m_address));
 #ifndef NDEBUG
                         QCC_DbgPrintf(("IpNameServiceImpl::PacketScheduler: [iteration %u] setting address %s for interface %s", i,
-                                       m_impl.m_liveInterfaces[i].m_interfaceName.c_str(),
-                                       m_impl.m_liveInterfaces[i].m_address.ToString().c_str()));
+                                       m_impl.m_liveInterfaces[i].m_address.ToString().c_str(),
+                                       m_impl.m_liveInterfaces[i].m_interfaceName.c_str()));
 #endif
                     }
                 }
@@ -8796,7 +8833,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                             if (!transportIfMap.empty()) {
                                 m_impl.m_protect_net_callback = true;
                                 m_impl.m_mutex.Unlock(MUTEX_CONTEXT);
-                                (*m_impl.m_networkEventCallback[transportIndex])(ifMap);
+                                (*m_impl.m_networkEventCallback[transportIndex])(ifMap, false);
                                 m_impl.m_mutex.Lock(MUTEX_CONTEXT);
                                 m_impl.m_protect_net_callback = false;
                             }
