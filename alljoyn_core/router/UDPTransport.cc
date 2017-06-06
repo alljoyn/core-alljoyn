@@ -5119,7 +5119,7 @@ QStatus UDPTransport::Start()
                                               (&m_foundCallback, &FoundCallback::Found));
 
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_UDP,
-                                                      new CallbackImpl<NetworkEventCallback, void, const std::multimap<qcc::String, qcc::IPAddress>&>
+                                                      new CallbackImpl<NetworkEventCallback, void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>
                                                           (&m_networkEventCallback, &NetworkEventCallback::Handler));
     uint32_t availConn = m_maxConn -  m_currConn;
     uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
@@ -11216,7 +11216,7 @@ void UDPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::S
     }
 }
 
-void UDPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
+void UDPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String, qcc::IPAddress>& ifMap, bool isDeletedIfaceEvent)
 {
     IncrementAndFetch(&m_transport.m_refCount);
     QCC_DbgPrintf(("UDPTransport::NetworkEventCallback::Handler()"));
@@ -11239,22 +11239,27 @@ void UDPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String
         return;
     }
 
-    m_transport.QueueHandleNetworkEvent(ifMap);
+    m_transport.QueueHandleNetworkEvent(ifMap, isDeletedIfaceEvent);
     DecrementAndFetch(&m_transport.m_refCount);
 }
 
-void UDPTransport::QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
+void UDPTransport::QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>& ifMap, bool isDeletedIfaceEvent)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgPrintf(("UDPTransport::QueueHandleNetworkEvent()"));
 
-    ListenRequest listenRequest;
-    listenRequest.m_requestOp = HANDLE_NETWORK_EVENT;
-    listenRequest.ifMap = ifMap;
-
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
-    RunListenMachine(listenRequest);
+    if (isDeletedIfaceEvent) {
+        for (auto it = ifMap.begin(); it != ifMap.end(); ++it) {
+            HandleInterfaceDownEvent(it->first);
+        }
+    } else {
+        ListenRequest listenRequest;
+        listenRequest.m_requestOp = HANDLE_NETWORK_EVENT;
+        listenRequest.ifMap = ifMap;
+        RunListenMachine(listenRequest);
+    }
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
 }
@@ -11465,6 +11470,33 @@ void UDPTransport::CleanupRequestedInterfaces(const multimap<String, IPAddress>&
     }
 }
 
+void UDPTransport::HandleInterfaceDownEvent(const qcc::String& iface)
+{
+    QCC_DbgTrace(("UDPTransport::%s(%s)\n", __FUNCTION__, iface.c_str()));
+    for (const auto& entry : m_requestedAddresses) {
+        if (entry.second.m_interface == iface) {
+            String listenSpec1 = "udp:addr=" + entry.first + ",port=" + U32ToString(entry.second.m_acceptingPort);
+            QCC_DbgPrintf(("UDPTransport::%s calling DoStopListen(%s)", __FUNCTION__, listenSpec1.c_str()));
+            DoStopListen(listenSpec1);
+            String listenSpec2 = "udp:addr=" + entry.first + ",port=" + U32ToString(entry.second.m_activePort);
+            QCC_DbgPrintf(("UDPTransport::%s calling DoStopListen(%s)", __FUNCTION__, listenSpec2.c_str()));
+            DoStopListen(listenSpec2);
+        }
+    }
+    for (const auto& entry1 : m_requestedInterfaces) {
+        if (entry1.first == iface) {
+            for (const auto& entry2 : entry1.second.m_addresses) {
+                String listenSpec1 = "udp:addr=" + entry2.ToString() + ",port=" + U32ToString(entry1.second.m_acceptingPort);
+                QCC_DbgPrintf(("UDPTransport::%s calling DoStopListen(%s)", __FUNCTION__, listenSpec1.c_str()));
+                DoStopListen(listenSpec1);
+                String listenSpec2 = "udp:addr=" + entry2.ToString() + ",port=" + U32ToString(entry1.second.m_activePort);
+                QCC_DbgPrintf(("UDPTransport::%s calling DoStopListen(%s)", __FUNCTION__, listenSpec2.c_str()));
+                DoStopListen(listenSpec2);
+            }
+        }
+    }
+}
+
 /* This is the callback handler that is invoked when the name service detects that a network interface
  * has become IFF_UP or a network interface's IP address has changed. When we invoke the OpenInterface()
  * method of the name service from the DoStartListen() method, it will also trigger the name service to
@@ -11488,9 +11520,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
     bool wildcardIPv6AddressRequested = (m_requestedAddresses.find(ADDR6_DEFAULT) != m_requestedAddresses.end());
     bool wildcardAddressRequested = (wildcardIPv4AddressRequested || wildcardIPv6AddressRequested);
 
-    QCC_DbgTrace(("UDPTransport::HandleNetworkEventInstance(), wildcardIfaceRequested = %d, wildcardAddressRequested = %d, ifMap.size() = %d",
-                  wildcardIfaceRequested, wildcardAddressRequested, ifMap.size()
-                  ));
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(), wildcardIfaceRequested = %d, wildcardAddressRequested = %d, ifMap.size() = %d\n",
+                   wildcardIfaceRequested, wildcardAddressRequested, ifMap.size()));
 
 #ifndef NDEBUG
     for (std::multimap<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
@@ -11604,7 +11635,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
                 replacedList.push_back(replacedAcceptingSpec);
                 String replacedActiveSpec = "udp:addr=" + addressStr + ",port=" + U32ToString(m_requestedAddresses[addressStr].m_activePort);
                 replacedList.push_back(replacedActiveSpec);
-                m_requestedAddresses[addressStr].m_interface = interface;
             }
             m_requestedAddresses[addressStr].m_interface = interface;
         }
