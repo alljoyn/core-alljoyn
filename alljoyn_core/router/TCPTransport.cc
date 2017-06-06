@@ -1036,7 +1036,7 @@ QStatus TCPTransport::Start()
      * detects that an interface has become IFF_UP or its IP address has changed.
      */
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_TCP,
-                                                      new CallbackImpl<NetworkEventCallback, void, const std::multimap<qcc::String, qcc::IPAddress>&>
+                                                      new CallbackImpl<NetworkEventCallback, void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>
                                                           (&m_networkEventCallback, &NetworkEventCallback::Handler));
 
     ConfigDB* config = ConfigDB::GetConfigDB();
@@ -4146,7 +4146,7 @@ void TCPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::S
     }
 }
 
-void TCPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
+void TCPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String, qcc::IPAddress>& ifMap, bool isDeletedIfaceEvent)
 {
     QCC_DbgPrintf(("TCPTransport::NetworkEventCallback::Handler()"));
 
@@ -4168,22 +4168,63 @@ void TCPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String
         return;
     }
 
-    m_transport.QueueHandleNetworkEvent(ifMap);
+    m_transport.QueueHandleNetworkEvent(ifMap, isDeletedIfaceEvent);
 }
 
-void TCPTransport::QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
+void TCPTransport::QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>& ifMap, bool isDeletedIfaceEvent)
 {
     QCC_DbgPrintf(("TCPTransport::QueueHandleNetworkEvent()"));
 
-    ListenRequest listenRequest;
-    listenRequest.m_requestOp = HANDLE_NETWORK_EVENT;
-    listenRequest.ifMap = ifMap;
-
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
-    RunListenMachine(listenRequest);
+    if (isDeletedIfaceEvent) {
+        for (auto it = ifMap.begin(); it != ifMap.end(); ++it) {
+            HandleInterfaceDownEvent(it->first);
+        }
+    } else {
+        ListenRequest listenRequest;
+        listenRequest.m_requestOp = HANDLE_NETWORK_EVENT;
+        listenRequest.ifMap = ifMap;
+        RunListenMachine(listenRequest);
+    }
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 
+}
+
+void TCPTransport::HandleInterfaceDownEvent(const qcc::String& iface)
+{
+    QCC_DbgTrace(("TCPTransport::%s(%s)\n", __FUNCTION__, iface.c_str()));
+    for (const auto& entry : m_requestedAddresses) {
+        if (entry.second == iface) {
+            auto itPortMap = m_requestedAddressPortMap.find(entry.first);
+            if (itPortMap != m_requestedAddressPortMap.end()) {
+                String listenSpec = "tcp:addr=" + entry.first + ",port=" + U32ToString(itPortMap->second);
+                QCC_DbgPrintf(("TCPTransport::%s calling DoStopListen(%s)", __FUNCTION__, listenSpec.c_str()));
+                DoStopListen(listenSpec);
+            }
+        }
+    }
+    for (const auto& entry : m_requestedInterfaces) {
+        if (entry.first == iface) {
+            String listenSpec = "tcp:addr=" + entry.second.GetAddress().ToString() + ",port=" + U32ToString(entry.second.GetPort());
+            QCC_DbgPrintf(("TCPTransport::%s calling DoStopListen(%s)", __FUNCTION__, listenSpec.c_str()));
+            DoStopListen(listenSpec);
+        }
+    }
+}
+
+qcc::SocketFd TCPTransport::GetMatchingListenFdEntry(const qcc::String& listenSpec)
+{
+    qcc::SocketFd socket = INVALID_SOCKET_FD;
+    m_listenFdsLock.Lock(MUTEX_CONTEXT);
+    for (auto it = m_listenFds.begin(); it != m_listenFds.end(); ++it) {
+        if (it->first == listenSpec) {
+            socket = it->second;
+            break;
+        }
+    }
+    m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+    return socket;
 }
 
 /* This is the callback handler that is invoked when the name service detects that a network interface
@@ -4254,31 +4295,40 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             continue;
         }
 
-        if (!wildcardIfaceRequested && currentIfaceRequested &&
-            m_requestedInterfaces[interface].GetAddress() == address) {
-            continue;
-        }
-
-        if (!wildcardAddressRequested && currentAddressRequested &&
-            m_requestedAddresses[addressStr] == interface) {
-            continue;
-        }
-
         if (!wildcardIfaceRequested && currentIfaceRequested) {
-            if (m_requestedInterfaces[interface].GetAddress() != qcc::IPAddress("0.0.0.0")) {
-                qcc::String replacedSpec = "tcp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
-                if (m_requestedAddresses.find(m_requestedInterfaces[interface].GetAddress().ToString()) != m_requestedAddresses.end()) {
-                    m_requestedAddresses.erase(m_requestedInterfaces[interface].GetAddress().ToString());
+            if (m_requestedInterfaces[interface].GetAddress() == address) {
+                QCC_DbgPrintf(("TCPTransport::HandleNetworkEventInstance(): not wildcard iface, current iface and addr matches"));
+                String spec = "tcp:addr=" + address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].port);
+                SocketFd fd = GetMatchingListenFdEntry(spec);
+                if (fd != INVALID_SOCKET_FD) {
+                    QCC_DbgPrintf(("TCPTransport::HandleNetworkEventInstance(): found address %s on matching interface %s which has a valid listedFd %d => moving to the next entry in the loop",
+                                   address.ToString().c_str(), interface.c_str(), fd));
+                    continue;
+                } else {
+                    QCC_DbgPrintf(("TCPTransport::HandleNetworkEventInstance(): found address %s on matching interface %s but without valid listedFd => proceed",
+                                   address.ToString().c_str(), interface.c_str()));
                 }
-                replacedList.push_back(replacedSpec);
+            } else {
+                m_requestedInterfaces[interface] = qcc::IPEndpoint(address, m_requestedInterfaces[interface].GetPort());
             }
-            m_requestedInterfaces[interface] = qcc::IPEndpoint(address, m_requestedInterfaces[interface].GetPort());
         }
 
         if (!wildcardAddressRequested && currentAddressRequested) {
-            if (!m_requestedAddresses[addressStr].empty()) {
-                m_requestedAddresses[addressStr] = interface;
-                continue;
+            if (m_requestedAddresses[addressStr] == interface) {
+                QCC_DbgPrintf(("TCPTransport::HandleNetworkEventInstance(): not wildcard addr, current addr and iface matches"));
+                String spec = "tcp:addr=" + addressStr + ",port=" + U32ToString(m_requestedAddressPortMap[addressStr]);
+                SocketFd fd = GetMatchingListenFdEntry(spec);
+                if (fd != INVALID_SOCKET_FD) {
+                    QCC_DbgPrintf(("TCPTransport::HandleNetworkEventInstance(): found address %s on matching interface %s which has a valid listedFd %d => moving to the next entry in the loop",
+                                   addressStr.c_str(), interface.c_str(), fd));
+                    continue;
+                }
+            } else if (!m_requestedAddresses[addressStr].empty()) {
+                /*
+                 * This address has moved between interfaces, socket (if opened) needs to be recreated so add this to cleanup list.
+                 */
+                String replacedSpec = "tcp:addr=" + addressStr + ",port=" + U32ToString(m_requestedAddressPortMap[addressStr]);
+                replacedList.push_back(replacedSpec);
             }
             m_requestedAddresses[addressStr] = interface;
         }
