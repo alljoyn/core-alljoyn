@@ -1261,6 +1261,9 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
 
     thread1.Start();
     thread2.Start();
+    //ASACore-2844: Sleep for 1 second to ensure serverBus has finished authentication
+    qcc::Sleep(1000);
+
     thread3.Start();
     thread4.Start();
     thread1.Join();
