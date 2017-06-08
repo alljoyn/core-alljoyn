@@ -34,6 +34,8 @@
 #include <stdlib.h>
 #include <alljoyn/MsgArg.h>
 
+extern jclass CLS_String;
+
 extern jclass CLS_BusException;
 extern jclass CLS_Status;
 
