@@ -318,9 +318,10 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetClaimableApplicationVersion(uint16_t& version);
 
     /**
-     * This method allows an admin to reset the application to its original state
-     * prior to claim. The application's security 2.0 related configuration is
-     * discarded. The application is no longer claimed.
+     * Use on an application after it has been claimed. Allows an admin to reset the
+     * ApplicationState to CLAIMABLE and ManifestTemplate to its value prior to
+     * claiming the application. The application's policies, identity certificates,
+     * membership certificates, and manifests are discarded.
      *
      * If the keystore is cleared by the BusAttachment::ClearKeyStore() call, this
      * Reset() method call is not required.  The Configuration service's
