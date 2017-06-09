@@ -224,8 +224,10 @@ class PermissionConfigurator {
 
     /**
      * Reset the permission settings by removing the manifest all the
-     * trust anchors, installed policy and certificates. This call
-     * must be invoked after the bus attachment has enable peer security.
+     * trust anchors, installed policy and certificates. Resets ApplicationState
+     * to CLAIMABLE or NEEDS_UPDATE. This call must be invoked after the bus
+     * attachment has enable peer security.
+     *
      * @return ER_OK if successful; otherwise, an error code.
      * @see BusAttachment::EnablePeerSecurity
      */
