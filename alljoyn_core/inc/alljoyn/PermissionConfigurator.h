@@ -223,9 +223,13 @@ class PermissionConfigurator {
     QStatus ComputeThumbprintAndSignManifestXml(const qcc::CertificateX509& subjectCertificate, std::string& manifest);
 
     /**
-     * Reset the permission settings by removing the manifest all the
-     * trust anchors, installed policy and certificates. This call
-     * must be invoked after the bus attachment has enable peer security.
+     * Reset the permission settings by removing the manifest, all the
+     * trust anchors, installed policy, and certificates. Resets ApplicationState
+     * to its value before it was CLAIMED, either CLAIMABLE or NEEDS_UPDATE.
+     * Also resets ManifestTemplate to the value before the app was
+     * claimed. This call must be invoked after the bus attachment has enable
+     * peer security.
+     *
      * @return ER_OK if successful; otherwise, an error code.
      * @see BusAttachment::EnablePeerSecurity
      */
