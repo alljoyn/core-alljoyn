@@ -84,6 +84,9 @@ const char* InterfaceName = "org.alljoyn.alljoyn_test.values";
 /** static interrupt flag */
 static volatile sig_atomic_t g_interrupt = false;
 
+static Mutex* g_joinMutex = nullptr;
+static bool g_sessionJoined = false;
+
 class MyAuthListener;
 
 /** Static data */
@@ -136,12 +139,23 @@ class MyBusListener : public BusListener, public SessionListener {
                 }
             }
 
+            g_joinMutex->Lock(MUTEX_CONTEXT);
+            if (g_sessionJoined) {
+                QCC_SyncPrintf("Session already joined, not joining\n");
+                g_joinMutex->Unlock(MUTEX_CONTEXT);
+                return;
+            }
+
             joinStartTime = GetTimestamp();
 
             status = g_msgBus->JoinSession(name, ::org::alljoyn::alljoyn_test::SessionPort, this, sessionId, opts);
+
             if (ER_OK != status) {
                 QCC_LogError(status, ("JoinSession(%s) failed", name));
+            } else {
+                g_sessionJoined = true;
             }
+            g_joinMutex->Unlock(MUTEX_CONTEXT);
 
             /* Release the main thread */
             if (ER_OK == status) {
@@ -726,6 +740,8 @@ int CDECL_CALL main(int argc, char** argv)
         g_myAuthListener = new MyAuthListener(userId, authCount);
         g_msgBus = new BusAttachment("bbclient", true);
 
+        g_joinMutex = new qcc::Mutex();
+
         if (!useIntrospection) {
             /* Add org.alljoyn.alljoyn_test interface */
             InterfaceDescription* testIntf = nullptr;
@@ -1070,6 +1086,10 @@ int CDECL_CALL main(int argc, char** argv)
         /* Deallocate bus */
         delete g_msgBus;
         g_msgBus = nullptr;
+
+        delete g_joinMutex;
+        g_joinMutex = nullptr;
+        g_sessionJoined = false;
 
         delete g_myAuthListener;
         g_myAuthListener = nullptr;

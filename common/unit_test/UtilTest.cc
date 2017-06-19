@@ -128,3 +128,27 @@ TEST(UtilTest, crc16_computation_stress) {
             expected_crc_value << ".";
     }
 }
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+TEST(UtilTest, windows_os_snprintf_test) {
+    char buffer[5];
+    memset(buffer, '#', sizeof(buffer));
+    const char* format = "%s";
+    const char* argp = "asdf";
+
+    // normal case: buffer is larger than input
+    EXPECT_EQ(4, AJ_snprintf(buffer, sizeof(buffer), format, argp));
+    EXPECT_STREQ(argp, buffer);
+    EXPECT_EQ('\0', buffer[4]);
+
+    // normal case: buffer is larger than copy length limit
+    EXPECT_EQ(4, AJ_snprintf(buffer, sizeof(buffer) - 1, format, argp));
+    EXPECT_STREQ("asd", buffer);
+    EXPECT_EQ('\0', buffer[3]);
+
+    // special case: buffer is equal or smaller than input.
+    EXPECT_EQ(5, AJ_snprintf(buffer, sizeof(buffer), format, "asdfg"));
+    EXPECT_STREQ("asdf", buffer);
+    EXPECT_EQ('\0', buffer[4]);
+}
+#endif

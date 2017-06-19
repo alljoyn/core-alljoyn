@@ -39,6 +39,8 @@
 #import "SecureDoor.h"
 #import "AJNInit.h"
 
+#include <string>
+
 static NSString *const kKeyxEcdheNull = @"ALLJOYN_ECDHE_NULL";
 static NSString *const kKeyxEcdhePsk = @"ALLJOYN_ECDHE_PSK";
 static NSString *const kKeyxEcdheSpeke = @"ALLJOYN_ECDHE_SPEKE";
