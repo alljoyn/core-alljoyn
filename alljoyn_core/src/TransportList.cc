@@ -45,8 +45,8 @@ using namespace qcc;
 
 namespace ajn {
 
-TransportList::TransportList(BusAttachment& bus, TransportFactoryContainer& factories, IODispatch* m_ioDispatch, uint32_t concurrency)
-    : bus(bus), localTransport(new LocalTransport(bus, concurrency)), m_factories(factories), isStarted(false), isInitialized(false), m_ioDispatch(m_ioDispatch)
+TransportList::TransportList(BusAttachment& bus, TransportFactoryContainer& factories, IODispatch* m_ioDispatch)
+    : bus(bus), localTransport(new LocalTransport(bus)), m_factories(factories), isStarted(false), isInitialized(false), m_ioDispatch(m_ioDispatch)
 {
 }
 

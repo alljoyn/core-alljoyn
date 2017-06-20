@@ -199,14 +199,13 @@ BusAttachment::Internal::Internal(const char* appName,
                                   TransportFactoryContainer& factories,
                                   Router* router,
                                   bool allowRemoteMessages,
-                                  const char* listenAddresses,
-                                  uint32_t concurrency) :
+                                  const char* listenAddresses) :
     application(appName ? appName : "unknown"),
     bus(bus),
     listenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_LISTENERSLOCK),
     listeners(),
     m_ioDispatch("iodisp", 96),
-    transportList(bus, factories, &m_ioDispatch, concurrency),
+    transportList(bus, factories, &m_ioDispatch),
     keyStore(application),
     authManager(keyStore),
     globalGuid(qcc::GUID128()),
@@ -322,11 +321,24 @@ static ClientTransportFactoryContainer* clientTransportsContainer = NULL;
 BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessages, uint32_t concurrency) :
     isStarted(false),
     isStopping(false),
-    concurrency(concurrency),
-    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
-    translator(NULL),
+    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, nullptr, allowRemoteMessages, nullptr)),
+    translator(nullptr),
     joinObj(this)
 {
+#ifndef NDEBUG
+    /*
+     * The warning below only makes sense in the debug mode (in the release mode, the error
+     * text is not displayed).
+     */
+    if (concurrency != 0) {
+        QCC_LogError(ER_WARNING,
+                     ("BusAttachment::BusAttachment: "
+                      "The concurrency parameter is now ignored and will be removed in a future release "
+                      "as concurrency is adjusted automatically."));
+    }
+#else
+    QCC_UNUSED(concurrency);
+#endif
     clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment client constructor (%p)", this));
 }
@@ -334,11 +346,24 @@ BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessag
 BusAttachment::BusAttachment(Internal* busInternal, uint32_t concurrency) :
     isStarted(false),
     isStopping(false),
-    concurrency(concurrency),
     busInternal(busInternal),
     translator(NULL),
     joinObj(this)
 {
+#ifndef NDEBUG
+    /*
+     * The warning below only makes sense in the debug mode (in the release mode, the error
+     * text is not displayed).
+     */
+    if (concurrency != 0) {
+        QCC_LogError(ER_WARNING,
+                     ("BusAttachment::BusAttachment: "
+                      "The concurrency parameter is now ignored as concurrency is adjusted automatically."));
+    }
+#else
+    QCC_UNUSED(concurrency);
+#endif
+
     clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment daemon constructor"));
 }
@@ -457,7 +482,17 @@ BusAttachment::~BusAttachment(void)
 
 uint32_t BusAttachment::GetConcurrency()
 {
-    return concurrency;
+#ifndef NDEBUG
+    /*
+     * The warning below only makes sense in the debug mode (in the release mode, the error
+     * text is not displayed).
+     */
+    const char* warningText =
+        "BusAttachment::GetConcurrency: Concurrency is adjusted automatically and the concurrency parameter is no longer used.";
+    QCC_LogError(ER_WARNING, (warningText));
+    QCC_ASSERT(!warningText);
+#endif
+    return 0;
 }
 
 qcc::String BusAttachment::GetConnectSpec()

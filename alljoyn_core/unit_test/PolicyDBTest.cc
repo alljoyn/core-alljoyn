@@ -88,8 +88,7 @@ class PolicyDBTest : public::testing::Test {
 
     ajn::BusEndpoint CreateEndpoint(const qcc::String& uniqueName)
     {
-        const uint32_t CONCURRENCY = 1u;
-        ajn::LocalEndpoint localEndpoint(*bus, CONCURRENCY);
+        ajn::LocalEndpoint localEndpoint(*bus);
         localEndpoint->SetUniqueName(uniqueName);
 
         ajn::BusEndpoint busEndpoint = ajn::BusEndpoint::cast(localEndpoint);
