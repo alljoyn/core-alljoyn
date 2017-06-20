@@ -1569,8 +1569,12 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_common_CertificateX509_toJavaStri
     }
 
     qcc::String certString = certPtr->ToString();
+    const unsigned char* cerStr = reinterpret_cast<const unsigned char*>(certString.c_str());
 
-    return jenv->NewStringUTF(certString.c_str());
+    jmethodID strngCnstrctr = jenv->GetMethodID(CLS_String, "<init>", "([B)V");
+    jbyteArray strByteArray = ToJByteArray(cerStr, certString.length());
+
+    return (jstring) jenv->NewObject(CLS_String, strngCnstrctr, strByteArray);
 }
 
 /*

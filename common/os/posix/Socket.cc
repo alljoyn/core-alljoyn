@@ -72,8 +72,9 @@ namespace qcc {
 const SocketFd INVALID_SOCKET_FD = -1;
 const int MAX_LISTEN_CONNECTIONS = SOMAXCONN;
 
-#if defined(QCC_OS_DARWIN)
 const int CONNECT_TIMEOUT = 5;
+
+#if defined(QCC_OS_DARWIN)
 #define MSG_NOSIGNAL 0
 
 static void DisableSigPipe(SocketFd socket)
@@ -224,15 +225,7 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
         return status;
     }
 
-#if defined(QCC_OS_DARWIN)
-    int selectRet;
     fd_set wfdset;
-    int so_error;
-    socklen_t slen = sizeof(so_error);
-    struct timeval tv;
-    tv.tv_sec = CONNECT_TIMEOUT;
-    tv.tv_usec = 0;
-
     /* This should always be called after a socket is created */
     FD_ZERO(&wfdset);
     FD_SET(sockfd, &wfdset);
@@ -249,6 +242,12 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
     ret = connect(static_cast<int>(sockfd), reinterpret_cast<struct sockaddr*>(&addr), addrLen);
     if (ret == -1) {
         if ((errno == EINPROGRESS) || (errno == EALREADY)) {
+            int selectRet;
+            int so_error;
+            socklen_t slen = sizeof(so_error);
+            struct timeval tv;
+            tv.tv_sec = CONNECT_TIMEOUT;
+            tv.tv_usec = 0;
             /* Call select to wait for the connect to take place */
             selectRet = select(sockfd + 1, NULL, &wfdset, NULL, &tv);
             /* select will return 1 when it indicates that the socket is writable */
@@ -275,22 +274,8 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
                                   errno, strerror(errno)));
         }
     }
-#else
-    ret = connect(static_cast<int>(sockfd), reinterpret_cast<struct sockaddr*>(&addr), addrLen);
-    if (ret == -1) {
-        if ((errno == EINPROGRESS) || (errno == EALREADY)) {
-            status = ER_WOULDBLOCK;
-        } else if (errno == EISCONN) {
-            status = ER_OK;
-        } else if (errno == ECONNREFUSED) {
-            status = ER_CONN_REFUSED;
-        } else {
-            status = ER_OS_ERROR;
-            QCC_LogError(status, ("Connecting (sockfd = %u) to %s %d: %d - %s", sockfd,
-                                  remoteAddr.ToString().c_str(), remotePort,
-                                  errno, strerror(errno)));
-        }
-    } else {
+#if !defined(QCC_OS_DARWIN)
+    else {
         int flags = fcntl(sockfd, F_GETFL, 0);
         ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
