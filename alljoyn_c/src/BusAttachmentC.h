@@ -99,7 +99,7 @@ class SetLinkTimeoutContext {
  */
 class BusAttachmentC : public BusAttachment, public BusAttachment::JoinSessionAsyncCB, public BusAttachment::SetLinkTimeoutAsyncCB {
   public:
-    BusAttachmentC(const char* applicationName, bool allowRemoteMessages = false, uint32_t concurrency = 0) :
+    BusAttachmentC(const char* applicationName, bool allowRemoteMessages = false, uint32_t concurrency = 4) :
         BusAttachment(applicationName, allowRemoteMessages, concurrency) { }
 
     /** Destructor */

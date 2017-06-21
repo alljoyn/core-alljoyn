@@ -62,14 +62,13 @@ class Timer {
     /**
      * Constructor
      *
-     * @param name                  Name for the thread.
-     * @param expireOnExit          If true call all pending alarms when this thread exits.
-     * @param concurrency           Number of preallocated slots for threads which will process alarms.
-     * @param prevenReentrancy      Prevent re-entrant call of AlarmTriggered.
-     * @param maxAlarms             Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
-     * @param allowMoreConcurrency  If true, more than @concurrency threads can be created to process alarms.
+     * @param name               Name for the thread.
+     * @param expireOnExit       If true call all pending alarms when this thread exits.
+     * @param concurrency        Dispatch up to this number of alarms concurently (using multiple threads). 0 means no limit.
+     * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
+     * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
      */
-    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurrency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0, bool allowMoreConcurrency = false);
+    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurrency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0);
 
     /**
      * Destructor.

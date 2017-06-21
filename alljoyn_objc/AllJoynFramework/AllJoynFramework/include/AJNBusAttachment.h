@@ -665,11 +665,11 @@ typedef int AJNSocketFd;
  *
  * For the same reason that enableConcurrentCallbacks cannot be used with
  * just one thread, the maximum number of concurrent callbacks is limited
- * to the value specified when creating the AJNBusAttachment. If no concurrency
- * value was chosen the default is 4. It is the application developers
- * responsibility to make sure the maximum number of concurrent callbacks is
- * not exceeded. If the maximum number is exceeded the application will
- * deadlock.
+ * to the value specified when creating the AJNBusAttachment. 0 means no limit.
+ * If no concurrency value was chosen the default is 4. It is the application
+ * developers responsibility to make sure the maximum number of concurrent
+ * callbacks is not exceeded. If the maximum number is exceeded the application
+ * will deadlock.
  */
 - (void)enableConcurrentCallbacks;
 
