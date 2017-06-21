@@ -1041,7 +1041,7 @@ public class BusAttachment {
      * @param policy if this attachment is allowed to receive messages from
      *               remote devices
      * @param concurrency The maximum number of concurrent method and signal
-     *                    handlers locally executing.
+     *                    handlers locally executing. 0 means no limit.
      */
     public BusAttachment(String applicationName, RemoteMessage policy, int concurrency) {
         isShared = false;

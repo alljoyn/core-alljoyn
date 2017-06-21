@@ -186,7 +186,8 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
              TransportFactoryContainer& factories,
              Router* router,
              bool allowRemoteMessages,
-             const char* listenAddresses);
+             const char* listenAddresses,
+             uint32_t concurrency);
 
     /*
      * Destructor also called by BusAttachment

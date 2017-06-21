@@ -84,7 +84,7 @@ class TestBusAttachment : public BusAttachment {
     class TestInternal : public Internal {
       public:
         TestInternal(TestBusAttachment& bus, TransportFactoryContainer& factories) :
-            Internal(NULL, bus, factories, NULL, false, NULL), bus(bus) { }
+            Internal(nullptr, bus, factories, nullptr, false, nullptr, 4), bus(bus) { }
         virtual QStatus TransportsStart() { return ER_OK; }
         virtual QStatus TransportsStop() { return ER_OK; }
         virtual QStatus TransportsJoin() { return ER_OK; }
@@ -126,7 +126,7 @@ class TestBusAttachment : public BusAttachment {
     TransportFactoryContainer factories;
     int nameOwnerChangedHandlerRegistered;
 
-    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories)), nameOwnerChangedHandlerRegistered(0) { }
+    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories), 4), nameOwnerChangedHandlerRegistered(0) { }
 };
 
 TEST(BusAttachmentTest, SingleSignalRegistrationWhenBusAttachmentIsLocallyDisconnectedThenConnected)
