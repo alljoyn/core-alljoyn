@@ -358,6 +358,16 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     EXPECT_EQ(ER_OK, status);
 }
 
+TEST_F(AboutProxyTest, Announce) {
+    AboutObj aboutObj(*serviceBus);
+    EXPECT_EQ(ER_OK, aboutObj.Announce(port, aboutEnglishData));
+    AboutObj aboutObj2(*serviceBus);
+    EXPECT_EQ(ER_BUS_OBJECT_NOT_REGISTERED, aboutObj2.Announce(port, aboutEnglishData));
+    serviceBus->UnregisterBusObject(aboutObj);
+    AboutObj aboutObj3(*serviceBus);
+    EXPECT_EQ(ER_OK, aboutObj3.Announce(port, aboutEnglishData));
+}
+
 TEST_F(AboutProxyTest, GetAboutData_English) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
