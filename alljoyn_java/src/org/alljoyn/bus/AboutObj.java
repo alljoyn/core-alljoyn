@@ -30,7 +30,7 @@
 package org.alljoyn.bus;
 
 
-public class AboutObj {
+public class AboutObj implements BusObject{
 
     /**
      * Create native resources held by objects of this class.

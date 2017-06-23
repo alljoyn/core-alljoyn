@@ -4428,6 +4428,7 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
 
 void JBusAttachment::UnregisterBusObject(jobject jbusObject)
 {
+
     QCC_DbgPrintf(("JBusAttachment::UnregisterBusObject(%p)", jbusObject));
 
     /*
@@ -13313,6 +13314,40 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create(JNIEnv* env, jobject
         return;
     }
     QCC_DbgPrintf(("AboutObj_create(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    gBusObjectMapLock.Lock();
+    QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Taking Bus Attachment common lock"));
+    busPtr->baCommonLock.Lock();
+    jobject jglobalref = env->NewGlobalRef(thiz);
+    /*
+     * It is a programming error to register the same Java Bus Object with
+     * multiple bus attachments.  It looks like it should be possible from
+     * the top, but that is not the case.
+     */
+    JBusObject* busObject = GetBackingObject(jglobalref);
+    if (busObject) {
+        /*
+         * we have a hold on the bus object, but alljoyn doesn't, so we must get rid of
+         * Java's hold to be consistent with underlying C++ alljoyn behavior.
+         */
+        QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Forgetting jglobalref"));
+        env->DeleteGlobalRef(jglobalref);
+
+        /*
+         * Release our hold on the shared resources, remembering to reverse the
+         * lock order.
+         */
+        busPtr->baCommonLock.Unlock();
+        QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing global Bus Object map lock"));
+        gBusObjectMapLock.Unlock();
+        return; //return ER_BUS_OBJ_ALREADY_EXISTS;
+    }
+
+    busObject = new JBusObject(busPtr, org::alljoyn::About::ObjectPath, jglobalref);
+    NewRefBackingObject(jglobalref, busObject);
+    busPtr->busObjects.push_back(jglobalref);
+    busPtr->baCommonLock.Unlock();
+    gBusObjectMapLock.Unlock();
 
     JAboutObject* aboutObj;
     if (isAboutAnnounced == JNI_TRUE) {

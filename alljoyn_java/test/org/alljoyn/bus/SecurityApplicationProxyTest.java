@@ -91,6 +91,8 @@ public class SecurityApplicationProxyTest extends TestCase {
                 SecurityTestHelper.AUTH_ECDSA);
 
         permissionConfigurator = busAttachment.getPermissionConfigurator();
+        permissionConfigurator = busAttachment.getPermissionConfigurator();
+        permissionConfigurator = busAttachment.getPermissionConfigurator();
         permissionConfigurator.setManifestTemplateFromXml(defaultManifestTemplate);
 
         peer1Bus = new BusAttachment("peer1Bus");
@@ -189,7 +191,13 @@ public class SecurityApplicationProxyTest extends TestCase {
 
         permissionConfigurator.installMembership(membershipCert);
 
+        SecurityApplicationProxy sap2 = new SecurityApplicationProxy(busAttachment,
+                peer1Bus.getUniqueName(),
+                sessionId.value);
         SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,
+                peer1Bus.getUniqueName(),
+                sessionId.value);
+        sap = new SecurityApplicationProxy(busAttachment,
                 peer1Bus.getUniqueName(),
                 sessionId.value);
         assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE, sap.getApplicationState());
