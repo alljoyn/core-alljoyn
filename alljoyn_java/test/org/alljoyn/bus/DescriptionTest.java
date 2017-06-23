@@ -60,6 +60,7 @@ public class DescriptionTest extends TestCase {
 
     public void setUp() throws Exception {
         sdit = new SimpleDescriptionInterfaceTranslator();
+        sdit = new SimpleDescriptionInterfaceTranslator();
         mSimpleDescriptionService = null;
         mSimpleDescriptionNoTranslateService = null;
         mSimpleDescriptionInterface = null;

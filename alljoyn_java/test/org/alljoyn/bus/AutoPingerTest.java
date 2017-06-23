@@ -135,6 +135,25 @@ public class AutoPingerTest extends TestCase {
         }, 2);
     }
 
+    public void testTwoAutoPingers() {
+        AutoPinger autoPinger2 = new AutoPinger(busAttachment);
+        autoPinger = new AutoPinger(busAttachment);
+        autoPinger.pause();
+        try {
+            Thread.sleep(1000);
+        } catch (Exception e) {}
+        autoPinger.resume();
+        autoPinger.addPingGroup("group1", new AutoPingListener() {
+            public void destinationLost(String group, String destination) {
+                System.out.println("group " + group + ", destination " + destination);
+            }
+
+            public void destinationFound(String group, String destination) {
+                System.out.println("group " + group + ", destination " + destination);
+            }
+        }, 2);
+    }
+
     public class TestPingListener implements AutoPingListener {
 
         private static final int MAX_RETRIES = 1000;

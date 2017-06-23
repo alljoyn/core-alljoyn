@@ -69,6 +69,30 @@ public class AboutObj {
      */
     private native void create(BusAttachment bus, boolean isAnnounced);
 
+	/**
+     * Release resources immediately.
+     *
+     * Normally, when all references to an object are removed, the Java
+     * garbage collector will destroy it.  This doesn't happen immediately;
+     * any resources held by the object will not be released until "some
+     * time later" after the object is no longer referenced.
+     *
+     * Often, test programs recycle BusAttachments in a very short time. Thus,
+     * they would quickly deplete scarce, underlying resources by depending
+     * on the garbage collector to clean up.
+     *
+     * An explicit release() method allows such programs to release
+     * the underlying resources immediately.  The garbage collector will still
+     * call finalize, but the resources held by the underlying C++ objects will
+     * go away immediately after release() is called.
+     *
+     * It is a programming error to call another method on the AboutObj
+     * after the release() method has been called.
+     */
+    public void release() {
+        destroy();
+    }
+
     /**
      * Release any native resources held by objects of this class.
      * Specifically, we may delete a C++ counterpart of this object.

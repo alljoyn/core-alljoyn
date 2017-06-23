@@ -1891,6 +1891,7 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, busA.bindSessionPort(port, sessionOpts, sessionPortListener));
 
         RemoveSessionMemberSessionListener sessionListener = new RemoveSessionMemberSessionListener();
+        sessionListener = new RemoveSessionMemberSessionListener();
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue(0);
 
         assertEquals(Status.OK, busB.joinSession(busA.getUniqueName(), (short)42, sessionId, sessionOpts, sessionListener));

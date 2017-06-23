@@ -179,8 +179,9 @@ public class AboutIconProxyTest extends TestCase{
             fail("Unexpected BusException.");
         }
         //icon.setUrl("image/png", "http://www.example.com");
+        AboutIconObj aio2 = new AboutIconObj(serviceBus, icon);
         AboutIconObj aio = new AboutIconObj(serviceBus, icon);
-
+        aio = new AboutIconObj(serviceBus, icon);
 
         BusAttachment clientBus = new BusAttachment("AboutIconTestClient", RemoteMessage.Receive);
         assertEquals(Status.OK, clientBus.connect());
