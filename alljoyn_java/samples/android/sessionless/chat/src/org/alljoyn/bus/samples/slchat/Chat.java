@@ -136,8 +136,7 @@ public class Chat extends Activity {
         mMessageEditText = (EditText) findViewById(R.id.MessageEditText);
         mMessageEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_NULL
-                        && event.getAction() == KeyEvent.ACTION_UP) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     /* Send a sessionless signal chat message using the mBusHandler. */
                     String senderName = mNameEditText.getText().toString();
                     String message = view.getText().toString();
