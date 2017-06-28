@@ -127,8 +127,7 @@ public class Client extends Activity {
         mEditText = (EditText) findViewById(R.id.EditText);
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_NULL
-                        && event.getAction() == KeyEvent.ACTION_UP) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     /* Call the remote object's Ping method. */
                     Message msg = mBusHandler.obtainMessage(BusHandler.PING,
                                                             view.getText().toString());
