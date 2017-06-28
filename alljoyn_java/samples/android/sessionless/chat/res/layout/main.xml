@@ -23,6 +23,8 @@
             android:layout_width="115dp"
             android:layout_height="52dp"
             android:ems="10"
+            android:inputType="text"
+            android:imeOptions="actionNext"
             android:hint="@string/Name" />
 
         <EditText
@@ -30,6 +32,8 @@
             android:layout_width="wrap_content"
             android:layout_height="52dp"
             android:ems="10"
+            android:inputType="text"
+            android:imeOptions="actionDone"
             android:hint="@string/enterMessageHint" />
     </LinearLayout>
 </LinearLayout>

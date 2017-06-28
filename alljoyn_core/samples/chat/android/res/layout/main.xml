@@ -20,8 +20,10 @@
 			android:layout_height="wrap_content"
 			android:layout_width="wrap_content"
 			android:layout_weight="1.0"
-			android:layout_gravity="bottom"
-			android:hint="@string/enter_message_hint"
+            android:layout_gravity="bottom"
+            android:inputType="text"
+            android:imeOptions="actionDone"
+            android:hint="@string/enter_message_hint"
 			/>
 	</LinearLayout>
 </LinearLayout>
