@@ -110,9 +110,8 @@ class TimerImpl : public ThreadListener {
      * @param concurrency           Number of preallocated slots for threads which will process alarms.
      * @param prevenReentrancy      Prevent re-entrant call of AlarmTriggered.
      * @param maxAlarms             Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
-     * @param allowMoreConcurrency  If true, more than @concurrency threads can be created to process alarms.
      */
-    TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms, bool AllowMoreConcurrency);
+    TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms);
 
     /**
      * Destructor.
@@ -293,11 +292,11 @@ class TimerImpl : public ThreadListener {
 
 }
 
-TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms, bool allowMoreConcurrency) :
+TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
     lock(LOCK_LEVEL_TIMERIMPL_LOCK),
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
-    timerThreads(concurrency),
+    timerThreads(concurrency > 0 ? concurrency : 1),
     isRunning(false),
     controllerIdx(0),
     preventReentrancy(preventReentrancy),
@@ -305,7 +304,7 @@ TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool 
     nameStr(name),
     maxAlarms(maxAlarms),
     numLimitableAlarms(0),
-    allowMoreConcurrency(allowMoreConcurrency)
+    allowMoreConcurrency(concurrency == 0)
 {
     /* TimerImpl thread objects will be created when required */
 }
@@ -1213,8 +1212,8 @@ bool TimerImpl::ThreadHoldsLock() const
     return false;
 }
 
-Timer::Timer(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms, bool allowMoreConcurrency) :
-    timerImpl(new TimerImpl(name, expireOnExit, concurrency, preventReentrancy, maxAlarms, allowMoreConcurrency))
+Timer::Timer(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
+    timerImpl(new TimerImpl(name, expireOnExit, concurrency, preventReentrancy, maxAlarms))
 {
     /* Timer thread objects will be created when required */
 }
