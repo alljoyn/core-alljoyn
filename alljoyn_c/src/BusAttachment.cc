@@ -88,7 +88,25 @@ QStatus AJ_CALL alljoyn_busattachment_join(alljoyn_busattachment bus)
 uint32_t AJ_CALL alljoyn_busattachment_getconcurrency(alljoyn_busattachment bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     return ((ajn::BusAttachmentC*)bus)->GetConcurrency();
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 AJ_PCSTR AJ_CALL alljoyn_busattachment_getconnectspec(alljoyn_busattachment bus)
