@@ -56,9 +56,14 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
         replyMsg->GetArgs(numArgs, returnArgs);
         if (numArgs == 1) {
             status = icon.SetContent(returnArgs[0]);
+            if (status != ER_OK) {
+                return status;
+            }
         } else {
-            status = ER_BUS_BAD_VALUE;
+            return ER_BUS_BAD_VALUE;
         }
+    } else {
+        return status;
     }
 
     status = MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
@@ -71,10 +76,14 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
             status = returnArgs[0].Get("s", &temp);
             if (status == ER_OK) {
                 icon.url.assign(temp);
+            } else {
+                return status;
             }
         } else {
-            status = ER_BUS_BAD_VALUE;
+            return ER_BUS_BAD_VALUE;
         }
+    } else {
+        return status;
     }
 
     MsgArg iconsProperties_arg;
