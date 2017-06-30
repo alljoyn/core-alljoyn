@@ -47,49 +47,26 @@ public class Client {
     private static ProxyBusObject mProxyObj;
     private static SampleInterface mSampleInterface;
 
-    private static boolean isJoined = false;
-    private static boolean isJoining = false;
+    private static SampleOnJoinSessionListener mOnJoined;
 
     static class MyBusListener extends BusListener {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
 
-            if (isJoined || isJoining) {
-                return;
-            }
-            isJoining = true;
+            Status status = mBus.joinSession(name,
+                    CONTACT_PORT,
+                    new SessionOpts(),
+                    new PrintSessionListener(),
+                    mOnJoined,
+                    null);
 
-            short contactPort = CONTACT_PORT;
-            SessionOpts sessionOpts = new SessionOpts();
-            sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
-            sessionOpts.isMultipoint = false;
-            sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-            sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
-
-            Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-
-            mBus.enableConcurrentCallbacks();
-
-            Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener());
             if (status != Status.OK) {
-                isJoining = false;
-                return;
+                System.out.println("BusAttachment.joinSession call failed " + status);
             }
-            System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
-
-            mProxyObj =  mBus.getProxyBusObject("com.my.well.known.name",
-                                                "/myService",
-                                                sessionId.value,
-                                                new Class<?>[] { SampleInterface.class});
-
-            mSampleInterface = mProxyObj.getInterface(SampleInterface.class);
-            isJoined = true;
-            isJoining = false;
-
         }
         public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
             if ("com.my.well.known.name".equals(busName)) {
-                System.out.println("BusAttachement.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
+                System.out.println("BusAttachment.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
             }
         }
 
@@ -114,6 +91,7 @@ public class Client {
 
     public static void main(String[] args) {
         mBus = new BusAttachment("AppName", BusAttachment.RemoteMessage.Receive);
+        mOnJoined = new SampleOnJoinSessionListener();
 
         BusListener listener = new MyBusListener();
         mBus.registerBusListener(listener);
@@ -131,13 +109,20 @@ public class Client {
         }
         System.out.println("BusAttachment.findAdvertisedName successful " + "com.my.well.known.name");
 
-        while(!isJoined) {
+        while(!mOnJoined.isConnected()) {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
                 System.out.println("Program interupted");
             }
         }
+
+        mProxyObj = mBus.getProxyBusObject("com.my.well.known.name",
+                "/myService",
+                mOnJoined.getSessionId(),
+                new Class<?>[] {SampleInterface.class});
+
+        mSampleInterface = mProxyObj.getInterface(SampleInterface.class);
 
         try {
             System.out.println("Ping : " + mSampleInterface.Ping("Hello World"));

@@ -83,8 +83,7 @@ public class Client {
         }
     }
 
-    private static boolean isJoining = false;
-    private static boolean isJoined = false;
+    private static SampleOnJoinSessionListener mOnJoined;
 
     public static void main(String[] args) {
 
@@ -92,40 +91,27 @@ public class Client {
             public void foundAdvertisedName(String name, short transport, String namePrefix) {
                 System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
 
-                if (isJoining || isJoined) {
-                    return;
-                }
+                Status status = mBus.joinSession(name,
+                        CONTACT_PORT,
+                        new SessionOpts(),
+                        new PrintSessionListener(),
+                        mOnJoined,
+                        null);
 
-                isJoining = true;
-                short contactPort = CONTACT_PORT;
-                SessionOpts sessionOpts = new SessionOpts();
-                sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
-                sessionOpts.isMultipoint = false;
-                sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-                sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
-
-                Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-
-                mBus.enableConcurrentCallbacks();
-
-                Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener());
                 if (status != Status.OK) {
-                    isJoining = false;
-                    return;
+                    System.out.println("BusAttachment.joinSession call failed " + status);
                 }
-                isJoined = true;
-                isJoining = false;
-                System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
             }
             public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
                 if ("com.my.well.known.name".equals(busName)) {
-                    System.out.println("BusAttachement.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
+                    System.out.println("BusAttachment.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
                 }
             }
 
         }
 
         mBus = new BusAttachment("AppName", BusAttachment.RemoteMessage.Receive);
+        mOnJoined = new SampleOnJoinSessionListener();
 
         BusListener listener = new MyBusListener();
         mBus.registerBusListener(listener);
