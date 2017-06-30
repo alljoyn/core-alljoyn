@@ -78,7 +78,20 @@ static MyBusListener* s_busListener = NULL;
 static qcc::String s_sessionHost;
 static SessionId s_sessionId = 0;
 
-class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
+class MyJoinCB : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        LOGD("SessionJoined status %s (id=%u)\n", QCC_StatusText(status), sessionId);
+        s_sessionId = sessionId;
+    }
+};
+
+class MySessionListener : public SessionListener {
+    void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        LOGD("SessionLost status %s (id=%u)\n", reason, sessionId);
+    }
+};
+
+class MyBusListener : public BusListener, public SessionPortListener {
   public:
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
@@ -94,9 +107,9 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
             /* Join the conversation */
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = s_bus->JoinSession(name, CHAT_PORT, NULL, s_sessionId, opts);
+            QStatus status = s_bus->JoinSessionAsync(name, CHAT_PORT, &sessionListener, opts, &joinSessionCB, NULL);
             if (ER_OK == status) {
-                LOGD("Joined conversation \"%s\"\n", name);
+                LOGD("Join Async conversation \"%s\"\n", name);
             } else {
                 LOGD("JoinSession failed status=%s\n", QCC_StatusText(status));
             }
@@ -128,8 +141,11 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
     {
     }
-};
 
+  private:
+    MySessionListener sessionListener;
+    MyJoinCB joinSessionCB;
+};
 
 /* Bus object */
 class ChatObject : public BusObject {
