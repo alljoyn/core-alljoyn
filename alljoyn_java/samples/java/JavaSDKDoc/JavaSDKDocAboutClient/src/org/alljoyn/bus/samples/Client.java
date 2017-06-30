@@ -25,7 +25,7 @@
  *    PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  *    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  *    PERFORMANCE OF THIS SOFTWARE.
-*/
+ */
 package org.alljoyn.bus.samples;
 
 import java.util.Map;
@@ -52,10 +52,14 @@ public class Client {
     private static ProxyBusObject mProxyObj;
     private static SampleInterface mSampleInterface;
 
-    private static boolean isJoined = false;
+    private static SampleOnJoinSessionListener mOnJoined;
+    private static String mBusName;
 
     static class MyAboutListener implements AboutListener {
         public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
+
+            mBusName = busName;
+
             System.out.println("Announced BusName:     " + busName);
             System.out.println("Announced Version:     " + version);
             System.out.println("Announced SessionPort: " + port);
@@ -95,77 +99,30 @@ public class Client {
                 e1.printStackTrace();
             }
 
-            SessionOpts sessionOpts = new SessionOpts();
-            sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
-            sessionOpts.isMultipoint = false;
-            sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-            sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+            mOnJoined.acquire();
 
-            Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-
-            mBus.enableConcurrentCallbacks();
-
-            Status status = mBus.joinSession(busName, port, sessionId, sessionOpts, new SessionListener());
-            if (status != Status.OK) {
+            if (mOnJoined.isConnected()) {
+                mOnJoined.release();
                 return;
             }
-            System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
 
-            mProxyObj =  mBus.getProxyBusObject(busName,
-                    "/example/path",
-                    sessionId.value,
-                    new Class<?>[] { SampleInterface.class});
+            Status status = mBus.joinSession(busName,
+                    port,
+                    new SessionOpts(),
+                    new PrintSessionListener(),
+                    mOnJoined,
+                    null);
 
-            mSampleInterface = mProxyObj.getInterface(SampleInterface.class);
-
-            System.out.println("\n\nCreating AboutProxy object and calling remote methods.");
-            AboutProxy aboutProxy = new AboutProxy(mBus, busName, sessionId.value);
-            System.out.println("Calling getObjectDescription:");
-            try {
-                AboutObjectDescription aod[] = aboutProxy.getObjectDescription();
-                if(aod != null) {
-                    for(AboutObjectDescription o : aod) {
-                        System.out.println("\t" + o.path);
-                        for (String s : o.interfaces) {
-                            System.out.println("\t\t" + s);
-                        }
-                    }
-                }
-                System.out.println("Calling getAboutData:");
-
-                Map<String, Variant> aboutData_en;
-                aboutData_en = aboutProxy.getAboutData("en");
-
-                for (Map.Entry<String, Variant> entry : aboutData_en.entrySet()) {
-                    System.out.print("\tField: " + entry.getKey() + " = ");
-
-                    if (entry.getKey().equals("AppId")) {
-                        byte[] appId = entry.getValue().getObject(byte[].class);
-                        for (byte b : appId) {
-                            System.out.print(String.format("%02X", b));
-                        }
-                    } else if (entry.getKey().equals("SupportedLanguages")) {
-                        String[] supportedLanguages = entry.getValue().getObject(String[].class);
-                        for (String s : supportedLanguages) {
-                            System.out.print(s + " ");
-                        }
-                    } else {
-                        System.out.print(entry.getValue().getObject(String.class));
-                    }
-                    System.out.print("\n");
-                }
-
-                System.out.println("Calling getVersion:");
-                System.out.println("\tVersion = " + aboutProxy.getVersion());
-            } catch (BusException e1) {
-                e1.printStackTrace();
+            if (status != Status.OK) {
+                mOnJoined.release();
+                System.out.println("BusAttachment.joinSession call failed " + status);
             }
-            isJoined = true;
         }
     }
 
     public static void main(String[] args) {
         mBus = new BusAttachment("Basic About Client Sample", BusAttachment.RemoteMessage.Receive);
+        mOnJoined = new SampleOnJoinSessionListener();
 
         Status status = mBus.connect();
         if (status != Status.OK) {
@@ -183,14 +140,66 @@ public class Client {
         }
         System.out.println("BusAttachment.whoImplements successful " + "com.example.about.feature.interface.sample");
 
-        while(!isJoined) {
+        while(!mOnJoined.isConnected()) {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
                 System.out.println("Program interupted");
             }
         }
-        System.out.println("BusAttachement.joinSession successful calling echo method");
+
+        mProxyObj = mBus.getProxyBusObject(mBusName,
+                "/example/path",
+                mOnJoined.getSessionId(),
+                new Class<?>[] {SampleInterface.class});
+
+        mSampleInterface = mProxyObj.getInterface(SampleInterface.class);
+
+        System.out.println("\n\nCreating AboutProxy object and calling remote methods.");
+        AboutProxy aboutProxy = new AboutProxy(mBus, mBusName, mOnJoined.getSessionId());
+        System.out.println("Calling getObjectDescription:");
+
+        try {
+            AboutObjectDescription aod[] = aboutProxy.getObjectDescription();
+            if(aod != null) {
+                for(AboutObjectDescription o : aod) {
+                    System.out.println("\t" + o.path);
+                    for (String s : o.interfaces) {
+                        System.out.println("\t\t" + s);
+                    }
+                }
+            }
+            System.out.println("Calling getAboutData:");
+
+            Map<String, Variant> aboutData_en;
+            aboutData_en = aboutProxy.getAboutData("en");
+
+            for (Map.Entry<String, Variant> entry : aboutData_en.entrySet()) {
+                System.out.print("\tField: " + entry.getKey() + " = ");
+
+                if (entry.getKey().equals("AppId")) {
+                    byte[] appId = entry.getValue().getObject(byte[].class);
+                    for (byte b : appId) {
+                        System.out.print(String.format("%02X", b));
+                    }
+                } else if (entry.getKey().equals("SupportedLanguages")) {
+                    String[] supportedLanguages = entry.getValue().getObject(String[].class);
+                    for (String s : supportedLanguages) {
+                        System.out.print(s + " ");
+                    }
+                } else {
+                    System.out.print(entry.getValue().getObject(String.class));
+                }
+                System.out.print("\n");
+            }
+
+            System.out.println("Calling getVersion:");
+            System.out.println("\tVersion = " + aboutProxy.getVersion());
+        } catch (BusException e1) {
+            e1.printStackTrace();
+        }
+
+        System.out.println("BusAttachment.joinSession successful calling echo method");
         try {
             System.out.println("Echo : " + mSampleInterface.echo("Hello World"));
         } catch (BusException e1) {

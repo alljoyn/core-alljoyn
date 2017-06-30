@@ -53,8 +53,7 @@ public class Client {
 
     private static String mPassword;
 
-    private static boolean isJoined = false;
-    private static boolean isJoining = false;
+    private static SampleOnJoinSessionListener mOnJoined;
 
     private static SrpKeyXListener mAuthListener;
 
@@ -62,46 +61,29 @@ public class Client {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
 
-            if (isJoined || isJoining) {
+            mOnJoined.acquire();
+
+            if (mOnJoined.isConnected()) {
+                mOnJoined.release();
                 return;
             }
 
-            isJoining = true;
-            short contactPort = CONTACT_PORT;
-            SessionOpts sessionOpts = new SessionOpts();
-            sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
-            sessionOpts.isMultipoint = false;
-            sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-            sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+            Status status = mBus.joinSession(name,
+                    CONTACT_PORT,
+                    new SessionOpts(),
+                    new PrintSessionListener(),
+                    mOnJoined,
+                    null);
 
-            Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-
-            mBus.enableConcurrentCallbacks();
-
-            Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener(){
-                            public void sessionLost(int sessionId, int reason) {
-                                System.out.println("Session Lost : " + sessionId + " reason: " + reason);
-                            }
-            });
             if (status != Status.OK) {
-                isJoining = false;
-                return;
+                mOnJoined.release();
+                System.out.println("BusAttachment.joinSession call failed " + status);
             }
-            System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
-
-            mProxyObj =  mBus.getProxyBusObject("com.my.well.known.name",
-                    "/testSrpSecurity",
-                    sessionId.value,
-                    new Class<?>[] { SecureInterface.class});
-
-            mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
-            isJoined = true;
-            isJoining = false;
 
         }
         public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
             if ("com.my.well.known.name".equals(busName)) {
-                System.out.println("BusAttachement.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
+                System.out.println("BusAttachment.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
             }
         }
 
@@ -176,6 +158,7 @@ public class Client {
 
     public static void main(String[] args) {
         mBus = new BusAttachment("SRPSecurityClient", BusAttachment.RemoteMessage.Receive);
+        mOnJoined = new SampleOnJoinSessionListener();
 
         mAuthListener = new SrpKeyXListener();
         Status status = mBus.registerAuthListener("ALLJOYN_SRP_KEYX", mAuthListener);
@@ -200,13 +183,20 @@ public class Client {
         }
         System.out.println("BusAttachment.findAdvertisedName successful " + "com.my.well.known.name");
 
-        while(!isJoined) {
+        while(!mOnJoined.isConnected()) {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
                 System.out.println("Program interupted");
             }
         }
+
+        mProxyObj = mBus.getProxyBusObject("com.my.well.known.name",
+                "/testSrpSecurity",
+                mOnJoined.getSessionId(),
+                new Class<?>[] {SecureInterface.class});
+
+        mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
 
         try {
             System.out.println("Ping = " + mSecureInterface.Ping("Hello AllJoyn"));
