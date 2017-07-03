@@ -88,9 +88,9 @@ public class AboutProxyTest extends TestCase{
         public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException {
             Map<String, Variant> aboutData = new HashMap<String, Variant>();
             //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant("en"));
-            aboutData.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
+            aboutData.put("AppId", new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
+            aboutData.put("DefaultLanguage", new Variant("en"));
+            aboutData.put("DeviceId", new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
             aboutData.put("ModelNumber", new Variant("A1B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
             aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
@@ -301,6 +301,28 @@ public class AboutProxyTest extends TestCase{
         assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
         clientBus.disconnect();
         clientBus.release();
+    }
+
+    public void testAnnounceFail() {
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.BUS_OBJECT_NOT_REGISTERED, aboutObj.announce(PORT_NUMBER, aboutData));
+    }
+
+    public void testAnnounceFail2() {
+        AboutObj aboutObj2 = new AboutObj(serviceBus);
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.BUS_OBJECT_NOT_REGISTERED, aboutObj.announce(PORT_NUMBER, aboutData));
+    }
+
+    public void testAnnounce() {
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        aboutObj.release();
+        aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
     }
 
     public void testGetVersion() {
