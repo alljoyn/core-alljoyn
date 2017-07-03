@@ -9056,6 +9056,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
 
         if (m_isListening) {
             if (!m_isNsEnabled) {
+                QCC_ASSERT(!m_listenPortMap.empty());
                 IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
                 m_isNsEnabled = true;
             }
@@ -9090,7 +9091,6 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     /*
      * We think we're ready to send the advertisement.  Are we really?
      */
-    QCC_ASSERT(!m_listenPortMap.empty());
     QCC_ASSERT(m_isNsEnabled);
     QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::EnableAdvertisementInstance(): IpNameService not started");
 
@@ -9358,7 +9358,6 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
         }
 
         m_isListening = false;
-        m_listenPortMap.clear();
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
@@ -11570,6 +11569,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * while walking the list of interfaces and return.
      */
     QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Walk map"));
+    std::map<qcc::String, uint16_t> newListenPortMap;
     for (std::multimap<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
         qcc::String interface = it->first;
         qcc::IPAddress address = it->second;
@@ -11797,7 +11797,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * here to account for ephemeral ports since only at
          * this point do we know the actual ephemeral port number
          * after we call Bind() and are actually listening.
-         * m_listenPortMap tells the name service which ports should
+         * newListenPortMap tells the name service which ports should
          * be advertised as accepting join session requests. We only
          * add accepting ports to this map. Active ports are used only for
          * traffic belonging to sessions hosted by other nodes.
@@ -11806,20 +11806,20 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * hence they should not be advertised.
          */
         if (wildcardIfaceRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"*\"] to listenFd %d.", acceptingFd));
-            m_listenPortMap["*"] = acceptingPort;
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set newListenPortMap[\"*\"] to listenFd %d.", acceptingFd));
+            newListenPortMap["*"] = acceptingPort;
         } else if (wildcardAddressRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.", wildcardAddress, acceptingFd));
-            m_listenPortMap[wildcardAddress] = acceptingPort;
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set newListenPortMap[\"%s\"] to listenFd %d.", wildcardAddress, acceptingFd));
+            newListenPortMap[wildcardAddress] = acceptingPort;
         } else {
             if (currentIfaceRequested) {
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set newListenPortMap[\"%s\"] to listenFd %d.",
                                interface.c_str(), acceptingFd));
-                m_listenPortMap[interface] = acceptingPort;
+                newListenPortMap[interface] = acceptingPort;
             } else if (currentAddressRequested) {
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set newListenPortMap[\"%s\"] to listenFd %d.",
                                addressStr.c_str(), acceptingFd));
-                m_listenPortMap[addressStr] = acceptingPort;
+                newListenPortMap[addressStr] = acceptingPort;
             }
         }
 
@@ -11834,7 +11834,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          *
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): IpNameService::Instance().Enable()"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
+        QCC_ASSERT(!newListenPortMap.empty());
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, newListenPortMap, false, false, true, true);
         m_isNsEnabled = true;
 
         /*
@@ -11881,7 +11882,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
                     if (iter->first != "*") {
                         for (const auto& entry : m_requestedInterfaces[iter->first].m_addresses) {
                             if ((entry != qcc::IPAddress(ADDR4_DEFAULT)) && (entry != qcc::IPAddress(ADDR4_DEFAULT))) {
-                                m_listenPortMap.erase(iter->first);
+                                newListenPortMap.erase(iter->first);
                                 qcc::String replacedAcceptingSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_acceptingPort);
                                 replacedList.push_back(replacedAcceptingSpec);
                                 qcc::String replacedActiveSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_activePort);
@@ -11907,7 +11908,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             if (!wildcardIPv4Processed && !wildcardIPv6Processed) {
                 for (std::map<qcc::String, AddressInfo>::iterator iter = m_requestedAddresses.begin(); iter != m_requestedAddresses.end(); iter++) {
                     if ((iter->first != wildcardAddress) && !iter->second.m_interface.empty()) {
-                        m_listenPortMap.erase(iter->first);
+                        newListenPortMap.erase(iter->first);
                         qcc::String replacedAcceptingSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_acceptingPort);
                         replacedList.push_back(replacedAcceptingSpec);
                         qcc::String replacedActiveSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_activePort);
@@ -11931,6 +11932,10 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
     }
 
+    if (!newListenPortMap.empty()) {
+        m_listenPortMap = newListenPortMap;
+    }
+
     /*
      * We stop advertising and discovering on all the listen specs that were
      * replaced during the processing.  These listen specs usually represent the
@@ -11948,7 +11953,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
         m_isListening = false;
         m_isNsEnabled = false;
-        m_listenPortMap.clear();
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
