@@ -255,6 +255,20 @@ void ProtectedAuthListener::AuthenticationComplete(const char* authMechanism, co
     lock.Unlock(MUTEX_CONTEXT);
 }
 
+void ProtectedAuthListener::TriedAuthenticationMechanism(const char* authMechanism, const char* peerName, bool success)
+{
+    lock.Lock(MUTEX_CONTEXT);
+    AuthListener* authListener = this->listener;
+    ++refCount;
+    lock.Unlock(MUTEX_CONTEXT);
+    if (authListener) {
+        authListener->TriedAuthenticationMechanism(authMechanism, peerName, success);
+    }
+    lock.Lock(MUTEX_CONTEXT);
+    --refCount;
+    lock.Unlock(MUTEX_CONTEXT);
+}
+
 /*
  * Static handler for auth credential response
  */

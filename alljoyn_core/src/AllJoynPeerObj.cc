@@ -1566,6 +1566,9 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
         status = ER_AUTH_FAIL; /* remote auth mask is 0 */
     }
 
+    //Notifiy the peer that a particular mechanism has been tried
+    peerAuthListener.TriedAuthenticationMechanism(mech.c_str(), busName.c_str(), status == ER_OK);
+
     if (status == ER_OK) {
         QCC_ASSERT(currentSuite != 0);
         return status;
@@ -1958,9 +1961,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
 {
     QCC_UNUSED(bus);
     /* clean up first */
-    delete [] supportedAuthSuites;
-    supportedAuthSuites = NULL;
-
     peerAuthMechanisms = authMechanisms;
     peerAuthListener.Set(listener);
 

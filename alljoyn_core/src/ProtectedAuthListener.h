@@ -96,6 +96,11 @@ class ProtectedAuthListener : public AuthListener {
      */
     void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success);
 
+    /**
+     * Simply wraps the call of the same name to the inner AuthListener
+     */
+    virtual void TriedAuthenticationMechanism(const char* authMechanism, const char* peerName, bool success);
+
   private:
     /**
      * Static init/shutdown

@@ -378,6 +378,21 @@ class AuthListener {
      * @param success        true if the authentication was successful, otherwise false.
      */
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success) = 0;
+
+    /**
+     * Reports successful or unsuccessful completion of an authentication mechanism.
+     *
+     * @param authMechanism  The name of the authentication mechanism that was used
+     * @param peerName       The name of the remote peer being authenticated.  On the initiating
+     *                       side this will be a well-known-name for the remote peer. On the
+     *                       accepting side this will be the unique bus name for the remote peer.
+     * @param success        true if the authentication mechanism was successful, otherwise false.
+     */
+    virtual void TriedAuthenticationMechanism(const char* authMechanism, const char* peerName, bool success) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(peerName);
+        QCC_UNUSED(success);
+    }
 };
 
 /**
