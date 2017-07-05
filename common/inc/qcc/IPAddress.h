@@ -166,6 +166,35 @@ class IPAddress {
         return true;
     }
 
+
+    /**
+     * Test if two IPv4 addresses belong to the same network.
+     *
+     * @param other      The other IPAddress to compre against.
+     * @param prefixLen  The network prefix length of both networks.
+     *
+     * @return "true" if two IPv4 addresses belong to the same network.
+     */
+    bool IsSameIPv4Network(const IPAddress& other, uint32_t prefixLen) const
+    {
+        if (!other.IsIPv4()) {
+            return false;
+        }
+        /*
+         * Create a netmask with a one in the leading bits for each position
+         * implied by the prefix length.
+         */
+        uint32_t mask = 0;
+        for (uint32_t j = 0; j < prefixLen; ++j) {
+            mask >>= 1;
+            mask |= 0x80000000;
+        }
+
+        uint32_t network1 = GetIPv4AddressCPUOrder() & mask;
+        uint32_t network2 = other.GetIPv4AddressCPUOrder() & mask;
+        return network1 == network2;
+    }
+
     /**
      * Test if two IPv6 addresses belong to the same network by comparing
      * their most significant 64 bits (routing prefix and subnet id).
