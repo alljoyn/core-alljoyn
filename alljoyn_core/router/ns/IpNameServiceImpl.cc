@@ -4186,29 +4186,7 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
             return false;
         }
 
-        //
-        // Create a netmask with a one in the leading bits for each position
-        // implied by the prefix length.
-        //
-        uint32_t mask = 0;
-        for (uint32_t i = 0; i < interfaceAddressPrefixLen; ++i) {
-            mask >>= 1;
-            mask |= 0x80000000;
-        }
-
-        //
-        // The subnet directed broadcast address is the address part of the
-        // interface address (defined by the mask) with the rest of the bits
-        // set to one.
-        //
-        uint32_t addrA = (addressA.GetIPv4AddressCPUOrder() & mask);
-        uint32_t addrB = (addressB.GetIPv4AddressCPUOrder() & mask);
-
-        //
-        // If the masked off network bits are the same, the two addresses belong
-        // to the same network.
-        //
-        if (addrA == addrB) {
+        if (addressA.IsSameIPv4Network(addressB, interfaceAddressPrefixLen)) {
             QCC_DbgPrintf(("IpNameServiceImpl::SameNetwork(): IPv4 networks are the same"));
             return true;
         } else {

@@ -10025,28 +10025,14 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
             QCC_DbgPrintf(("UDPTransport::Connect(): prefixlen=%d.", prefixLen));
 
             /*
-             * Create a netmask with a one in the leading bits for each position
-             * implied by the prefix length.
-             */
-            uint32_t mask = 0;
-            for (uint32_t j = 0; j < prefixLen; ++j) {
-                mask >>= 1;
-                mask |= 0x80000000;
-            }
-
-            QCC_DbgPrintf(("UDPTransport::Connect(): net mask is 0x%x", mask));
-
-            /*
              * Is local address of the currently indexed listenFd on the same
              * network as the destination address supplied as a parameter to the
              * connect?  If so, we use this listenFD as the socket to use when we
              * try to connect to the remote daemon.
              */
-            uint32_t network1 = listenAddr.GetIPv4AddressCPUOrder() & mask;
-            uint32_t network2 = ipAddr.GetIPv4AddressCPUOrder() & mask;
-            if (network1 == network2) {
+            if (listenAddr.IsSameIPv4Network(ipAddr, prefixLen)) {
                 QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" matches network \"%s\"",
-                               IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+                               listenAddr.ToString().c_str(), ipAddr.ToString().c_str()));
                 /*
                  * Mark the socket as found, but don't break here in case there is a
                  * socket bound to INADDR_ANY that happens to be later in the list.
@@ -10058,7 +10044,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
                 foundSock = true;
             } else {
                 QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" does not match network \"%s\"",
-                               IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+                               listenAddr.ToString().c_str(), ipAddr.ToString().c_str()));
             }
         } else if (listenAddr.IsIPv6() && ipAddr.IsIPv6()) {
             /*
