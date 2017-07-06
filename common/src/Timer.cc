@@ -397,9 +397,9 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
     lock.Lock(MUTEX_CONTEXT);
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
+        Thread* thread = Thread::GetThread();
+        QCC_ASSERT(thread);
         while (maxAlarms && alarm->limitable && (numLimitableAlarms >= maxAlarms) && isRunning) {
-            Thread* thread = Thread::GetThread();
-            QCC_ASSERT(thread);
             addWaitQueue.push_front(thread);
             lock.Unlock(MUTEX_CONTEXT);
             QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
@@ -510,8 +510,9 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
              * There might be a call in progress to the alarm that is being removed.
              * RemoveAlarm must not return until this alarm is finished.
              */
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -564,8 +565,9 @@ bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
              * There might be a call in progress to the alarm that is being removed.
              * RemoveAlarm must not return until this alarm is finished.
              */
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -603,8 +605,9 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
              * There might be a call in progress to origAlarm.
              * RemoveAlarm must not return until this alarm is finished.
              */
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -646,8 +649,9 @@ bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
          * If we are, wait until the listener returns.
          */
         if (!removedOne) {
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -1182,8 +1186,9 @@ bool TimerImpl::IsTimerCallbackThread() const
 {
     bool result = false;
     lock.Lock(MUTEX_CONTEXT);
+    Thread* thread = Thread::GetThread();
     for (size_t i = 0; i < timerThreads.size(); ++i) {
-        if ((timerThreads[i] != NULL) && (timerThreads[i] == Thread::GetThread())) {
+        if ((timerThreads[i] != NULL) && (timerThreads[i] == thread)) {
             result = true;
             break;
         }
