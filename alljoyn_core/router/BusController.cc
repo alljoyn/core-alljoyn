@@ -87,7 +87,7 @@ QStatus BusController::Init(const qcc::String& listenSpecs)
             status = bus.Start();
         }
         if (status == ER_OK) {
-            while (!initComplete) {
+            while (!initComplete.load()) {
                 qcc::Sleep(4);
             }
         }
