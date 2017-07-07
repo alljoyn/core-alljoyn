@@ -50,6 +50,8 @@
 #include "SessionlessObj.h"
 #include "ProtectedAuthListener.h"
 
+#include <atomic>
+
 namespace ajn {
 
 /**
@@ -152,7 +154,7 @@ class BusController {
 #endif
 
     /** Event to wait on while initialization completes */
-    bool initComplete;
+    std::atomic<bool> initComplete;
 };
 
 }
