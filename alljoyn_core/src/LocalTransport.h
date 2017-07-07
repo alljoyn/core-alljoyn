@@ -39,6 +39,7 @@
 #include <qcc/platform.h>
 
 #include <map>
+#include <atomic>
 
 #include <qcc/Condition.h>
 #include <qcc/String.h>
@@ -499,7 +500,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     std::set<CachedGetPropertyReplyContext*> cachedGetPropertyReplyContexts;
 
-    bool running;                      /**< Is the local endpoint up and running */
+    std::atomic<bool> running;         /**< Is the local endpoint up and running */
     bool isRegistered;                 /**< true iff endpoint has been registered with router */
     MethodTable methodTable;           /**< Hash table of BusObject methods */
     SignalTable signalTable;           /**< Hash table of BusObject signal handlers */
