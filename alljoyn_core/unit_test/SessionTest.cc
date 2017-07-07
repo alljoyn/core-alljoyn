@@ -32,9 +32,11 @@
 #include <stdio.h>
 #include <vector>
 #include <map>
+#include <atomic>
 
 #include <qcc/String.h>
 #include <qcc/Thread.h>
+#include <qcc/ScopedMutexLock.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
@@ -224,17 +226,17 @@ TEST_F(SessionTest, TwoMultipointSessions)
     ASSERT_EQ(ER_OK, busB.UnbindSessionPort(portB));
 }
 
-bool sessionMemberAddedFlagA = false;
-bool sessionMemberRemovedFlagA = false;
-bool sessionMemberAddedFlagB = false;
-bool sessionMemberRemovedFlagB = false;
-bool sessionMemberAddedFlagC = false;
-bool sessionMemberRemovedFlagC = false;
-bool sessionJoinerAcceptedFlag = false;
-bool sessionJoinedFlag = false;
-bool sessionJoinedCBFlag = false;
-bool sessionLostFlag = false;
-SessionId bindMemberSessionId = 0;
+std::atomic<bool> sessionMemberAddedFlagA = { false };
+std::atomic<bool> sessionMemberRemovedFlagA = { false };
+std::atomic<bool> sessionMemberAddedFlagB = { false };
+std::atomic<bool> sessionMemberRemovedFlagB = { false };
+std::atomic<bool> sessionMemberAddedFlagC = { false };
+std::atomic<bool> sessionMemberRemovedFlagC = { false };
+std::atomic<bool> sessionJoinerAcceptedFlag = { false };
+std::atomic<bool> sessionJoinedFlag = { false };
+std::atomic<bool> sessionJoinedCBFlag = { false };
+std::atomic<bool> sessionLostFlag = { false };
+std::atomic<SessionId> bindMemberSessionId = { 0 };
 
 class BindMemberSessionListenerA : public SessionListener {
   public:
@@ -506,36 +508,61 @@ class SessionJoinTestSessionListener : public SessionListener {
 
   public:
     SessionId lastSessionId;
-    size_t sessionLostCalled;
-    SessionListener::SessionLostReason lastReason;
 
     SessionId sessionMemberAddedSessionId;
-    size_t sessionMemberAddedCalled;
     qcc::String sessionMemberAddedUniqueName;
 
     SessionId sessionMemberRemovedSessionId;
-    size_t sessionMemberRemovedCalled;
     qcc::String sessionMemberRemovedUniqueName;
-
 
     std::set<qcc::String> sessionMembers;
     const char*name;
     qcc::String uniqueName;
+  private:
+    size_t sessionLostCalled;
+    SessionListener::SessionLostReason lastReason;
 
+    size_t sessionMemberAddedCalled;
+    size_t sessionMemberRemovedCalled;
+
+    mutable qcc::Mutex mMutex;
+
+  public:
     SessionJoinTestSessionListener(const char*_name, qcc::String _uniqueName) :
         lastSessionId(0),
+        sessionMemberAddedSessionId(0),
+        sessionMemberRemovedSessionId(0),
+        name(_name),
+        uniqueName(_uniqueName),
         sessionLostCalled(0),
         lastReason(ALLJOYN_SESSIONLOST_INVALID),
-        sessionMemberAddedSessionId(0),
         sessionMemberAddedCalled(0),
-        sessionMemberRemovedSessionId(0),
-        sessionMemberRemovedCalled(0),
-        name(_name),
-        uniqueName(_uniqueName)
+        sessionMemberRemovedCalled(0)
     { }
 
+    size_t getSessionLostCalledCount() const {
+        qcc::ScopedMutexLock lock(mMutex);
+        return sessionLostCalled;
+    }
+
+    size_t getSessionMemberAddedCalledCount() const {
+        qcc::ScopedMutexLock lock(mMutex);
+        return sessionMemberAddedCalled;
+    }
+
+    size_t getSessionMemberRemovedCalledCount() const {
+        qcc::ScopedMutexLock lock(mMutex);
+        return sessionMemberRemovedCalled;
+    }
+
+    SessionListener::SessionLostReason getLastReason() const {
+        qcc::ScopedMutexLock lock(mMutex);
+        return lastReason;
+    }
 
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+
+        qcc::ScopedMutexLock lock(mMutex);
         lastSessionId = sessionId;
         lastReason = reason;
         ++sessionLostCalled;
@@ -544,6 +571,7 @@ class SessionJoinTestSessionListener : public SessionListener {
 
     virtual void SessionMemberAdded(SessionId sessionId, const char* memberUniqueName) {
 
+        qcc::ScopedMutexLock lock(mMutex);
         EXPECT_EQ(0U, sessionLostCalled);
         sessionMemberAddedSessionId = sessionId;
         sessionMemberAddedUniqueName = memberUniqueName;
@@ -554,6 +582,7 @@ class SessionJoinTestSessionListener : public SessionListener {
 
     virtual void SessionMemberRemoved(SessionId sessionId, const char* memberUniqueName) {
 
+        qcc::ScopedMutexLock lock(mMutex);
         EXPECT_EQ(0U, sessionLostCalled);
         sessionMemberRemovedSessionId = sessionId;
         sessionMemberRemovedUniqueName = memberUniqueName;
@@ -562,6 +591,7 @@ class SessionJoinTestSessionListener : public SessionListener {
     }
 
     void Reset() {
+        qcc::ScopedMutexLock lock(mMutex);
         sessionMemberAddedSessionId = 0;
         sessionMemberAddedCalled = 0;
         sessionMemberAddedUniqueName = "";
@@ -577,6 +607,7 @@ class SessionJoinTestSessionListener : public SessionListener {
 
     void ResetMemberAddedRemoved() {
 
+        qcc::ScopedMutexLock lock(mMutex);
         sessionMemberAddedSessionId = 0;
         sessionMemberAddedCalled = 0;
         sessionMemberAddedUniqueName = "";
@@ -690,24 +721,24 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
 
     qcc::Sleep(WAIT_TIME_100); /* not sure if this is needed */
     EXPECT_EQ(sessionId, signalledListener->lastSessionId);
-    EXPECT_EQ(1U, signalledListener->sessionLostCalled);
-    EXPECT_EQ(sessionLostReason, signalledListener->lastReason);
+    EXPECT_EQ(1U, signalledListener->getSessionLostCalledCount());
+    EXPECT_EQ(sessionLostReason, signalledListener->getLastReason());
     EXPECT_EQ((SessionId)0, notSignalledListener->lastSessionId);
-    EXPECT_EQ(0U, notSignalledListener->sessionLostCalled);
-    EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_INVALID, notSignalledListener->lastReason);
+    EXPECT_EQ(0U, notSignalledListener->getSessionLostCalledCount());
+    EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_INVALID, notSignalledListener->getLastReason());
     if (multipoint) {
         EXPECT_EQ(sessionId, sessionListenerHost.sessionMemberAddedSessionId);
-        EXPECT_EQ(1U, sessionListenerHost.sessionMemberAddedCalled);
+        EXPECT_EQ(1U, sessionListenerHost.getSessionMemberAddedCalledCount());
         EXPECT_STREQ(busJoiner.GetUniqueName().c_str(), sessionListenerHost.sessionMemberAddedUniqueName.c_str());
         EXPECT_EQ(sessionId, sessionListenerJoiner.sessionMemberAddedSessionId);
-        EXPECT_EQ(1U, sessionListenerJoiner.sessionMemberAddedCalled);
+        EXPECT_EQ(1U, sessionListenerJoiner.getSessionMemberAddedCalledCount());
         EXPECT_STREQ(busHost.GetUniqueName().c_str(), sessionListenerJoiner.sessionMemberAddedUniqueName.c_str());
 
         EXPECT_EQ(sessionId, signalledListener->sessionMemberRemovedSessionId);
-        EXPECT_EQ(1U, signalledListener->sessionMemberRemovedCalled);
+        EXPECT_EQ(1U, signalledListener->getSessionMemberRemovedCalledCount());
         EXPECT_STREQ(joinerLeaves ? busJoiner.GetUniqueName().c_str() : busHost.GetUniqueName().c_str(), signalledListener->sessionMemberRemovedUniqueName.c_str());
         EXPECT_EQ((SessionId)0, notSignalledListener->sessionMemberRemovedSessionId);
-        EXPECT_EQ(0U, notSignalledListener->sessionMemberRemovedCalled);
+        EXPECT_EQ(0U, notSignalledListener->getSessionMemberRemovedCalledCount());
         EXPECT_STREQ("", notSignalledListener->sessionMemberRemovedUniqueName.c_str());
     }
 
@@ -768,9 +799,9 @@ TEST_F(SessionTest, SessionJoined_SelfJoin_MP_HostLeaves) {
 
 bool sessionLostFlagA;
 bool sessionLostFlagB;
-static int sessionMemberAddedCounter;
-static int sessionMemberRemovedCounter;
-static int sessionLostCounter;
+static std::atomic<int> sessionMemberAddedCounter;
+static std::atomic<int> sessionMemberRemovedCounter;
+static std::atomic<int> sessionLostCounter;
 
 class RemoveSessionMemberBusAListener : public SessionPortListener, public SessionListener {
   public:
@@ -933,21 +964,21 @@ static::testing::AssertionResult MPJoinAllNotificationsDone(SessionJoinTestSessi
     }
 
     /* joiner always gets SessionMemberAdded for all other session participants */
-    CHECK((joiner->sessionMemberAddedCalled == (existingJoiners.size() + (isPreSelfJoined ? 0 : 1))));
+    CHECK((joiner->getSessionMemberAddedCalledCount() == (existingJoiners.size() + (isPreSelfJoined ? 0 : 1))));
     for (it = existingJoiners.begin(); it != existingJoiners.end(); ++it) {
         CHECK((joiner->sessionMembers.count((*it)->uniqueName) == 1));
     }
     CHECK((joiner->sessionMembers.count(host->uniqueName) == 1));
 
     /* host always gets SessionMemberAdded for joiner */
-    CHECK((host->sessionMemberAddedCalled == 1));
+    CHECK((host->getSessionMemberAddedCalledCount() == 1));
     CHECK((host->sessionMemberAddedUniqueName == joiner->uniqueName));
 
     /* other session participants are only involved if it's not a self-join */
     if (host->uniqueName != joiner->uniqueName) {
         /* it's not self-join so the other members should get notifications too */
         for (it = existingJoiners.begin(); it != existingJoiners.end(); ++it) {
-            CHECK(((*it)->sessionMemberAddedCalled == 1));
+            CHECK(((*it)->getSessionMemberAddedCalledCount() == 1));
             CHECK(((*it)->sessionMemberAddedUniqueName == joiner->uniqueName));
         }
     }
@@ -970,8 +1001,8 @@ static::testing::AssertionResult MPHostLeavesAllNotificationsDone(SessionJoinTes
     }
 
     /* sanity check: host should never get SessionMemberRemoved or SessionLost calls */
-    CHECK((host->sessionMemberRemovedCalled == 0));
-    CHECK((host->sessionLostCalled == 0));
+    CHECK((host->getSessionMemberRemovedCalledCount() == 0));
+    CHECK((host->getSessionLostCalledCount() == 0));
 
     /* If there was only one joiner left, the session is over. That one joiner is expected to
      * receive both SessionMemberRemoved and SessionLost.
@@ -980,24 +1011,24 @@ static::testing::AssertionResult MPHostLeavesAllNotificationsDone(SessionJoinTes
     if (joiners.size() == 1) {
         /* session is lost */
         SessionJoinTestSessionListener* joiner = *(joiners.begin());
-        CHECK((joiner->sessionMemberRemovedCalled == 1));
+        CHECK((joiner->getSessionMemberRemovedCalledCount() == 1));
         CHECK((joiner->sessionMemberRemovedUniqueName == host->uniqueName));
-        CHECK((joiner->lastReason == SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION));
+        CHECK((joiner->getLastReason() == SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION));
     } else if (selfJoiner != NULL) {
         /* session is not lost, but self-join in play */
-        CHECK((selfJoiner->sessionMemberRemovedCalled == 1));
+        CHECK((selfJoiner->getSessionMemberRemovedCalledCount() == 1));
         CHECK((selfJoiner->sessionMemberRemovedUniqueName == host->uniqueName));
-        CHECK((selfJoiner->sessionLostCalled == 0));
+        CHECK((selfJoiner->getSessionLostCalledCount() == 0));
         for (it = otherJoiners.begin(); it != otherJoiners.end(); ++it) {
-            CHECK(((*it)->sessionMemberRemovedCalled ==  0));
-            CHECK(((*it)->sessionLostCalled == 0));
+            CHECK(((*it)->getSessionMemberRemovedCalledCount() ==  0));
+            CHECK(((*it)->getSessionLostCalledCount() == 0));
         }
     } else {
         /* session is not lost, no self-join in play */
         for (it = otherJoiners.begin(); it != otherJoiners.end(); ++it) {
-            CHECK(((*it)->sessionMemberRemovedCalled ==  1));
+            CHECK(((*it)->getSessionMemberRemovedCalledCount() ==  1));
             CHECK(((*it)->sessionMemberRemovedUniqueName == host->uniqueName));
-            CHECK(((*it)->sessionLostCalled == 0));
+            CHECK(((*it)->getSessionLostCalledCount() == 0));
         }
     }
 
@@ -1019,14 +1050,14 @@ static::testing::AssertionResult MPJoinerLeavesAllNotificationsDone(SessionJoinT
     if (host != NULL) {
         /* the host should always get SessionMemberRemoved.
          * if there are no remaining members in the session, we expect SessionLost as well */
-        CHECK((host->sessionMemberRemovedCalled == 1));
+        CHECK((host->getSessionMemberRemovedCalledCount() == 1));
         CHECK((host->sessionMemberRemovedUniqueName == leaver->uniqueName));
 
         if (remainingJoiners.size() == 0) {
-            CHECK((host->sessionLostCalled == 1));
-            CHECK((host->lastReason == SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION));
+            CHECK((host->getSessionLostCalledCount() == 1));
+            CHECK((host->getLastReason() == SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION));
         } else {
-            CHECK((host->sessionLostCalled == 0));
+            CHECK((host->getSessionLostCalledCount() == 0));
         }
     }
 
@@ -1036,34 +1067,34 @@ static::testing::AssertionResult MPJoinerLeavesAllNotificationsDone(SessionJoinT
         bool expectSessionLost = (host == NULL) && (remainingJoiners.size() == 1);
         for (it = remainingJoiners.begin(); it != remainingJoiners.end(); ++it) {
             SessionJoinTestSessionListener* joiner = *it;
-            CHECK((joiner->sessionMemberRemovedCalled == 1));
+            CHECK((joiner->getSessionMemberRemovedCalledCount() == 1));
             CHECK((joiner->sessionMemberRemovedUniqueName == leaver->uniqueName));
             if (expectSessionLost) {
-                CHECK((joiner->sessionLostCalled == 1));
-                CHECK((joiner->lastReason == SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION));
+                CHECK((joiner->getSessionLostCalledCount() == 1));
+                CHECK((joiner->getLastReason() == SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION));
             } else {
-                CHECK((joiner->sessionLostCalled == 0));
+                CHECK((joiner->getSessionLostCalledCount() == 0));
             }
         }
     }
 
     /* the leaver will only get SessionLost and SessionMemberRemoved, but only if it was forcibly removed by the host */
     if (forced) {
-        CHECK((leaver->sessionLostCalled == 1));
+        CHECK((leaver->getSessionLostCalledCount() == 1));
         if (isSelfLeave) {
-            CHECK((leaver->lastReason == SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER_SELF));
+            CHECK((leaver->getLastReason() == SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER_SELF));
         } else {
-            CHECK((leaver->lastReason == SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER));
+            CHECK((leaver->getLastReason() == SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER));
         }
         size_t expectedRemovedCalls = remainingJoiners.size();
         if (host && !hostHasSelfJoined) {
             ++expectedRemovedCalls;
         }
-        CHECK((leaver->sessionMemberRemovedCalled == expectedRemovedCalls));
+        CHECK((leaver->getSessionMemberRemovedCalledCount() == expectedRemovedCalls));
         CHECK((leaver->sessionMembers.size() == 0));
     } else {
-        CHECK((leaver->sessionLostCalled == 0));
-        CHECK((leaver->sessionMemberRemovedCalled == 0));
+        CHECK((leaver->getSessionLostCalledCount() == 0));
+        CHECK((leaver->getSessionMemberRemovedCalledCount() == 0));
     }
 
     return ::testing::AssertionSuccess();
@@ -1167,9 +1198,9 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
         EXPECT_EQ(1U, signalobjects[&busHost]->signalReceived);
     }
 
-    EXPECT_EQ(0U, sessionListenerHost.sessionLostCalled);
-    EXPECT_EQ(0U, sessionListenerJoiner.sessionLostCalled);
-    EXPECT_EQ(0U, sessionListenerJoiner2.sessionLostCalled);
+    EXPECT_EQ(0U, sessionListenerHost.getSessionLostCalledCount());
+    EXPECT_EQ(0U, sessionListenerJoiner.getSessionLostCalledCount());
+    EXPECT_EQ(0U, sessionListenerJoiner2.getSessionLostCalledCount());
 
     bool sessionHostInSession = true;
     bool sessionJoinerInSession = true;
@@ -1547,25 +1578,25 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
 
         //Wait all callbacks and listeners to be called.
         for (int i = 0; i < 300; ++i) {
-            if (sessionListenerJoiner2.sessionMemberAddedCalled == 1) {
+            if (sessionListenerJoiner2.getSessionMemberAddedCalledCount() == 1) {
                 break;
             }
             qcc::Sleep(WAIT_TIME_10);
         }
 
-        ASSERT_EQ(1U, sessionListenerJoiner2.sessionMemberAddedCalled);
+        ASSERT_EQ(1U, sessionListenerJoiner2.getSessionMemberAddedCalledCount());
         ASSERT_EQ(1U, sessionListenerJoiner2.sessionMembers.size());     /* sessionMembers is a set */
 
         /* At this moment both Ahost and Ajoiner are gone (and so is the session) */
         for (int i = 0; i < 300; ++i) {
-            if (sessionListenerJoiner2.sessionMemberRemovedCalled == 1) {
+            if (sessionListenerJoiner2.getSessionMemberRemovedCalledCount() == 1) {
                 break;
             }
             qcc::Sleep(WAIT_TIME_10);
         }
-        ASSERT_EQ(1U, sessionListenerJoiner2.sessionMemberRemovedCalled);
-        ASSERT_EQ(1U, sessionListenerJoiner2.sessionLostCalled);
-        EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionListenerJoiner2.lastReason);
+        ASSERT_EQ(1U, sessionListenerJoiner2.getSessionMemberRemovedCalledCount());
+        ASSERT_EQ(1U, sessionListenerJoiner2.getSessionLostCalledCount());
+        EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionListenerJoiner2.getLastReason());
 
         busB.Disconnect();
         busB.Stop();
@@ -1616,9 +1647,9 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
         sessionJoinedFlag = false;
 
         EXPECT_EQ(2, sessionJoinedCounter);
-        EXPECT_EQ(2U, sessionListenerHost.sessionMemberAddedCalled);
+        EXPECT_EQ(2U, sessionListenerHost.getSessionMemberAddedCalledCount());
         EXPECT_EQ(2U, sessionListenerHost.sessionMembers.size());
-        EXPECT_EQ(2U, sessionListenerJoiner.sessionMemberAddedCalled);
+        EXPECT_EQ(2U, sessionListenerJoiner.getSessionMemberAddedCalledCount());
         EXPECT_EQ(2U, sessionListenerJoiner.sessionMembers.size());
 
         std::set<String> membersCopy = sessionListenerJoiner.sessionMembers;
@@ -1630,18 +1661,18 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
 
         //Wait for all callbacks and listeners to be called.
         for (int i = 0; i < 100; ++i) {
-            if (sessionListenerHost.sessionMemberRemovedCalled == 1 &&
-                sessionListenerJoiner.sessionMemberRemovedCalled == 2) {
+            if (sessionListenerHost.getSessionMemberRemovedCalledCount() == 1 &&
+                sessionListenerJoiner.getSessionMemberRemovedCalledCount() == 2) {
                 break;
             }
             qcc::Sleep(WAIT_TIME_10);
         }
 
-        EXPECT_EQ(1U, sessionListenerHost.sessionMemberRemovedCalled);
-        EXPECT_EQ(2U, sessionListenerJoiner.sessionMemberRemovedCalled);
-        EXPECT_EQ(0U, sessionListenerHost.sessionLostCalled);
-        EXPECT_EQ(1U, sessionListenerJoiner.sessionLostCalled);
-        EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER_SELF, sessionListenerJoiner.lastReason);
+        EXPECT_EQ(1U, sessionListenerHost.getSessionMemberRemovedCalledCount());
+        EXPECT_EQ(2U, sessionListenerJoiner.getSessionMemberRemovedCalledCount());
+        EXPECT_EQ(0U, sessionListenerHost.getSessionLostCalledCount());
+        EXPECT_EQ(1U, sessionListenerJoiner.getSessionLostCalledCount());
+        EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER_SELF, sessionListenerJoiner.getLastReason());
 
         status = busA.LeaveSession(sessionId);
         EXPECT_EQ(ER_OK, status);
