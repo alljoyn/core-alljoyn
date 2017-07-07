@@ -43,6 +43,7 @@
 #include <map>
 #include <unordered_map>
 #include <limits>
+#include <atomic>
 
 #include <alljoyn/Message.h>
 
@@ -253,7 +254,7 @@ class _PeerState {
      *          - ER_BUS_KEY_EXPIRED if there was a session key but the key has expired.
      */
     QStatus GetKey(qcc::KeyBlob& key, PeerKeyType keyType) {
-        if (isSecure) {
+        if (isSecure.load()) {
             key = keys[keyType];
             if (key.HasExpired()) {
                 ClearKeys();
@@ -281,7 +282,7 @@ class _PeerState {
      *
      * @return  Returns true if a session key has been set for this peer.
      */
-    bool IsSecure() { return isSecure; }
+    bool IsSecure() { return isSecure.load(); }
 
     /**
      * Returns the auth event for this peer. The auth event is set by the peer object while the peer
@@ -337,7 +338,7 @@ class _PeerState {
         if (msgType == MESSAGE_INVALID) {
             return false;
         } else {
-            return isSecure ? (authorizations[(uint8_t)msgType - 1] & access) == access : true;
+            return isSecure.load() ? (authorizations[(uint8_t)msgType - 1] & access) == access : true;
         }
     }
 
@@ -706,7 +707,7 @@ class _PeerState {
     /**
      * Set to true if this peer has keys.
      */
-    bool isSecure;
+    std::atomic<bool> isSecure;
 
     /**
      * Event used to prevent simultaneous authorization requests to this peer.
