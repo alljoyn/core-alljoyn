@@ -40,9 +40,11 @@
 #error Only include UDPTransport.h in C++ code.
 #endif
 
+#include <atomic>
 #include <list>
 #include <vector>
 #include <queue>
+
 #include <alljoyn/Status.h>
 
 #include <qcc/platform.h>
@@ -355,7 +357,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
     mutable volatile int32_t m_refCount;                           /**< Incremented if a thread is doing something somewhere */
-    bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
+    std::atomic<bool> m_stopping;                                  /**< True if Stop() has been called but endpoints still exist */
     bool m_routerNameAdvertised;                                   /**< True if routerName is advertised */
     TransportListener* m_listener;                                 /**< Registered TransportListener */
     std::set<UDPEndpoint> m_preList;                               /**< "Pre" list of authenticating endpoints (see AcceptCb comments) */
