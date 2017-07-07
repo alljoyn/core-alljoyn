@@ -1098,7 +1098,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * during shutdown, as identified by the error return value
          * ER_BUS_ENDPOINT_CLOSING.
          */
-        if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
+        if (m_transport->IsRunning() == false || m_transport->m_stopping.load() == true) {
             QStatus status = ER_BUS_ENDPOINT_CLOSING;
             DecrementAndFetch(&m_refCount);
             DecrementAndFetch(&m_pushCount);
@@ -2445,7 +2445,7 @@ class ArdpStream : public qcc::Stream {
          * started but the stream can think it has started going down.  We'll
          * catch that case before actually starting the send.
          */
-        if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
+        if (m_transport->IsRunning() == false || m_transport->m_stopping.load() == true) {
             return ER_BUS_ENDPOINT_CLOSING;
         }
         if (m_endpoint->IsEpStarted() == false) {
@@ -2521,7 +2521,7 @@ class ArdpStream : public qcc::Stream {
              * trying to get data out, so we need to check to make sure that the
              * transport is not shutting down each time through the loop.
              */
-            if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
+            if (m_transport->IsRunning() == false || m_transport->m_stopping.load() == true) {
                 status = ER_BUS_ENDPOINT_CLOSING;
                 done = true;
                 continue;
@@ -6028,7 +6028,7 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
      * need to make sure we tell all of our endpoints to start the process of
      * disconnecting.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): m_stopping: Stopping endpoints on m_endpointList"));
         for (i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
@@ -6770,7 +6770,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
     /*
      * We never want to accept connections if we are shutting down.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::AcceptCb(): Stopping or not running"));
         DecrementAndFetch(&m_refCount);
         return false;
@@ -7228,7 +7228,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
      * Check m_stopping to ensure that the transport has not been stopped.
      */
     udpEp->SetEpPassiveStarted();
-    if (!m_stopping) {
+    if (!m_stopping.load()) {
         m_preList.insert(udpEp);
     } else {
         m_preListLock.Unlock(MUTEX_CONTEXT);
@@ -7339,7 +7339,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
      * complete will be stopped in other ways, so it is safe to kill possible
      * responses here.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         status = ER_UDP_STOPPING;
         QCC_LogError(status, ("ArdpStream::PushBytes(): UDP Transport not running or stopping"));
         DecrementAndFetch(&m_refCount);
@@ -9673,7 +9673,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::Connect(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return ER_BUS_TRANSPORT_NOT_STARTED;
@@ -10445,7 +10445,7 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::StartListen(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return ER_BUS_TRANSPORT_NOT_STARTED;
@@ -10708,7 +10708,7 @@ QStatus UDPTransport::StopListen(const char* listenSpec)
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::StopListen(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return ER_BUS_TRANSPORT_NOT_STARTED;
@@ -10936,7 +10936,7 @@ void UDPTransport::EnableDiscovery(const char* namePrefix, TransportMask transpo
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::EnableDiscovery(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return;
@@ -10991,7 +10991,7 @@ void UDPTransport::DisableDiscovery(const char* namePrefix, TransportMask transp
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::DisbleDiscovery(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return;
@@ -11036,7 +11036,7 @@ QStatus UDPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::EnableAdvertisement(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return ER_BUS_TRANSPORT_NOT_STARTED;
@@ -11093,7 +11093,7 @@ void UDPTransport::DisableAdvertisement(const qcc::String& advertiseName, Transp
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::DisableAdvertisement(): Not running or stopping; exiting"));
         DecrementAndFetch(&m_refCount);
         return;
@@ -11136,7 +11136,7 @@ void UDPTransport::UpdateRouterAdvertisementAndDynamicScore()
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (IsRunning() == false || m_stopping == true) {
+    if (IsRunning() == false || m_stopping.load() == true) {
         QCC_DbgPrintf(("UDPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
         return;
     }
@@ -11234,7 +11234,7 @@ void UDPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String
      * hole, we need to check IsRunning() and also m_stopping, which is set in
      * our Stop() method.
      */
-    if (m_transport.IsRunning() == false || m_transport.m_stopping == true) {
+    if (m_transport.IsRunning() == false || m_transport.m_stopping.load() == true) {
         QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::NetworkEventCallback::Handler(): Not running or stopping; exiting"));
         return;
     }
