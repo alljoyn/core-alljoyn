@@ -1,5 +1,4 @@
 /******************************************************************************
- *
  *    Copyright (c) Open Connectivity Foundation (OCF), AllJoyn Open Source
  *    Project (AJOSP) Contributors and others.
  *
@@ -32,6 +31,7 @@
 #include <deque>
 #include <list>
 #include <algorithm>
+#include <atomic>
 
 #include <qcc/Condition.h>
 #include <qcc/Thread.h>
@@ -159,13 +159,38 @@ qcc::Mutex tl;
  * completes, we can also be very fast when the host is very fast, and we will
  * not be dependent on arbitrary guesses about compromises.
  */
-enum GenericState {
+enum GenericStateInt {
     IDLE = 1,
     RUN_ENTERED,
     IN_LOOP,
     CALLING,
     CALLED,
     DONE
+};
+
+class GenericState {
+  public:
+    GenericState(const GenericStateInt val) {
+        GenericState::operator=(val);
+    };
+
+    GenericState& operator=(GenericStateInt val) {
+        volatile int32_t v = val;
+        AtomicSet(&mVal, v);
+        return *this;
+    };
+
+    explicit operator GenericStateInt() const {
+        return static_cast<GenericStateInt>(AtomicFetch(&mVal));
+    };
+
+  private:
+    GenericState& operator=(const GenericState&) = delete;
+    GenericState& operator=(const GenericState&&) = delete;
+    GenericState(GenericState&) = delete;
+    GenericState(GenericState&&) = delete;
+
+    int32_t mVal;
 };
 
 /*
@@ -198,9 +223,9 @@ class ConsumerThread : public qcc::Thread {
   public:
     ConsumerThread(Condition* e, Condition* f, Mutex* m)
         : qcc::Thread(qcc::String("C")), m_e(e), m_f(f), m_m(m), m_done(false), m_state(IDLE), m_loops(0) { }
-    void Done() { m_done = true; }
-    GenericState GetState() { return m_state; }
-    uint32_t GetLoops() { return m_loops; }
+    void Done() { m_done.store(true); }
+    GenericStateInt GetState() { return GenericStateInt(m_state); }
+    uint32_t GetLoops() { return m_loops.load(); }
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
@@ -225,7 +250,7 @@ class ConsumerThread : public qcc::Thread {
             tl.Unlock();
 
             ++m_loops;
-        } while (m_done == false);
+        } while (m_done.load() == false);
         m_state = DONE;
         return 0;
     }
@@ -233,9 +258,9 @@ class ConsumerThread : public qcc::Thread {
     Condition* m_e;
     Condition* m_f;
     Mutex* m_m;
-    bool m_done;
+    std::atomic<bool> m_done;
     GenericState m_state;
-    uint32_t m_loops;
+    std::atomic<uint32_t> m_loops;
 };
 
 TEST(ConditionTest, simple_empty_protected_buffer)
@@ -600,8 +625,8 @@ class ProducerThread : public qcc::Thread {
         : qcc::Thread(qcc::String("P")), m_e(e), m_f(f), m_m(m), m_state(IDLE), m_loops(0) { }
     void Begin(uint32_t begin) { m_begin = begin; }
     void Count(uint32_t count) { m_count = count; }
-    GenericState GetState() { return m_state; }
-    uint32_t GetLoops() { return m_loops; }
+    GenericStateInt GetState() { return GenericStateInt(m_state); }
+    uint32_t GetLoops() { return m_loops.load(); }
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
@@ -630,7 +655,7 @@ class ProducerThread : public qcc::Thread {
     uint32_t m_begin;
     uint32_t m_count;
     GenericState m_state;
-    uint32_t m_loops;
+    std::atomic<uint32_t> m_loops;
 };
 
 TEST(ConditionTest, multithread_throughput)
@@ -897,9 +922,9 @@ class AllocatorThread : public qcc::Thread {
     AllocatorThread(Condition* c, Mutex* m)
         : qcc::Thread(qcc::String("A")), m_c(c), m_m(m), m_done(false), m_state(IDLE), m_loops(0) { }
     void Size(uint32_t size) { m_size = size; }
-    void Done() { m_done = true; }
-    GenericState GetState() { return m_state; }
-    uint32_t GetLoops() { return m_loops; }
+    void Done() { m_done.store(true); }
+    GenericStateInt GetState() { return GenericStateInt(m_state); }
+    uint32_t GetLoops() { return m_loops.load(); }
 
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg)
@@ -926,17 +951,17 @@ class AllocatorThread : public qcc::Thread {
             tl.Unlock();
 
             ++m_loops;
-        } while (m_done == false);
+        } while (m_done.load() == false);
         m_state = DONE;
         return 0;
     }
   private:
     Condition* m_c;
     Mutex* m_m;
-    bool m_done;
+    std::atomic<bool> m_done;
     uint32_t m_size;
     GenericState m_state;
-    uint32_t m_loops;
+    std::atomic<uint32_t> m_loops;
 };
 
 TEST(ConditionTest, simple_alloc)

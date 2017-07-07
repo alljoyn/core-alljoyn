@@ -60,6 +60,7 @@
 #include "PermissionManager.h"
 
 #include <alljoyn/Status.h>
+#include <limits>
 #include <set>
 
 namespace ajn {
@@ -86,13 +87,16 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      */
     uint32_t NextSerial() {
         uint32_t sn = (uint32_t) qcc::IncrementAndFetch(&msgSerial);
-        return sn ? sn : NextSerial();
+        return (sn > 0) ? sn : NextSerial();
     }
 
     /**
      * Return most recently allocated serial number
      */
-    uint32_t PrevSerial() { return msgSerial ? msgSerial : -1; }
+    uint32_t PrevSerial() {
+      uint32_t sn = qcc::AtomicFetch(&msgSerial);
+      return (sn > 0) ? sn : std::numeric_limits<uint32_t>::max();
+    }
 
     /**
      * Get a reference to the authentication manager object.

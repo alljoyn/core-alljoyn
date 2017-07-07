@@ -566,7 +566,7 @@ void _LocalEndpoint::Dispatcher::PerformDeferredCallbacks()
      */
     endpoint->objectsLock.Lock(MUTEX_CONTEXT);
     unordered_map<const char*, BusObject*, Hash, PathEq>::iterator iter = endpoint->localObjects.begin();
-    while (endpoint->running && (iter != endpoint->localObjects.end())) {
+    while (endpoint->running.load() && (iter != endpoint->localObjects.end())) {
         if (!iter->second->isRegistered) {
             BusObject* bo = iter->second;
             bo->isRegistered = true;
@@ -662,7 +662,7 @@ QStatus _LocalEndpoint::PushMessage(Message& message)
 {
     QStatus ret;
 
-    if (running) {
+    if (running.load()) {
         BusEndpoint ep = bus->GetInternal().GetRouter().FindEndpoint(message->GetSender());
         /* Determine if the source of this message is local to the process */
         if ((ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL) && (dispatcher->IsTimerCallbackThread())) {
@@ -680,7 +680,7 @@ QStatus _LocalEndpoint::DoPushMessage(Message& message)
 {
     QStatus status = ER_OK;
 
-    if (!running) {
+    if (!running.load()) {
         status = ER_BUS_STOPPING;
         QCC_DbgHLPrintf(("Local transport not running discarding %s", message->Description().c_str()));
     } else {
@@ -959,7 +959,7 @@ QStatus _LocalEndpoint::RegisterReplyHandler(MessageReceiver* receiver,
                                              uint32_t timeout)
 {
     QStatus status = ER_OK;
-    if (!running) {
+    if (!running.load()) {
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("Local transport not running"));
     } else {
@@ -1192,7 +1192,7 @@ void _LocalEndpoint::AlarmTriggered(const Alarm& alarm, QStatus reason)
     replyMapLock.Unlock(MUTEX_CONTEXT);
 
     QStatus status = ER_OK;
-    bool attemptDispatch = running;
+    bool attemptDispatch = running.load();
 
     if (attemptDispatch) {
         QCC_DbgPrintf(("Timed out waiting for METHOD_REPLY with serial %d", serial));
