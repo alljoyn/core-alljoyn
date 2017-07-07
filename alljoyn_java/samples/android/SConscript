@@ -51,37 +51,45 @@ for sample in ['simple/client',
                'secure/srpclient',
                'secure/service',
                'secure/ECDHEclient',
+               'secure/sharedks/service',
+               'secure/sharedks/srpclientA',
+               'secure/sharedks/srpclientB',
                'properties/PropertiesClient',
                'properties/PropertiesService',
                'contacts/ContactsClient',
                'contacts/ContactsService',
                'sessionless/chat',
                'sessionless/client',
-               'sessionless/service']:
+               'sessionless/service',
+               'sessions']:
+    returnValue += env.Install('%s/libs' % sample, '$JARDIR/alljoyn.jar')
+    returnValue += env.Install('%s/libs/%s' % (sample, android_eabi), '$JAVA_DISTDIR/lib/liballjoyn_java.so')
     returnValue += env.Install('$JAVA_DISTDIR/samples/%s' % sample,
                 ['%s/AndroidManifest.xml' % sample,
                  '%s/.classpath' % sample,
                  '%s/project.properties' % sample,
                  '%s/.project' % sample,
                  '%s/res' % sample,
-                 '%s/src' % sample])
-    returnValue += env.Install('$JAVA_DISTDIR/samples/%s/libs' % sample, '$JARDIR/alljoyn.jar')
-    returnValue += env.Install('%s/libs' % sample, '$JARDIR/alljoyn.jar')
-    returnValue += env.Install('$JAVA_DISTDIR/samples/%s/libs/%s' % (sample, android_eabi), '$JAVA_DISTDIR/lib/liballjoyn_java.so')
-    returnValue += env.Install('%s/libs/%s' % (sample, android_eabi), '$JAVA_DISTDIR/lib/liballjoyn_java.so')
+                 '%s/src' % sample,
+                 '%s/libs' % sample])
 
 returnValue += env.Install('$JAVA_DISTDIR/samples', 'README.txt')
 
-# install the alljoyn_java.jar and liballjoyn_java.so into the shared
-# keystore samples at this time the shared keystore samples are not being placed
-# in the dist folder if they are the samples could be moved into the Application
-# samples loop shown above.
-for sample in ['secure/sharedks/service',
-               'secure/sharedks/srpclientA',
-               'secure/sharedks/srpclientB',
-               'sessions']:
-    returnValue += env.Install('%s/libs' % sample, '$JARDIR/alljoyn.jar')
-    returnValue += env.Install('%s/libs/%s' % (sample, android_eabi), '$JAVA_DISTDIR/lib/liballjoyn_java.so')
+# Samples that use gradle
+
+for sample in ['secure/SecureDoorClient',
+               'secure/SecureDoorService',
+               'secure/SecurityManager']:
+    returnValue += env.Install('%s/app/libs' % sample, '$JARDIR/alljoyn.jar')
+    returnValue += env.Install('%s/app/src/main/jniLibs/%s' % (sample, android_eabi), '$JAVA_DISTDIR/lib/liballjoyn_java.so')
+    returnValue += env.Install('$JAVA_DISTDIR/samples/%s' % sample,
+                ['%s/app' % sample,
+                 '%s/build.gradle' % sample,
+                 '%s/gradle' % sample,
+                 '%s/gradlew' % sample,
+                 '%s/gradlew.bat' % sample,
+                 '%s/README' % sample,
+                 '%s/settings.gradle' % sample])
 
 # Unit test runner
 env.Install('$JAVA_TESTDIR',
