@@ -90,7 +90,7 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
   public:
     class _Env {
       public:
-        ReplyReceiver* thiz;
+        ReplyReceiver& thiz;
         Plugin plugin;
         BusAttachment busAttachment;
         ProxyBusObject proxyBusObject;
@@ -103,7 +103,7 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
         QStatus status;
         qcc::String errorMessage;
 
-        _Env(ReplyReceiver* thiz, Plugin& plugin, BusAttachment& busAttachment, ProxyBusObject& proxyBusObject, qcc::String& interfaceName, qcc::String& methodName, CallbackNative* callbackNative, const NPVariant* npargs, uint32_t npargCount) :
+        _Env(ReplyReceiver& thiz, Plugin& plugin, BusAttachment& busAttachment, ProxyBusObject& proxyBusObject, qcc::String& interfaceName, qcc::String& methodName, CallbackNative* callbackNative, const NPVariant* npargs, uint32_t npargCount) :
             thiz(thiz),
             plugin(plugin),
             busAttachment(busAttachment),
@@ -132,7 +132,7 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
     typedef qcc::ManagedObj<_Env> Env;
     Env env;
     ReplyReceiver(Plugin& plugin, BusAttachment& busAttachment, ProxyBusObject& proxyBusObject, qcc::String& interfaceName, qcc::String& methodName, CallbackNative* callbackNative, const NPVariant* npargs, uint32_t npargCount) :
-        env(this, plugin, busAttachment, proxyBusObject, interfaceName, methodName, callbackNative, npargs, npargCount) { }
+        env(*this, plugin, busAttachment, proxyBusObject, interfaceName, methodName, callbackNative, npargs, npargCount) { }
     virtual ~ReplyReceiver() { }
 
     class IntrospectCBContext : public PluginData::CallbackContext {
@@ -145,7 +145,7 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
         virtual ~IntrospectCBContext() {
             if (ER_OK != env->status) {
                 ajn::Message message(*env->busAttachment);
-                env->thiz->ReplyHandler(message, 0);
+                env->thiz.ReplyHandler(message, 0);
             }
         }
     };
@@ -263,9 +263,9 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
         if (flags & ajn::ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
             env->status = env->proxyBusObject->MethodCallAsync(*method, 0, 0, args, numArgs, 0, 0, flags);
             ajn::Message message(*env->busAttachment);
-            env->thiz->ReplyHandler(message, 0);
+            env->thiz.ReplyHandler(message, 0);
         } else {
-            env->status = env->proxyBusObject->MethodCallAsync(*method, env->thiz, static_cast<ajn::MessageReceiver::ReplyHandler>(&ReplyReceiver::ReplyHandler), args, numArgs, 0, timeout, flags);
+            env->status = env->proxyBusObject->MethodCallAsync(*method, &env->thiz, static_cast<ajn::MessageReceiver::ReplyHandler>(&ReplyReceiver::ReplyHandler), args, numArgs, 0, timeout, flags);
         }
 
     exit:
@@ -283,7 +283,6 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
     virtual void ReplyHandler(ajn::Message& message, void*) {
         PluginData::Callback callback(env->plugin, _ReplyHandler);
         callback->context = new ReplyHandlerContext(env, message);
-        env->thiz = NULL;
         delete this;
         PluginData::DispatchCallback(callback);
     }

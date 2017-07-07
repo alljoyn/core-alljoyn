@@ -206,3 +206,101 @@ TEST_F(ThreadsMultipleTest, shouldNullifyHandleAfterJoinFromMultipleThreads)
 
     EXPECT_EQ((ThreadHandle)nullptr, threadUnderTest->GetHandle());
 }
+
+class ThreadExternalTest : public::testing::Test {
+  public:
+    Thread* threadUnderTest;
+
+    ThreadExternalTest() :
+        threadUnderTest(nullptr)
+    { }
+
+    virtual void SetUp()
+    {
+        threadUnderTest = new Thread("threadTestFunction", JoinSelfTask);
+    }
+
+    virtual void TearDown()
+    {
+        delete threadUnderTest;
+    }
+
+  private:
+
+    static ThreadReturn JoinSelfTask(void*)
+    {
+        Thread* pSelf = new Thread("dummy", nullptr, true);
+        if (pSelf) {
+            pSelf->Join();
+        }
+
+        // No delete of pSelf as the object is automagically freed by
+        // Thread::StaticShutdown >> Thread::CleanExternalThread
+
+        return nullptr;
+    }
+};
+
+TEST_F(ThreadExternalTest, shouldJoinSelfWithoutErrors)
+{
+    ASSERT_EQ(ER_OK, threadUnderTest->Start(nullptr));
+    qcc::Sleep(1000);
+}
+
+class DerivedThread : public qcc::Thread, public qcc::ThreadListener {
+  public:
+    DerivedThread(qcc::Condition& wCond, qcc::Mutex& m,
+                  qcc::String name = "", ThreadFunction func = NULL)
+        : Thread(name, func), isJoined(false), waitCondition(wCond), mutex(m)
+    { }
+
+    void ThreadExit(Thread* thread) {
+        thread->Join(); // make sure this join does not cause a dead lock
+        mutex.Lock();
+        isJoined = true;
+        mutex.Unlock();
+        waitCondition.Broadcast();
+    }
+
+    bool isJoined;
+    qcc::Condition& waitCondition;
+    qcc::Mutex& mutex;
+};
+
+class DerivedThreadTest : public::testing::Test {
+  public:
+    DerivedThread* threadUnderTest;
+    qcc::Condition waitCondition;
+    qcc::Mutex mutex;
+    DerivedThreadTest() :
+        threadUnderTest(nullptr)
+    { }
+
+    virtual void SetUp()
+    {
+        threadUnderTest = new DerivedThread(waitCondition, mutex, "threadTestFunction", dummyMain);
+    }
+
+    virtual void TearDown()
+    {
+        threadUnderTest->Stop();
+        threadUnderTest->Join();
+        delete threadUnderTest;
+    }
+
+  private:
+
+    static ThreadReturn dummyMain(void*)
+    {
+        return nullptr;
+    }
+};
+
+TEST_F(DerivedThreadTest, shouldJoinSelfWithoutErrors)
+{
+    ASSERT_EQ(ER_OK, threadUnderTest->Start(nullptr, threadUnderTest));
+    ASSERT_EQ(ER_OK, threadUnderTest->mutex.Lock());
+    ASSERT_EQ(ER_OK, waitCondition.TimedWait(threadUnderTest->mutex, 2000));
+    ASSERT_EQ(true, threadUnderTest->isJoined);
+    ASSERT_EQ(ER_OK, threadUnderTest->mutex.Unlock());
+}
