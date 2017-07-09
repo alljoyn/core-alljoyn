@@ -2125,6 +2125,9 @@ public class BusAttachmentTest extends TestCase {
             BusObjectInfo info = buildInterfaceDefinitions();
 
             @Override
+            public BusAttachment getBus() { return bus; }
+
+            @Override
             public String getPath() { return info.getPath(); }
 
             @Override
@@ -2221,6 +2224,9 @@ public class BusAttachmentTest extends TestCase {
             BusObjectInfo info = buildInterfaceDefinitions();
 
             @Override
+            public BusAttachment getBus() { return bus; }
+
+            @Override
             public String getPath() { return info.getPath(); }
 
             @Override
@@ -2278,6 +2284,9 @@ public class BusAttachmentTest extends TestCase {
                 ifaceDef.addMethod( new MethodDef("DoSomething", "", "", "org.test.iface") );
                 info = new BusObjectInfo("/test", Arrays.asList(ifaceDef) );
             }
+
+            @Override
+            public BusAttachment getBus() { return bus; }
 
             @Override
             public String getPath() { return info.getPath(); }

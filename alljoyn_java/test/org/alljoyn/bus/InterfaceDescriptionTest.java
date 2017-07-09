@@ -85,6 +85,11 @@ public class InterfaceDescriptionTest extends TestCase {
 
     public class DynamicService implements DynamicBusObject {
         @Override
+        public BusAttachment getBus() {
+            return bus;
+        }
+
+        @Override
         public String getPath() {
             return "/org/alljoyn/bus/DBOTest";
         }

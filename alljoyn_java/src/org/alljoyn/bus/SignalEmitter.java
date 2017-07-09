@@ -33,6 +33,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.alljoyn.bus.ifaces.Properties;
@@ -104,7 +105,8 @@ public class SignalEmitter {
             interfacesNew = new Class<?>[] {GenericInterface.class};
 
             // Add support for Properties.PropertiesChanged() signal
-            List<InterfaceDef> ifaceDefs = ((DynamicBusObject)source).getInterfaces();
+            List<InterfaceDef> ifaceDefs = new ArrayList<InterfaceDef>();
+            ifaceDefs.addAll( ((DynamicBusObject)source).getInterfaces() );
             ifaceDefs.add( buildPropertiesSignalInterface() );
 
             // Create emit handler that relies on dynamic interface definitions

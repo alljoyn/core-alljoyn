@@ -71,8 +71,15 @@ public abstract class AbstractDynamicBusObject implements DynamicBusObject  {
      *
      * @param bus the bus attachment with which this object is registered.
      * @param objectDef the bus object's interface(s) definition.
+     * @throws IllegalArgumentException if the bus or objectDef argument is null.
      */
     public AbstractDynamicBusObject(BusAttachment bus, BusObjectInfo objectDef) {
+        if (bus == null) {
+            throw new IllegalArgumentException("Null bus");
+        }
+        if (objectDef == null) {
+            throw new IllegalArgumentException("Null objectDef");
+        }
         mBus = bus;
         mInfo = objectDef;
     }
@@ -83,16 +90,16 @@ public abstract class AbstractDynamicBusObject implements DynamicBusObject  {
      * @param bus the bus attachment with which this object is registered.
      * @param path the object path.
      * @param interfaces the bus object's contained interfaces.
-     * @throws IllegalArgumentException if interfaces argument is null.
+     * @throws IllegalArgumentException if the bus, path or interfaces argument is null.
      */
     public AbstractDynamicBusObject(BusAttachment bus, String path, List<InterfaceDef> interfaces) {
-        mBus = bus;
-        mInfo = new BusObjectInfo(path, interfaces);
+        this(bus, new BusObjectInfo(path, interfaces));
     }
 
     /**
      * @return the bus attachment with which this bus object is registered.
      */
+    @Override
     public BusAttachment getBus() {
         return mBus;
     }
