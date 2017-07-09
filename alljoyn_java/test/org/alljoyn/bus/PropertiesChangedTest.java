@@ -29,7 +29,10 @@
 
 package org.alljoyn.bus;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -37,15 +40,18 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.PropertyDef;
+import org.alljoyn.bus.defs.PropertyDef.ChangedSignalPolicy;
+
 import org.alljoyn.bus.SignalEmitter.GlobalBroadcast;
 
 public class PropertiesChangedTest
     extends TestCase
 {
-
-    private static final String NAME_IFACE = "org.alljoyn.bus.ifaces.PropertiesTest";
+    private static final String NAME_BUS = "org.alljoyn.bus.ifaces.PropertiesTest"; // well-known name for the bus attachment
+    private static final String NAME_IFACE = InterfaceWithAnnotations.class.getName();
     private static final String NAME_PATH = "/testpropsobject";
-    private static final short PORT = 4567;
     private Semaphore mSem;
     private String changedPropName;
     private String changedPropValue;
@@ -63,7 +69,6 @@ public class PropertiesChangedTest
     public class PropertiesTestService
         implements InterfaceWithAnnotations, BusObject
     {
-
         private String prop1 = "N/A";
         private String prop2 = "N/A";
 
@@ -123,12 +128,39 @@ public class PropertiesChangedTest
         {
             prop2 = s;
         }
-
     }
 
-    private BusAttachment bus;
+    public class PropertiesTestDynamicService extends AbstractDynamicBusObject {
+        public Map<String,Object> propertyMap = new HashMap<String,Object>();
 
-    private PropertiesTestService service;
+        public PropertiesTestDynamicService(BusAttachment bus, String path, List<InterfaceDef> interfaceDefs) {
+            super(bus, path, interfaceDefs);
+        }
+
+        public void setProperty(String ifaceName, String propName, Object value) {
+            String key = ifaceName + ":" + propName;
+            propertyMap.put(key, value);
+        }
+
+        /** Generic Method handler used when bus object receives a remote "Set" property call */
+        @Override
+        public void setPropertyReceived(Object arg) throws BusException {
+            MessageContext ctx = getBus().getMessageContext();
+            setProperty(ctx.interfaceName, ctx.memberName, arg);
+        }
+
+        /** Generic Method handler used when bus object receives a remote "Get" property call */
+        @Override
+        public Object getPropertyReceived() throws BusException {
+            MessageContext ctx = getBus().getMessageContext();
+            String key = ctx.interfaceName + ":" + ctx.memberName;
+            return propertyMap.get(key);
+        }
+    }
+
+
+    private BusAttachment bus;
+    private BusObject service;
 
     @Override
     public void setUp()
@@ -139,17 +171,19 @@ public class PropertiesChangedTest
         Status status = bus.connect();
         assertEquals(Status.OK, status);
 
-        service = new PropertiesTestService();
-        status = bus.registerBusObject(service, NAME_PATH);
-        assertEquals(Status.OK, status);
+        changedPropName = "";
+        changedPropValue = "";
+        invalidatedPropName = "";
     }
 
     @Override
     public void tearDown()
         throws Exception
     {
-        bus.unregisterBusObject(service);
-        service = null;
+        if (service != null) {
+            bus.unregisterBusObject(service);
+            service = null;
+        }
 
         bus.disconnect();
         bus.release();
@@ -160,36 +194,113 @@ public class PropertiesChangedTest
         throws Exception
     {
         Status s;
-        Mutable.ShortValue contactPort = new Mutable.ShortValue(PORT);
 
-        s = bus.requestName(NAME_IFACE, (BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING |
+        service = new PropertiesTestService();
+        s = bus.registerBusObject(service, NAME_PATH);
+        assertEquals(Status.OK, s);
+
+        s = bus.requestName(NAME_BUS, (BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING |
                                          BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE));
         assertEquals(Status.OK, s);
 
-
         /* Get a remote object */
-        ProxyBusObject remoteObj = bus.getProxyBusObject(NAME_IFACE, NAME_PATH, BusAttachment.SESSION_ID_ANY,
+        ProxyBusObject remoteObj = bus.getProxyBusObject(NAME_BUS, NAME_PATH, BusAttachment.SESSION_ID_ANY,
                                                          new Class<?>[] {InterfaceWithAnnotations.class});
 
-        System.out.println("Using iface: " + InterfaceWithAnnotations.class.getName());
+        System.out.println("Using iface: " + NAME_IFACE);
         Set<String> props = new HashSet<String>();
         props.add("Prop1");
         props.add("Prop2");
         String[] propsArray = props.toArray(new String[props.size()]);
 
         MyPropertyChangedListener listener = new MyPropertyChangedListener();
-        s = remoteObj.registerPropertiesChangedListener(InterfaceWithAnnotations.class.getName(), propsArray, listener);
+        s = remoteObj.registerPropertiesChangedListener(NAME_IFACE, propsArray, listener);
         assertEquals(Status.OK, s);
 
         PropertyChangedEmitter pce = new PropertyChangedEmitter(service, GlobalBroadcast.On);
 
-        service.setProp1("Hello");
-        service.setProp2("World");
+        ((PropertiesTestService)service).setProp1("Hello");
+        ((PropertiesTestService)service).setProp2("World");
 
         System.out.println("Sending property changed signal...");
         pce.PropertiesChanged(InterfaceWithAnnotations.class, props);
 
         // wait for listener to receive properties
+        waitFor(mSem);
+
+        assertEquals("Prop1", changedPropName);
+        assertEquals("Hello", changedPropValue);
+        assertEquals("Prop2", invalidatedPropName);
+    }
+
+    public void testEmitDynamicPropertiesChanged() throws Exception {
+        List<InterfaceDef> interfaceDefs = buildInterfaceDef(NAME_IFACE);
+
+        // Setup a dynamic bus object (service-side)
+        service = new PropertiesTestDynamicService(bus, NAME_PATH, interfaceDefs);
+        Status s = bus.registerBusObject(service, NAME_PATH);
+        assertEquals(Status.OK, s);
+
+        s = bus.requestName(NAME_BUS, (BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING |
+                                         BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE));
+        assertEquals(Status.OK, s);
+
+        // Setup a remote object (client-side)
+        ProxyBusObject remoteObj = bus.getProxyBusObject(NAME_BUS, NAME_PATH, BusAttachment.SESSION_ID_ANY, interfaceDefs, false);
+
+        System.out.println("Using iface: " + NAME_IFACE);
+        String[] propsArray = new String[] {"Prop1", "Prop2"};
+
+        s = remoteObj.registerPropertiesChangedListener(NAME_IFACE, propsArray, new MyPropertyChangedListener());
+        assertEquals(Status.OK, s);
+
+        // Update bus object's property values and then notify registerd clients of change (service-side)
+        ((PropertiesTestDynamicService)service).setProperty(NAME_IFACE, "Prop1", "Hello");
+        ((PropertiesTestDynamicService)service).setProperty(NAME_IFACE, "Prop2", "World");
+
+        System.out.println("Sending property changed signal...");
+        PropertyChangedEmitter pce = new PropertyChangedEmitter(service, GlobalBroadcast.On);
+        pce.PropertiesChanged(interfaceDefs.get(0), new HashSet<String>(Arrays.asList(propsArray)));
+
+        // Wait for listener to receive properties (client-side)
+        waitFor(mSem);
+
+        assertEquals("Prop1", changedPropName);
+        assertEquals("Hello", changedPropValue);
+        assertEquals("Prop2", invalidatedPropName);
+    }
+
+    public void testEmitDynamicPropertyChanged() throws Exception {
+        List<InterfaceDef> interfaceDefs = buildInterfaceDef(NAME_IFACE);
+
+        // Setup a dynamic bus object (service-side)
+        service = new PropertiesTestDynamicService(bus, NAME_PATH, interfaceDefs);
+        Status s = bus.registerBusObject(service, NAME_PATH);
+        assertEquals(Status.OK, s);
+
+        s = bus.requestName(NAME_BUS, (BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING |
+                BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE));
+        assertEquals(Status.OK, s);
+
+        // Setup a remote object (client-side)
+        ProxyBusObject remoteObj = bus.getProxyBusObject(NAME_BUS, NAME_PATH, BusAttachment.SESSION_ID_ANY, interfaceDefs, false);
+
+        System.out.println("Using iface: " + NAME_IFACE);
+        String[] propsArray = new String[] {"Prop1", "Prop2"};
+
+        s = remoteObj.registerPropertiesChangedListener(NAME_IFACE, propsArray, new MyPropertyChangedListener());
+        assertEquals(Status.OK, s);
+
+        // Update bus object's property values and then notify registerd clients of change (service-side)
+        ((PropertiesTestDynamicService)service).setProperty(NAME_IFACE, "Prop1", "Hello");
+        ((PropertiesTestDynamicService)service).setProperty(NAME_IFACE, "Prop2", "World");
+
+        System.out.println("Sending property changed signal...");
+        PropertyChangedEmitter pce = new PropertyChangedEmitter(service, GlobalBroadcast.On);
+        pce.PropertyChanged(NAME_IFACE, "Prop1", new Variant("Hello")); // notify changed property
+        pce.PropertyChanged(NAME_IFACE, "Prop2", null);                 // notify invalidated property
+
+        // Wait for listener to receive properties (client-side)
         waitFor(mSem);
 
         assertEquals("Prop1", changedPropName);
@@ -205,10 +316,24 @@ public class PropertiesChangedTest
         }
     }
 
+    /* Return a dynamic interface definition containing property definitions: prop1, prop2 */
+    private List<InterfaceDef> buildInterfaceDef(String interfaceName) {
+        InterfaceDef interfaceDef = new InterfaceDef(interfaceName);
+
+        PropertyDef propertyDef = new PropertyDef("Prop1", "s", PropertyDef.ACCESS_READWRITE, interfaceName);
+        propertyDef.addAnnotation(PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL, ChangedSignalPolicy.TRUE.text);
+        interfaceDef.addProperty(propertyDef);
+
+        propertyDef = new PropertyDef("Prop2", "s", PropertyDef.ACCESS_READWRITE, interfaceName);
+        propertyDef.addAnnotation(PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL, ChangedSignalPolicy.INVALIDATES.text);
+        interfaceDef.addProperty(propertyDef);
+
+        return Arrays.asList(interfaceDef);
+    }
+
     private class MyPropertyChangedListener
         extends PropertiesChangedListener
     {
-
         @Override
         public void propertiesChanged(ProxyBusObject pObj, String ifaceName, Map<String, Variant> changed, String[] invalidated)
         {
