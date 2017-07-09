@@ -45,6 +45,11 @@ import org.alljoyn.bus.defs.InterfaceDef;
 public interface DynamicBusObject extends BusObject {
 
     /**
+     * @return the bus attachment with which this bus object is registered.
+     */
+    public BusAttachment getBus();
+
+    /**
      * @return the bus object's path.
      */
     public String getPath();

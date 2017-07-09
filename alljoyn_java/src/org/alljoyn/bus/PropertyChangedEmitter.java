@@ -30,6 +30,7 @@
 package org.alljoyn.bus;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,13 +42,15 @@ import org.alljoyn.bus.annotation.BusAnnotations;
 import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.ifaces.Properties;
 
+import org.alljoyn.bus.defs.BusObjectInfo;
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.PropertyDef;
+
 /**
  * A helper proxy used by BusObjects to send property change notifications.  A PropertyChangedlEmitter
  * instance can be used to send any signal from a given AllJoyn interface.
  */
 public class PropertyChangedEmitter extends SignalEmitter {
-
-    private final Properties props;
 
     /**
      * Constructs a PropertyChangedEmitter.
@@ -58,7 +61,6 @@ public class PropertyChangedEmitter extends SignalEmitter {
      */
     public PropertyChangedEmitter(BusObject source, int sessionId, GlobalBroadcast globalBroadcast) {
         super(source, null, sessionId, globalBroadcast);
-        props = getInterface(Properties.class);
     }
 
     /**
@@ -108,7 +110,60 @@ public class PropertyChangedEmitter extends SignalEmitter {
             invalidatedProps = new String[] {};
             propsChanged.put(propertyName, newValue);
         }
-        props.PropertiesChanged(ifaceName, propsChanged, invalidatedProps);
+        sendPropertiesChanged(ifaceName, propsChanged, invalidatedProps);
+    }
+
+    /**
+     * Sends the PropertiesChanged signal. This operation may only be used when the
+     * PropertyChangedEmitter is constructed with a DynamicBusObject source.
+     *
+     * @param iface the dynamic definition of the BusInterface the property belongs to
+     * @param properties list of properties that were changed
+     * @throws BusException indicating failure to send the PropertiesChanged signal
+     * @throws IllegalStateException if the source bus object is not a DynamicBusObject.
+     */
+    public void PropertiesChanged(InterfaceDef iface, Set<String> properties) throws BusException {
+        if (!(source instanceof DynamicBusObject)) {
+            new IllegalStateException("Source object is not a DynamicBusObject");
+        }
+
+        DynamicBusObject dynamicObj = (DynamicBusObject)source;
+        BusAttachment bus = dynamicObj.getBus();
+        String ifaceName = iface.getName();
+        List<InterfaceDef> ifaceDefs = new ArrayList<InterfaceDef>(Arrays.asList(iface));
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject(bus.getUniqueName(), dynamicObj.getPath(),
+                BusAttachment.SESSION_ID_ANY, ifaceDefs, false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        Map<String, Variant> changedProps = new HashMap<String, Variant>();
+        List<String> invalidatedProps = new ArrayList<String>();
+
+        for (String propName : properties) {
+            PropertyDef propertyDef = BusObjectInfo.getProperty(ifaceDefs, ifaceName, propName);
+            if (propertyDef == null || propertyDef.isWriteAccess()) {
+                throw new IllegalArgumentException("No property with name " + propName + " found");
+            }
+
+            for (Map.Entry<String, String> annotation : propertyDef.getAnnotationList().entrySet()) {
+                if (annotation.getKey().equals(PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL)) {
+                    if (annotation.getValue().equals("true")) {
+                        Object o;
+                        try {
+                            o = proxy.getProperty(ifaceName, propName);
+                        } catch (Exception ex) {
+                            throw new BusException("Can't get value of property " + propName, ex);
+                        }
+                        Variant v = new Variant(o, propertyDef.getType());
+                        changedProps.put(propName, v);
+                    } else if (annotation.getValue().equals("invalidates")) {
+                        invalidatedProps.add(propName);
+                    }
+                }
+            }
+        }
+
+        sendPropertiesChanged(ifaceName, changedProps, invalidatedProps.toArray(new String[invalidatedProps.size()]));
     }
 
     /**
@@ -130,7 +185,7 @@ public class PropertyChangedEmitter extends SignalEmitter {
                 // try to find the get method
                 m = iface.getMethod("get" + propName);
             } catch (NoSuchMethodException ex) {
-                throw new IllegalArgumentException("Not property with name " + propName + " found");
+                throw new IllegalArgumentException("No property with name " + propName + " found");
             }
             BusProperty busPropertyAnn = m.getAnnotation(BusProperty.class);
             if (busPropertyAnn != null) {
@@ -162,6 +217,19 @@ public class PropertyChangedEmitter extends SignalEmitter {
             }
         }
 
-        props.PropertiesChanged(ifaceName, changedProps, invalidatedProps.toArray(new String[invalidatedProps.size()]));
+        sendPropertiesChanged(ifaceName, changedProps, invalidatedProps.toArray(new String[invalidatedProps.size()]));
     }
+
+    private void sendPropertiesChanged(String iface, Map<String, Variant> changedProps, String[] invalidatedProps)
+            throws BusException {
+        if (source instanceof DynamicBusObject) {
+            GenericInterface emitter = getInterface(GenericInterface.class);
+            String propsIfaceName = InterfaceDescription.getName(Properties.class);
+            emitter.signal(propsIfaceName, "PropertiesChanged", new Object[] {iface, changedProps, invalidatedProps});
+        } else {
+            Properties props = getInterface(Properties.class);
+            props.PropertiesChanged(iface, changedProps, invalidatedProps);
+        }
+    }
+
 }
