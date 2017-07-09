@@ -251,6 +251,11 @@ public class SignalEmitterTest extends TestCase {
         }
 
         @Override
+        public BusAttachment getBus() {
+            return ownerBus;
+        }
+
+        @Override
         public String getPath() {
             return info.getPath();
         }
