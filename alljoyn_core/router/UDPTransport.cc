@@ -8508,8 +8508,6 @@ void* UDPTransport::Run(void* arg)
             checkEvents.push_back(&ardpTimerEvent);
             checkEvents.push_back(&maintenanceTimerEvent);
 
-            bool listening = false;
-
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Walking listen FDs"));
             for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end();) {
                 /*
@@ -8532,8 +8530,6 @@ void* UDPTransport::Run(void* arg)
 
                 QCC_DbgPrintf(("UDPTransport::Run(): NOT STATE_RELOADED. Creating events for socket %d", i->m_sockFd));
 
-                listening = true;
-
                 qcc::Event* eventRd = new Event(i->m_sockFd, Event::IO_READ);
                 checkEvents.push_back(eventRd);
 
@@ -8543,11 +8539,6 @@ void* UDPTransport::Run(void* arg)
                 ++i;
             }
 
-            /*
-             * Once we have create an event to look for inbound action on some
-             * socket, we can note that that we are m_listening or not.
-             */
-            m_isListening = listening;
             m_reload = STATE_RELOADED;
         }
 
@@ -9056,6 +9047,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
 
         if (m_isListening) {
             if (!m_isNsEnabled) {
+                QCC_ASSERT(!m_listenPortMap.empty());
                 IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
                 m_isNsEnabled = true;
             }
@@ -9090,7 +9082,6 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     /*
      * We think we're ready to send the advertisement.  Are we really?
      */
-    QCC_ASSERT(!m_listenPortMap.empty());
     QCC_ASSERT(m_isNsEnabled);
     QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::EnableAdvertisementInstance(): IpNameService not started");
 
@@ -9194,6 +9185,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
         }
 
         m_isListening = false;
+        m_listenPortMap.clear();
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
@@ -11834,8 +11826,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          *
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): IpNameService::Instance().Enable()"));
+        QCC_ASSERT(!m_listenPortMap.empty());
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
-        m_isNsEnabled = true;
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -11868,6 +11860,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             }
             m_isAdvertising = true;
         }
+        m_isListening = true;
+        m_isNsEnabled = true;
 
         /* If we have a wildcard specified in the configuration database, we want to stop
          * listening on all the non-wildcard addresses/ports we may have previously opened
@@ -11943,6 +11937,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         for (list<ListenFdEntry>::iterator it = addedList.begin(); it != addedList.end(); it++) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): send \"%s\" to replacedList", it->m_normSpec.c_str()));
             replacedList.push_back(it->m_normSpec);
+            it = addedList.erase(it);
         }
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Disable NS"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
