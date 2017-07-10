@@ -111,12 +111,15 @@ QStatus DaemonTransport::Stop(void)
      * Ask any running endpoints to shut down and exit their threads.
      */
     for (list<RemoteEndpoint>::iterator i = endpointList.begin(); i != endpointList.end(); ++i) {
-        (*i)->Stop();
+        QStatus s = (*i)->Stop();
+        if ((s != ER_BUS_NO_ENDPOINT) && (status == ER_OK)) {
+            status = s;
+        }
     }
 
     endpointListLock.Unlock(MUTEX_CONTEXT);
 
-    return ER_OK;
+    return status;
 }
 
 QStatus DaemonTransport::Join(void)
