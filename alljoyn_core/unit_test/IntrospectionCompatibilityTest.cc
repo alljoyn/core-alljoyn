@@ -900,6 +900,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     EXPECT_STREQ("English property description", description.c_str());
     ASSERT_TRUE(remoteIntf->GetPropertyDescriptionForLanguage("TestProperty", description, "de"));
     EXPECT_STREQ("German property description", description.c_str());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithDescriptionsTwoInterfaces_RemoteInterfaceHasDescriptions) {
@@ -964,6 +965,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     EXPECT_STREQ("English Second Interface Description", description.c_str());
     ASSERT_TRUE(secondRemoteIntf->GetDescriptionForLanguage(description, "de"));
     EXPECT_STREQ("German Second Interface Description", description.c_str());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithoutDescription_CreatesInterfaceDoesNotCallIntrospectWithDescription) {
@@ -986,6 +988,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
 
     const InterfaceDescription* remoteIntf = proxyObject->GetInterface(interfaceName);
     EXPECT_NE(nullptr, remoteIntf);
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithDescriptionsMalformedInterface_ReturnsBadXml) {
@@ -1005,6 +1008,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     proxyObject.reset(new ProxyBusObject(*clientAttachment, serverAttachment->GetUniqueName().c_str(), s_mainPath, 0));
     ASSERT_NE(nullptr, proxyObject);
     EXPECT_EQ(ER_BUS_BAD_XML, proxyObject->IntrospectRemoteObject());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithInconsistentDescriptionXml_ReturnsBadXml) {
@@ -1027,6 +1031,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     proxyObject.reset(new ProxyBusObject(*clientAttachment, serverAttachment->GetUniqueName().c_str(), s_mainPath, 0));
     ASSERT_NE(nullptr, proxyObject);
     EXPECT_EQ(ER_BUS_BAD_XML, proxyObject->IntrospectRemoteObject());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_NonLegacyObject_ReturnsOkDoesNotCallIntrospectWithDescription) {
@@ -1045,6 +1050,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_NonLegacyObject_Re
     proxyObject.reset(new ProxyBusObject(*clientAttachment, serverAttachment->GetUniqueName().c_str(), s_mainPath, 0));
     ASSERT_NE(nullptr, proxyObject);
     EXPECT_EQ(ER_OK, proxyObject->IntrospectRemoteObject());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithDescriptionsTwoNodes_RemoteInterfacesInNodesHaveDescriptions)
@@ -1088,6 +1094,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     EXPECT_STREQ("English net.UnitTest Property description", description.c_str());
     ASSERT_TRUE(netIntf->GetPropertyDescriptionForLanguage("TestProperty", description, "de"));
     EXPECT_STREQ("German net.UnitTest Property description", description.c_str());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithDescriptionsNestedNodes_RemoteInterfacesInNodesHaveDescriptions)
@@ -1131,6 +1138,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     EXPECT_STREQ("English Nested Method Description", description.c_str());
     ASSERT_TRUE(nestedIntf->GetMemberDescriptionForLanguage("TestMethod", description, "de"));
     EXPECT_STREQ("German Nested Method Description", description.c_str());
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithoutAllSeenIntrospection_CreatesInterfaceDoesNotCallGetDescriptionLanguages) {
@@ -1153,6 +1161,7 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
 
     const InterfaceDescription* remoteIntf = proxyObject->GetInterface(interfaceName);
     EXPECT_NE(nullptr, remoteIntf);
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
 
 TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithStandardDbusInterface_CreatesNonDbusInterfaces) {
@@ -1184,4 +1193,5 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     EXPECT_NE(nullptr, remoteIntf);
     remoteIntf = proxyObject->GetInterface(lampstateInterfaceName);
     EXPECT_NE(nullptr, remoteIntf);
+    serverAttachment->UnregisterBusObject(*fakeObject);
 }
