@@ -1282,6 +1282,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         // the transports.
         //
         bool useEntry = false;
+        TransportMask transportMask = TRANSPORT_NONE;
         for (uint32_t j = 0; j < N_TRANSPORTS; ++j) {
             QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Check out interface cantidates for transport %d", j));
 
@@ -1313,6 +1314,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                                entries[i].m_name.c_str()));
                 useEntry = true;
 #endif
+                transportMask |= MaskFromIndex(j);
             } else {
                 m_mutex.Lock(MUTEX_CONTEXT);
 
@@ -1332,6 +1334,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface name "
                                        " \"%s\" for transport %d", m_requestedInterfaces[j][k].m_interfaceName.c_str(), j));
                         useEntry = true;
+                        transportMask |= MaskFromIndex(j);
                         break;
                     }
 
@@ -1343,6 +1346,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface address "
                                        "\"%s\" for transport %d.", entries[i].m_addr.c_str(), j));
                         useEntry = true;
+                        transportMask |= MaskFromIndex(j);
                         break;
                     }
                 }
@@ -1440,6 +1444,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         live.m_flags = entries[i].m_flags;
         live.m_mtu = entries[i].m_mtu;
         live.m_index = entries[i].m_index;
+        live.m_transportMask = transportMask;
 
         live.m_multicastsockFd = multicastsockFd;
         live.m_multicastMDNSsockFd = multicastMDNSsockFd;
@@ -8154,12 +8159,12 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
         completeTransportMask |= TRANSPORT_UDP;
     }
     if (!isAllJoynQuery) {
-        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery Ignoring Non-AllJoyn related query"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring Non-AllJoyn related query"));
         return;
     }
     MDNSResourceRecord* refRecord;
     if (!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) {
-        QCC_DbgPrintf(("Ignoring query without sender info"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring query without sender info"));
 #ifndef NDEBUG
         mdnsPacket->Dump();
 #endif
@@ -8167,7 +8172,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
     }
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
     if (!refRData) {
-        QCC_DbgPrintf(("Ignoring query with invalid sender info"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring query with invalid sender info"));
         return;
     }
     qcc::IPEndpoint dst;
@@ -8181,7 +8186,22 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
     if (guid == m_guid) {
-        QCC_DbgPrintf(("Ignoring my own query"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring my own query"));
+        return;
+    }
+
+    bool senderAddressMatchesOurLiveInterfaces = false;
+    for (auto& liveInterface : m_liveInterfaces) {
+        if (!SameNetwork(liveInterface.m_prefixlen, liveInterface.m_address, remote.GetAddress())) {
+            continue;
+        }
+        if ((liveInterface.m_transportMask & completeTransportMask) != TRANSPORT_NONE) {
+            senderAddressMatchesOurLiveInterfaces = true;
+            break;
+        }
+    }
+    if (!senderAddressMatchesOurLiveInterfaces) {
+        QCC_LogError(ER_OK, ("IpNameServiceImpl::HandleProtocolQuery: rejecting %s:%d with transport mask %d", remote.GetAddress().ToString().c_str(), remote.GetPort(), completeTransportMask));
         return;
     }
     m_mutex.Lock(MUTEX_CONTEXT);
@@ -8197,7 +8217,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
     if (local.port == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
         if (!UpdateMDNSPacketTracker(guid, dst, refRData->GetSearchID())) {
-            QCC_DbgPrintf(("Ignoring query with duplicate burst ID"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring query with duplicate burst ID"));
             m_mutex.Unlock(MUTEX_CONTEXT);
             return;
         }
@@ -8237,14 +8257,14 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
     }
 
     vector<String> wkns;
-    //
-    // The who-has message doesn't specify which transport is doing the asking.
-    // This is an oversight and should be fixed in a subsequent version.  The
-    // only reasonable thing to do is to return name matches found in all of
-    // the advertising transports.
-    //
-    for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
-
+    vector<uint32_t> transportIndexArray;
+    if ((completeTransportMask & TRANSPORT_TCP) != TRANSPORT_NONE) {
+        transportIndexArray.push_back(TRANSPORT_INDEX_TCP);
+    }
+    if ((completeTransportMask & TRANSPORT_UDP) != TRANSPORT_NONE) {
+        transportIndexArray.push_back(TRANSPORT_INDEX_UDP);
+    }
+    for (auto index : transportIndexArray) {
         //
         // If there are no names being advertised by the transport identified by
         // its index (actively or quietly), there is nothing to do.
@@ -8491,19 +8511,14 @@ set<String> IpNameServiceImpl::GetAdvertising(TransportMask transportMask) {
     std::set<String> empty;
     set_intersection(m_advertised[TRANSPORT_INDEX_TCP].begin(), m_advertised[TRANSPORT_INDEX_TCP].end(), m_advertised[TRANSPORT_INDEX_UDP].begin(), m_advertised[TRANSPORT_INDEX_UDP].end(), std::inserter(set_common, set_common.end()));
 
-    if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
-
-
+    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
+        return set_common;
+    } else if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
         uint32_t transportIndex = IndexFromBit(transportMask);
         if (transportIndex >= 16) {
             return empty;
         }
-
-        set_difference(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), set_common.begin(), set_common.end(), std::inserter(set_return, set_return.end()));
-        return set_return;
-    }
-    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
-        return set_common;
+        return m_advertised[transportIndex];
     }
 
     return empty;
@@ -8514,18 +8529,14 @@ set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask
     std::set<String> empty;
     set_intersection(m_advertised_quietly[TRANSPORT_INDEX_TCP].begin(), m_advertised_quietly[TRANSPORT_INDEX_TCP].end(), m_advertised_quietly[TRANSPORT_INDEX_UDP].begin(), m_advertised_quietly[TRANSPORT_INDEX_UDP].end(), std::inserter(set_common, set_common.end()));
 
-    if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
+    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
+        return set_common;
+    } else if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
         uint32_t transportIndex = IndexFromBit(transportMask);
         if (transportIndex >= 16) {
             return empty;
         }
-
-        set_difference(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), set_common.begin(), set_common.end(), std::inserter(set_return, set_return.end()));
-        return set_return;
-    }
-    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
-
-        return set_common;
+        return m_advertised_quietly[transportIndex];
     }
 
     return empty;

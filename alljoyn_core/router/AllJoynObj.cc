@@ -3448,12 +3448,12 @@ void AllJoynObj::OnAppResume(const InterfaceDescription::Member* member, Message
     }
 }
 
-TransportMask AllJoynObj::GetCompleteTransportMaskFilter() {
+TransportMask AllJoynObj::GetCompleteTransportMaskFilter(TransportMask mask) {
     Transport* tcpTransport = GetTransport("tcp:");
     Transport* udpTransport = GetTransport("udp:");
     TransportMask filterComplete = (tcpTransport && tcpTransport->IsRunning()) ? TRANSPORT_TCP : 0;
     filterComplete |= (udpTransport && udpTransport->IsRunning()) ? TRANSPORT_UDP : 0;
-    return filterComplete;
+    return filterComplete & mask;
 }
 void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Message& msg)
 {
@@ -3545,7 +3545,7 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
                     for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
                         Transport* trans = transList.GetTransport(i);
                         if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
-                            status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
+                            status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter(trans->GetTransportMask()));
                             if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
                                 QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
                             }
@@ -3673,7 +3673,7 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
         for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
             Transport* trans = transList.GetTransport(i);
             if (trans && (trans->GetTransportMask() & cancelMask)) {
-                trans->DisableAdvertisement(advertiseName, cancelMask & GetCompleteTransportMaskFilter());
+                trans->DisableAdvertisement(advertiseName, cancelMask & GetCompleteTransportMaskFilter(trans->GetTransportMask()));
             } else if (!trans) {
                 QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
             }
@@ -3852,7 +3852,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
             Transport* trans = transList.GetTransport(i);
             if (trans && (trans->GetTransportMask() & enableMask)) {
-                trans->EnableDiscovery(matchingStr.c_str(), enableMask & GetCompleteTransportMaskFilter());
+                trans->EnableDiscovery(matchingStr.c_str(), enableMask & GetCompleteTransportMaskFilter(trans->GetTransportMask()));
             } else if (!trans) {
                 QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
             }
@@ -4031,7 +4031,7 @@ QStatus AllJoynObj::ProcCancelFindAdvertisement(const qcc::String& sender, const
         for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
             Transport* trans =  transList.GetTransport(i);
             if (trans && (trans->GetTransportMask() & cancelMask)) {
-                trans->DisableDiscovery(matchingStr.c_str(), refMask & GetCompleteTransportMaskFilter());
+                trans->DisableDiscovery(matchingStr.c_str(), refMask & GetCompleteTransportMaskFilter(trans->GetTransportMask()));
             }
         }
     } else if (!foundFinder) {
