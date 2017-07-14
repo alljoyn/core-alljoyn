@@ -30,8 +30,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.alljoyn.bus.sample.chat"
-    android:versionCode="16100100"
-    android:versionName="16.10.01">
+    android:versionCode="16100002"
+    android:versionName="16.10.00.02">
     <uses-sdk android:minSdkVersion="16" />
     <!-- Permission required to use the TCP transport -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
