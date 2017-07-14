@@ -30,8 +30,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.alljoyn.config.samples.configclient"
-    android:versionCode="16100100"
-    android:versionName="16.10.01" >
+    android:versionCode="16100200"
+    android:versionName="16.10.02" >
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
