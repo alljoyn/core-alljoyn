@@ -30,8 +30,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="org.alljoyn.bus.plugin"
-          android:versionCode="16100100"
-          android:versionName="16.10.01">
+          android:versionCode="16100002"
+          android:versionName="16.10.00.02">
 
     <uses-permission android:name="android.webkit.permission.PLUGIN" />
     <uses-permission android:name="android.permission.INTERNET" />
