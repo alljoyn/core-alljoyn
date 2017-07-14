@@ -64,7 +64,7 @@ class Timer {
      *
      * @param name               Name for the thread.
      * @param expireOnExit       If true call all pending alarms when this thread exits.
-     * @param concurrency         Dispatch up to this number of alarms concurently (using multiple threads).
+     * @param concurrency        Dispatch up to this number of alarms concurently (using multiple threads). 0 means no limit.
      * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
      * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
      */

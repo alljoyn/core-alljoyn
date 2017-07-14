@@ -319,12 +319,12 @@ class ClientTransportFactoryContainer : public TransportFactoryContainer {
 
 static ClientTransportFactoryContainer* clientTransportsContainer = NULL;
 
-BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessages, uint32_t concurrency) :
+BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessages, uint32_t concurrencyLimit) :
     isStarted(false),
     isStopping(false),
-    concurrency(concurrency),
-    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
-    translator(NULL),
+    concurrency(concurrencyLimit),
+    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, nullptr, allowRemoteMessages, nullptr, concurrency)),
+    translator(nullptr),
     joinObj(this)
 {
     clientTransportsContainer->Init();

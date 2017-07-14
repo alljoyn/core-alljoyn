@@ -756,7 +756,7 @@ static void usage(void)
     printf("   -sn                   = Interface security is not applicable\n");
     printf("   -sr                   = Interface security is required\n");
     printf("   -so                   = Enable object security\n");
-    printf("   -con #                = Specify concurrent threads\n");
+    printf("   -con #                = Specify concurrent threads limit. 0 = no limit (default)\n");
     printf("   -dcon                 = Disable concurrency\n");
     printf("   -dpws                 = Use DelayedPingWithSleep as methodhandler instead of DelayedPing\n");
     printf("   -about [name]         = use the about feature for discovery. (optional override default application name.)\n");
@@ -776,7 +776,7 @@ int CDECL_CALL main(int argc, char** argv)
     unsigned long reportInterval = 1000;
     const char* keyStore = NULL;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
-    unsigned long concurrencyLevel = 4;
+    unsigned long concurrencyLevel = 0;
     unsigned long run_time = 0;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());

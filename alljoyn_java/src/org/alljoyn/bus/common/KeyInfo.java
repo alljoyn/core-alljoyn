@@ -79,8 +79,8 @@ public class KeyInfo {
         return m_keyId;
     }
 
-    public void setKeyId(byte[] key_ID) {
-        m_keyId = key_ID;
+    public void setKeyId(byte[] keyId) {
+        m_keyId = keyId;
     }
 
     @Override

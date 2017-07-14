@@ -574,40 +574,26 @@ TEST_F(CredentialAccessorTest, TwoKeysWithTheSameGUID)
 }
 
 #if defined(QCC_OS_LINUX)
-
-/** a keystore compatibility test using old key store generated in a linux
- * application with keystore version 0x103.
+/*
+ * Only perform this test if the target platform is Little-Endian.  In reality
+ * the Keystore is generated and read  with the same endianess.
  */
-
-#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN) && defined(QCC_OS_GROUP_POSIX)
-
-/** A 32-bit Big-Endian KeyStore for OpenWRT testing **/
-static const char Rev0X103KeyStore[] = {
-    "vWgQBOe83hKtREtXdBd0T4F01rvtgLa/2Z3pQIX07md1WWAa9GfwU0gqFZHV"
-    "TCMiykz4haBMt1pHSCE242zBPB/FDR0FcVS11djxcAnRu0RTAUHy/Ovm/i/p"
-    "dkAVwgLCwep8m19142n0+s1CmrJ2VJ1UwmN1jY72kelkIZuHuk0kn04lXDH9"
-    "Hk/Q+nHLSVEZFfJepWl3lIEk6crIEHls1T9eoAgN3fyxAtsJF4KSdBFHNQix"
-    "zECOJlZJ14dbgwyF6URwf8iafbneoWm8YRJoHdQY6n6cyQtQRqtAVju2CUjK"
-    "TJD079wyz+K7oTIqLZKrjFkDQ/iiCZTswPGTmdeqSihEs9ICievLY4v+wq+g"
-    "DSDGXBkv05OElCcUzseMU3sbwF4Y7mQ7QR5/GTz0CygxHlrr+Th5S8YCnmNu"
-    "agZvcD1KjAOtz9iN354BcdU6ibTyfzZdePFG7hdWJim9S6MBNQ2gwQFg7gc2"
-    "4gAAAWzBC3JMYgaQRW9wNImCW0sIAAAAIwED"
-};
-
-#else
+#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
 /**
- *   In case Crypto parameters change, this test will fail. The input is a Base64 encoded ciphertext, below is how it could be re-constructed:
- *
- *   1). leading 40 chars are the header part which will be stripped out by KeyStore by serveral "PullBytes" calls for version, lengh, etc. and
- *   they are not part of Decryption/Encryption.
+ *   The input is a Base64 encoded ciphertext, below is how it could be re-constructed:
+ *   1). leading 40 chars are the header part which will be stripped out by KeyStore by
+ *   several "PullBytes" calls for version, length, etc. and they are not part of
+ *   Decryption/Encryption.
  *
  *   "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA"
  *
  *   After Base64 decoding the length is 30 bytes;
  *
- *   2). The rest part should be 364 bytes long after Base64 decoding, which contains 348 bytes of Ciphertext and 16 bytes of Tag. To compute the
- *   right input, either start from your own Cleartext, or first Base64 decode the following string, then use the same Crypto, nonce, key to do a
- *   Encrypt_CCM, which will compute a tag and append to the end of the Ciphtertext.
+ *   2). The rest part should be 364 bytes long after Base64 decoding, which contains 348
+ *   bytes of Ciphertext and 16 bytes of Tag. To compute the right input, either start from
+ *   your own Cleartext, or first Base64 decode the following string, then use the same
+ *   Crypto, nonce, key to do a Encrypt_CCM, which will compute a tag and append to the
+ *   end of the Ciphtertext.
  *
  *   "DQAAAM9eg8ltGrz5qniR1pWyN3jhAfmIigAAAAAAJwAAFwBUaGlzIGlzIHRoZSBw"
  *   "ZWVyIHNlY3JldAAAAAAAFgAAALk60g9MFjECwVYBNgtuCbzBARyJigAAAAAAXwAA"
@@ -643,7 +629,6 @@ static const char Rev0X103KeyStore[] = {
     "7vSFQOmd2b+2gO271nSBT3QXdFdLRK0S3rznBBBoveJlyA=="
 #endif //QCC_LINUX_OPENSSL_GT_1_1_X
 };
-#endif
 
 static const char Rev0X103KeyStorePwd[] = {
     "L3VzcjIvcGhpbG4vQ3JlZGVudGlhbEFjY2Vzc29yVGVzdA=="
@@ -680,5 +665,5 @@ TEST_F(CompatibleCredentialAccessorTest, LoadOldFormat)
     ASSERT_TRUE(memcmp(localKb.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original local KB";
 
 }
-
+#endif
 #endif

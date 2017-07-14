@@ -508,7 +508,12 @@ OptParse::ParseResultCode OptParse::ParseResult()
             noSwitchUser = true;
         } else if (arg.substr(0, sizeof("--verbosity") - 1).compare(
                        "--verbosity") == 0) {
-            verbosity = StringToI32(arg.substr(sizeof("--verbosity")));
+            if (arg.length() < sizeof("--verbosity=")) {
+                result = PR_MISSING_OPTION;
+                goto exit;
+            } else {
+                verbosity = StringToI32(arg.substr(sizeof("--verbosity")));
+            }
         } else if ((arg.compare("--help") == 0) || (arg.compare("-h") == 0)) {
             PrintUsage();
             result = PR_EXIT_NO_ERROR;
@@ -535,7 +540,7 @@ exit:
         break;
 
     case PR_MISSING_OPTION:
-        fprintf(stderr, "No config file specified.\n");
+        fprintf(stderr, "Missing option value.\n");
         PrintUsage();
         break;
 

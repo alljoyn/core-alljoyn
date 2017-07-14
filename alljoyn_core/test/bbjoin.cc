@@ -80,7 +80,7 @@ static int g_sleepBeforeLeave = 0;
 static bool g_useMultipoint = true;
 static bool g_suppressNameOwnerChanged = false;
 static bool g_keep_retrying_in_failure = false;
-static uint32_t g_concurrent_threads = 4;
+static uint32_t g_concurrent_threads = 0;
 
 SessionPort SESSION_PORT = 26;
 
@@ -433,7 +433,7 @@ int CDECL_CALL main(int argc, char** argv)
                 usage();
                 exit(1);
             } else {
-                g_concurrent_threads = qcc::StringToU32(argv[i], 0);;
+                g_concurrent_threads = qcc::StringToU32(argv[i], 0);
             }
         } else if (0 == strcmp("-sp", argv[i])) {
             ++i;
@@ -442,7 +442,7 @@ int CDECL_CALL main(int argc, char** argv)
                 usage();
                 exit(1);
             } else {
-                SESSION_PORT = (SessionPort) qcc::StringToU32(argv[i], 0);;
+                SESSION_PORT = (SessionPort) qcc::StringToU32(argv[i], 0);
             }
         } else if (0 == strcmp("-about", argv[i])) {
             g_useAboutFeatureDiscovery = true;

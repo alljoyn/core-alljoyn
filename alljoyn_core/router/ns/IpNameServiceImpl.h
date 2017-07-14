@@ -748,7 +748,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      */
     QStatus SetNetworkEventCallback(TransportMask transportMask,
-                                    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb);
+                                    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>* cb);
 
     /**
      * @brief Clear the callbacks for all transports.
@@ -1270,7 +1270,7 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* m_callback[N_TRANSPORTS];
 
-    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* m_networkEventCallback[N_TRANSPORTS];
+    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&, bool>* m_networkEventCallback[N_TRANSPORTS];
 
     /**
      * @internal @brief A vector of list of all of the names that the various
@@ -1480,6 +1480,12 @@ class IpNameServiceImpl : public qcc::Thread {
      * more new interfaces are detected.
      */
     bool m_refreshAdvertisements;
+
+    /**
+     * @internal
+     * @brief Set to true to cleanup sockets.
+     */
+    bool m_interfaceDownDetected;
 
     /**
      * @internal

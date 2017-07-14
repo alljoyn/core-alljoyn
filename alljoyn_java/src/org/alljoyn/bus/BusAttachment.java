@@ -1040,15 +1040,18 @@ public class BusAttachment {
      * @param applicationName the name of the application
      * @param policy if this attachment is allowed to receive messages from
      *               remote devices
-     * @param concurrency The maximum number of concurrent method and signal
-     *                    handlers locally executing.
+     * @param concurrencyLimit The maximum number of concurrent method and signal
+     *                    handlers locally executing. When the limit is set to 0,
+     *                    the concurrency value is adjusted automatically and
+     *                    the number of method and signal handlers processed
+     *                    concurrently is not limited.
      */
-    public BusAttachment(String applicationName, RemoteMessage policy, int concurrency) {
+    public BusAttachment(String applicationName, RemoteMessage policy, int concurrencyLimit) {
         isShared = false;
         isConnected = false;
         this.allowRemoteMessages = (policy == RemoteMessage.Receive);
         busAuthListener = new AuthListenerInternal();
-        create(applicationName, allowRemoteMessages, concurrency);
+        create(applicationName, allowRemoteMessages, concurrencyLimit);
 
         /*
          * Create a separate dbus bus object (dbusbo) and interface so we get at
@@ -2106,6 +2109,23 @@ public class BusAttachment {
      * developers responsibility to make sure the maximum number of concurrent
      * callbacks is not exceeded. If the maximum number is exceeded the
      * application will deadlock.
+     * </p>
+     * <p>
+     * If this function is not called, any non-asynchronous remote procedure call
+     * made from within an AllJoyn callback will immediately return with an
+     * ER_BUS_BLOCKING_CALL_NOT_ALLOWED error.
+     * </p>
+     * <p>
+     * If this function is called, non-asynchronous remote procedure calls made
+     * from within callbacks will be handled by the BusAttachment's thread pool.
+     * The number of calls processed in this way is not limited if the concurrency
+     * value was set to 0 when creating bus attachment, however a large number
+     * of calls in a short period of time could significantly increase the usage
+     * of system resources by the AllJoyn process. Therefore, if a large number
+     * of remote system calls from callbacks is expected, it is recommended
+     * to use the asynchronous variants of remote procedure calls (e.g.,
+     * JoinSessionAsync()) and process their callbacks in threads owned
+     * and managed by the application.
      * </p>
      */
     public native void enableConcurrentCallbacks();

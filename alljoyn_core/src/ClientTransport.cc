@@ -76,16 +76,16 @@ QStatus ClientTransport::Stop(void)
 {
     m_running = false;
     /* Stop the endpoint */
-    m_endpoint->Stop();
-    return ER_OK;
+    QStatus status = m_endpoint->Stop();
+    return (status == ER_BUS_NO_ENDPOINT ? ER_OK : status);
 }
 
 QStatus ClientTransport::Join(void)
 {
     /* Join the endpoint i.e. wait for the EndpointExit callback to complete */
-    m_endpoint->Join();
+    QStatus status = m_endpoint->Join();
     m_endpoint = RemoteEndpoint();
-    return ER_OK;
+    return (status == ER_BUS_NO_ENDPOINT ? ER_OK : status);
 }
 
 void ClientTransport::EndpointExit(RemoteEndpoint& ep)

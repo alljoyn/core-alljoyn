@@ -105,11 +105,11 @@ class TimerImpl : public ThreadListener {
     /**
      * Constructor
      *
-     * @param name               Name for the thread.
-     * @param expireOnExit       If true call all pending alarms when this thread exits.
-     * @param concurrency        Dispatch up to this number of alarms concurrently (using multiple threads).
-     * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
-     * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
+     * @param name                  Name for the thread.
+     * @param expireOnExit          If true call all pending alarms when this thread exits.
+     * @param concurrency           Number of preallocated slots for threads which will process alarms.
+     * @param prevenReentrancy      Prevent re-entrant call of AlarmTriggered.
+     * @param maxAlarms             Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
      */
     TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms);
 
@@ -287,7 +287,7 @@ class TimerImpl : public ThreadListener {
     const uint32_t maxAlarms;
     uint32_t numLimitableAlarms;               /**< Number of alarms currently in the alarm queue that count towards the limit */
     std::deque<qcc::Thread*> addWaitQueue;     /**< Threads waiting for alarms set to become not-full */
-
+    bool allowMoreConcurrency;                 /**< If true, more than @concurrency threads can be created to process alarms. */
 };
 
 }
@@ -296,14 +296,15 @@ TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool 
     lock(LOCK_LEVEL_TIMERIMPL_LOCK),
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
-    timerThreads(concurrency),
+    timerThreads(concurrency > 0 ? concurrency : 1),
     isRunning(false),
     controllerIdx(0),
     preventReentrancy(preventReentrancy),
     reentrancyLock(LOCK_LEVEL_TIMERIMPL_REENTRANCYLOCK),
     nameStr(name),
     maxAlarms(maxAlarms),
-    numLimitableAlarms(0)
+    numLimitableAlarms(0),
+    allowMoreConcurrency(concurrency == 0)
 {
     /* TimerImpl thread objects will be created when required */
 }
@@ -396,9 +397,9 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
     lock.Lock(MUTEX_CONTEXT);
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
+        Thread* thread = Thread::GetThread();
+        QCC_ASSERT(thread);
         while (maxAlarms && alarm->limitable && (numLimitableAlarms >= maxAlarms) && isRunning) {
-            Thread* thread = Thread::GetThread();
-            QCC_ASSERT(thread);
             addWaitQueue.push_front(thread);
             lock.Unlock(MUTEX_CONTEXT);
             QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
@@ -509,8 +510,9 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
              * There might be a call in progress to the alarm that is being removed.
              * RemoveAlarm must not return until this alarm is finished.
              */
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -563,8 +565,9 @@ bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
              * There might be a call in progress to the alarm that is being removed.
              * RemoveAlarm must not return until this alarm is finished.
              */
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -602,8 +605,9 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
              * There might be a call in progress to origAlarm.
              * RemoveAlarm must not return until this alarm is finished.
              */
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -645,8 +649,9 @@ bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
          * If we are, wait until the listener returns.
          */
         if (!removedOne) {
+            Thread* thread = Thread::GetThread();
             for (size_t i = 0; i < timerThreads.size(); ++i) {
-                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == thread)) {
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
@@ -912,15 +917,32 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
 
 
                     if (timer->isRunning) {
-                        if (!tt && nullIdx != -1) {
-                            /* If <tt> is NULL and we have located an index in the timerThreads vector
-                             * that is NULL, allocate memory so we can start this thread
-                             */
-                            String threadName = timer->nameStr + "_" + U32ToString(nullIdx);
-                            timer->timerThreads[nullIdx] = new TimerThread(threadName, nullIdx, timer);
-                            tt = timer->timerThreads[nullIdx];
-                            QCC_DbgPrintf(("TimerThread::Run(): Created timer thread %d", nullIdx));
+                        if (tt == nullptr) {
+                            if (nullIdx != -1) {
+                                /* If <tt> is NULL and we have located an index in the timerThreads vector
+                                 * that is NULL, allocate memory so we can start this thread
+                                 */
+                                String threadName = timer->nameStr + "_" + U32ToString(nullIdx);
+
+                                timer->timerThreads[nullIdx] = new TimerThread(threadName, nullIdx, timer);
+                                tt = timer->timerThreads[nullIdx];
+                                QCC_DbgPrintf(("TimerThread::Run(): Created timer thread %d", nullIdx));
+                            } else if (timer->allowMoreConcurrency) {
+                                /* If all the slots for threads are occupied and allowMoreConcurrency is true,
+                                 * we can add an extra slot (index) to the pool and create a new thread
+                                 * in that slot.
+                                 * This thread will be deleted after it finishes its job and stops,
+                                 * just like any other thread in the pool.
+                                 */
+                                size_t newIdx = timer->timerThreads.size();
+                                String threadName = timer->nameStr + "_" + U32ToString(newIdx);
+
+                                tt = new TimerThread(threadName, newIdx, timer);
+                                timer->timerThreads.push_back(tt);
+                                QCC_DbgPrintf(("TimerThread::Run(): Created additional timer thread %d", newIdx));
+                            }
                         }
+
                         if (tt) {
                             /*
                              * If <tt> is non-NULL, then we have located a thread that
@@ -1164,8 +1186,9 @@ bool TimerImpl::IsTimerCallbackThread() const
 {
     bool result = false;
     lock.Lock(MUTEX_CONTEXT);
+    Thread* thread = Thread::GetThread();
     for (size_t i = 0; i < timerThreads.size(); ++i) {
-        if ((timerThreads[i] != NULL) && (timerThreads[i] == Thread::GetThread())) {
+        if ((timerThreads[i] != NULL) && (timerThreads[i] == thread)) {
             result = true;
             break;
         }

@@ -51,11 +51,11 @@ alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(AJ_PCSTR applicationN
     return ((alljoyn_busattachment) new ajn::BusAttachmentC(applicationName, allowRemoteMessagesBool));
 }
 
-alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(AJ_PCSTR applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrency)
+alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(AJ_PCSTR applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrencyLimit)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     bool allowRemoteMessagesBool = (allowRemoteMessages == QCC_TRUE ? true : false);
-    return ((alljoyn_busattachment) new ajn::BusAttachmentC(applicationName, allowRemoteMessagesBool, concurrency));
+    return ((alljoyn_busattachment) new ajn::BusAttachmentC(applicationName, allowRemoteMessagesBool, concurrencyLimit));
 }
 
 

@@ -84,15 +84,12 @@ typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus stat
  * Allocate an alljoyn_busattachment.
  *
  * By default this will create an alljoyn_busattachment capable of handling 4 concurrent method and signal handlers.
- * This is the recommended default value.  If for some reason the application must be able to handle a different
- * number of concurrent methods use alljoyn_busattachment_create_concurrency.
  * Warning: if synchronous remote procedure calls or other blocking calls are made from within AllJoyn callbacks
  * and this value is too low, the application may deadlock.
  * Please see the documentation for alljoyn_busattachment_enableconcurrentcallbacks for details.
  *
  * @note Any alljoyn_busattachment allocated using this function must be freed using alljoyn_busattachment_destroy
  *
- * @see alljoyn_busattachment_create_concurrency
  * @see alljoyn_busattachment_destroy
  *
  * @param applicationName       Name of the application.
@@ -104,9 +101,9 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
 
 /**
  * Allocate an alljoyn_busattachment.
- *
  * This will Allocate an alljoyn_busattachment that is capable of using a different value for concurrency then
- * the default value of 4.
+ * the default value of 4. When concurrency is set to 0 the concurrency value is adjusted automatically
+ * and the number of method and signal handlers processed concurrently is not limited.
  * Warning: if synchronous remote procedure calls or other blocking calls are made from within AllJoyn callbacks
  * and this value is too low, the application may deadlock.
  * Please see the documentation for alljoyn_busattachment_enableconcurrentcallbacks for details.
@@ -118,11 +115,13 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
  *
  * @param applicationName       Name of the application.
  * @param allowRemoteMessages   True if this attachment is allowed to receive messages from remote devices.
- * @param concurrency           The maximum number of concurrent method and signal handlers locally executing.
+ * @param concurrencyLimit      The maximum number of concurrent method and signal handlers locally executing.
+ *                              When the limit is set to 0, the concurrency value is adjusted automatically and
+ *                              the number of method and signal handlers processed concurrently is not limited.
  *
  * @return the allocated alljoyn_busattachment
  */
-extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const char* applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrency);
+extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const char* applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrencyLimit);
 
 /**
  * Free an allocated alljoyn_busattachment.
@@ -298,7 +297,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_join(alljoyn_busattachment b
  * @param bus    The alljoyn_busattachment on which to get the concurrent method and
  *               signal handler limit.
  *
- * @return The maximum number of concurrent method and signal handlers.
+ * @return The maximum number of concurrent method and signal handlers. 0 means no limit.
  */
 extern AJ_API uint32_t AJ_CALL alljoyn_busattachment_getconcurrency(alljoyn_busattachment bus);
 
@@ -347,12 +346,20 @@ extern AJ_API const char* AJ_CALL alljoyn_busattachment_getconnectspec(alljoyn_b
  * callbacks is not exceeded. If the maximum number is exceeded the application
  * will deadlock.
  *
- * For the above reasons, if time-consuming blocking calls from within AllJoyn
- * callbacks are needed, it is recommended to delegate them to application-owned
- * threads. If remote procedure calls (e.g., alljoyn_busattachment_joinsession)
- * from within AllJoyn callbacks are needed, it is recommended to use
- * the asynchronous variants (e.g., alljoyn_busattachment_joinsessionasync)
- * and process their callbacks in threads owned by the application.
+ * If this function is not called, any non-asynchronous remote procedure call
+ * made from within an AllJoyn callback will immediately return with an
+ * ER_BUS_BLOCKING_CALL_NOT_ALLOWED error.
+ *
+ * If this function is called, non-asynchronous remote procedure calls made
+ * from within callbacks will be handled by the BusAttachment's thread pool.
+ * The number of calls processed in this way is not limited if the concurrency
+ * value was set to 0 when creating bus attachment, however a large number
+ * of calls in a short period of time could significantly increase the usage
+ * of system resources by the AllJoyn process. Therefore, if a large number
+ * of remote system calls from callbacks is expected, it is recommended
+ * to use the asynchronous variants of remote procedure calls (e.g.,
+ * alljoyn_busattachment_joinsessionasync) and process their callbacks in
+ * threads owned and managed by the application.
  * Please refer to the AboutClient sample for an implementation example.
  *
  * @param bus    The alljoyn_busattachment to enable concurrent callbacks on
