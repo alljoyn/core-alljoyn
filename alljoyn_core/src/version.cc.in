@@ -36,7 +36,7 @@
 
 static const unsigned int year = 16;
 static const unsigned int month = 10;
-static const unsigned int feature = 1;
+static const unsigned int feature = 2;
 static const unsigned int bugfix = ' ';
 
 static const char version[] = "##VERSION_STRING##";
