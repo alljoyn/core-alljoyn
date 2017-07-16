@@ -1,0 +1,18 @@
+This is an Eclipse Android project. In order to run this project,
+the AllJoyn 'jar' and 'so' files must be added (AllJoyn release 16.10.01 or later).
+
+Add the following jar files to a libs/ folder at the top of the project:
+   alljoyn.jar
+   alljoyn_config.jar
+
+Add the following shared object file to the libs/armeabi/ folder:
+   liballjoyn_java.so
+
+
+Android Studio:
+With the above libs/ folder added to the Eclipse project, importing the project
+into Android Studio will automatically place these .jar/.so files at the following
+locations in your new Android Studio project:
+   app/libs/
+   app/src/main/jniLibs/armeabi/
+and will configure the app/build.gradle file with both jar files as dependencies.
