@@ -1039,6 +1039,8 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t m_flags;           /**< The flags we found during the qcc::IfConfig() that originally discovered this iface */
 
         bool m_messageSent;         /**< True if this interface has already been used to send a particular protocol message */
+
+        TransportMask m_transportMask; /**< All transports which are using this interface */
     };
 
     /**
@@ -1159,19 +1161,6 @@ class IpNameServiceImpl : public qcc::Thread {
         Packet packet,
         uint32_t interfaceIndex,
         const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
-
-
-    /**
-     * @internal
-     * @brief Is the interface specified by the liveIndex an interface requested
-     * to be opened by the transport specified by the transportIndex.
-     *
-     * @param transportIndex An index into the per-transport data structures
-     *     derived from the transport mask of the transport under consideration.
-     * @param liveIndex An index into the list of live interfaces specifying the
-     *     index under consideration.
-     */
-    bool InterfaceRequested(uint32_t transportIndex, uint32_t liveIndex);
 
     /**
      * @internal
@@ -1646,8 +1635,7 @@ class IpNameServiceImpl : public qcc::Thread {
     class BurstExpiryHandler;
     BurstExpiryHandler* burstExpiryHandler;
 
-    bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, const qcc::IPEndpoint& src,
-                           const qcc::String& guid, const qcc::IPEndpoint& dst);
+    bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
 
     bool HandleAdvertiseResponse(MDNSPacket mdnsPacket,
                                  const qcc::String& guid, const qcc::IPEndpoint& ns4,
