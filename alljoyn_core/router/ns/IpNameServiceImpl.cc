@@ -1282,6 +1282,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         // the transports.
         //
         bool useEntry = false;
+        TransportMask transportMask = TRANSPORT_NONE;
         for (uint32_t j = 0; j < N_TRANSPORTS; ++j) {
             QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Check out interface cantidates for transport %d", j));
 
@@ -1313,6 +1314,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                                entries[i].m_name.c_str()));
                 useEntry = true;
 #endif
+                transportMask |= MaskFromIndex(j);
             } else {
                 m_mutex.Lock(MUTEX_CONTEXT);
 
@@ -1332,6 +1334,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface name "
                                        " \"%s\" for transport %d", m_requestedInterfaces[j][k].m_interfaceName.c_str(), j));
                         useEntry = true;
+                        transportMask |= MaskFromIndex(j);
                         break;
                     }
 
@@ -1343,6 +1346,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface address "
                                        "\"%s\" for transport %d.", entries[i].m_addr.c_str(), j));
                         useEntry = true;
+                        transportMask |= MaskFromIndex(j);
                         break;
                     }
                 }
@@ -1440,6 +1444,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         live.m_flags = entries[i].m_flags;
         live.m_mtu = entries[i].m_mtu;
         live.m_index = entries[i].m_index;
+        live.m_transportMask = transportMask;
 
         live.m_multicastsockFd = multicastsockFd;
         live.m_multicastMDNSsockFd = multicastMDNSsockFd;
@@ -4508,7 +4513,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                     if (tcpAnswer && udpAnswer) {
                         if (!reliableTransportPort && !unreliableTransportPort) {
                             continue;
-                        } else if (!reliableTransportPort) {
+                        } else if (!reliableTransportPort || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_TCP) == TRANSPORT_NONE)) {
                             MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecordTcp->GetRData());
                             String name = ptrRData->GetPtrDName();
                             mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
@@ -4543,7 +4548,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                                     advRData->SetValue("name", *iter);
                                 }
                             }
-                        } else if (!unreliableTransportPort) {
+                        } else if (!unreliableTransportPort || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_UDP) == TRANSPORT_NONE)) {
                             MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecordUdp->GetRData());
                             String name = ptrRData->GetPtrDName();
                             mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
@@ -4592,9 +4597,9 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                     bool reliableTransportAllowed = (reliableTransportPort != 0);
                     bool unreliableTransportAllowed = (unreliableTransportPort != 0);
                     if (tcpQuestion && udpQuestion) {
-                        if (!reliableTransportAllowed) {
+                        if (!reliableTransportAllowed || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_TCP) == TRANSPORT_NONE)) {
                             mdnsPacket->RemoveQuestion("_alljoyn._tcp.local.");
-                        } else if (!unreliableTransportAllowed) {
+                        } else if (!unreliableTransportAllowed || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_UDP) == TRANSPORT_NONE)) {
                             mdnsPacket->RemoveQuestion("_alljoyn._udp.local.");
                         }
                     }
@@ -4961,55 +4966,57 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 if (tcpAnswer && udpAnswer) {
                     if (!reliableTransportPort && !unreliableTransportPort && !ttlZero) {
                         continue;
-                    } else if (!reliableTransportPort) {
-                        numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
-                        for (uint32_t match = 0; match < numMatches; match++) {
-                            MDNSResourceRecord* advRecord;
-                            if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
-                                continue;
-                            }
-                            MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
-                            if (!advRData) {
-                                continue;
-                            }
-
-                            if (!advRecord->GetRRttl()) {
-                                continue;
-                            }
-
-                            uint32_t numNames = advRData->GetNumNames(TRANSPORT_TCP);
-                            for (uint32_t j = 0; j < numNames; j++) {
-                                String name = advRData->GetNameAt(TRANSPORT_TCP, j);
-                                tcpNames[match].push_back(name);
-                            }
-                            numNames = advRData->GetNumNames(TRANSPORT_UDP);
-                            for (uint32_t j = 0; j < numNames; j++) {
-                                String name = advRData->GetNameAt(TRANSPORT_UDP, j);
-                                udpNames[match].push_back(name);
-                            }
-                            numNames = advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP);
-                            for (uint32_t j = 0; j < numNames; j++) {
-                                String name = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
-                                tcpUdpNames[match].push_back(name);
-                            }
-
-                            advRData->Reset();
-                            advRData->SetTransport(TRANSPORT_UDP);
-                            if (udpNames.find(match) != udpNames.end()) {
-                                for (std::list<String>::iterator iter = udpNames[match].begin(); iter != udpNames[match].end(); iter++) {
-                                    advRData->SetValue("name", *iter);
+                    } else if (!reliableTransportPort || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_TCP) == TRANSPORT_NONE)) {
+                        if (!reliableTransportPort) {
+                            numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
+                            for (uint32_t match = 0; match < numMatches; match++) {
+                                MDNSResourceRecord* advRecord;
+                                if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
+                                    continue;
                                 }
-                            }
-                            if (tcpUdpNames.find(match) != tcpUdpNames.end()) {
-                                for (std::list<String>::iterator iter = tcpUdpNames[match].begin(); iter != tcpUdpNames[match].end(); iter++) {
-                                    advRData->SetValue("name", *iter);
+                                MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+                                if (!advRData) {
+                                    continue;
                                 }
-                            }
 
-                            if (packet->InterfaceIndexSet()) {
-                                tcpNames.erase(match);
-                                udpNames.erase(match);
-                                tcpUdpNames.erase(match);
+                                if (!advRecord->GetRRttl()) {
+                                    continue;
+                                }
+
+                                uint32_t numNames = advRData->GetNumNames(TRANSPORT_TCP);
+                                for (uint32_t j = 0; j < numNames; j++) {
+                                    String name = advRData->GetNameAt(TRANSPORT_TCP, j);
+                                    tcpNames[match].push_back(name);
+                                }
+                                numNames = advRData->GetNumNames(TRANSPORT_UDP);
+                                for (uint32_t j = 0; j < numNames; j++) {
+                                    String name = advRData->GetNameAt(TRANSPORT_UDP, j);
+                                    udpNames[match].push_back(name);
+                                }
+                                numNames = advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP);
+                                for (uint32_t j = 0; j < numNames; j++) {
+                                    String name = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
+                                    tcpUdpNames[match].push_back(name);
+                                }
+
+                                advRData->Reset();
+                                advRData->SetTransport(TRANSPORT_UDP);
+                                if (udpNames.find(match) != udpNames.end()) {
+                                    for (std::list<String>::iterator iter = udpNames[match].begin(); iter != udpNames[match].end(); iter++) {
+                                        advRData->SetValue("name", *iter);
+                                    }
+                                }
+                                if (tcpUdpNames.find(match) != tcpUdpNames.end()) {
+                                    for (std::list<String>::iterator iter = tcpUdpNames[match].begin(); iter != tcpUdpNames[match].end(); iter++) {
+                                        advRData->SetValue("name", *iter);
+                                    }
+                                }
+
+                                if (packet->InterfaceIndexSet()) {
+                                    tcpNames.erase(match);
+                                    udpNames.erase(match);
+                                    tcpUdpNames.erase(match);
+                                }
                             }
                         }
                         if (!ttlZero) {
@@ -5030,52 +5037,54 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                             mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
                             mdnsPacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
                         }
-                    } else if (!unreliableTransportPort) {
-                        MDNSResourceRecord* advRecord;
-                        numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
-                        for (uint32_t match = 0; match < numMatches; match++) {
-                            if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
-                                continue;
-                            }
-                            MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
-                            if (!advRData) {
-                                continue;
-                            }
-                            if (!advRecord->GetRRttl()) {
-                                continue;
-                            }
-                            uint32_t numNames = advRData->GetNumNames(TRANSPORT_TCP);
-                            for (uint32_t j = 0; j < numNames; j++) {
-                                String name = advRData->GetNameAt(TRANSPORT_TCP, j);
-                                tcpNames[match].push_back(name);
-                            }
-                            numNames = advRData->GetNumNames(TRANSPORT_UDP);
-                            for (uint32_t j = 0; j < numNames; j++) {
-                                String name = advRData->GetNameAt(TRANSPORT_UDP, j);
-                                udpNames[match].push_back(name);
-                            }
-                            numNames = advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP);
-                            for (uint32_t j = 0; j < numNames; j++) {
-                                String name = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
-                                tcpUdpNames[match].push_back(name);
-                            }
+                    } else if (!unreliableTransportPort || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_UDP) == TRANSPORT_NONE)) {
+                        if (!unreliableTransportPort) {
+                            MDNSResourceRecord* advRecord;
+                            numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
+                            for (uint32_t match = 0; match < numMatches; match++) {
+                                if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
+                                    continue;
+                                }
+                                MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+                                if (!advRData) {
+                                    continue;
+                                }
+                                if (!advRecord->GetRRttl()) {
+                                    continue;
+                                }
+                                uint32_t numNames = advRData->GetNumNames(TRANSPORT_TCP);
+                                for (uint32_t j = 0; j < numNames; j++) {
+                                    String name = advRData->GetNameAt(TRANSPORT_TCP, j);
+                                    tcpNames[match].push_back(name);
+                                }
+                                numNames = advRData->GetNumNames(TRANSPORT_UDP);
+                                for (uint32_t j = 0; j < numNames; j++) {
+                                    String name = advRData->GetNameAt(TRANSPORT_UDP, j);
+                                    udpNames[match].push_back(name);
+                                }
+                                numNames = advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP);
+                                for (uint32_t j = 0; j < numNames; j++) {
+                                    String name = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
+                                    tcpUdpNames[match].push_back(name);
+                                }
 
-                            advRData->Reset();
-                            advRData->SetTransport(TRANSPORT_TCP);
-                            if (tcpNames.find(match) != tcpNames.end()) {
-                                for (std::list<String>::iterator iter = tcpNames[match].begin(); iter != tcpNames[match].end(); iter++) {
-                                    advRData->SetValue("name", *iter);
+                                advRData->Reset();
+                                advRData->SetTransport(TRANSPORT_TCP);
+                                if (tcpNames.find(match) != tcpNames.end()) {
+                                    for (std::list<String>::iterator iter = tcpNames[match].begin(); iter != tcpNames[match].end(); iter++) {
+                                        advRData->SetValue("name", *iter);
+                                    }
                                 }
-                            }
-                            if (tcpUdpNames.find(match) != tcpUdpNames.end()) {
-                                for (std::list<String>::iterator iter = tcpUdpNames[match].begin(); iter != tcpUdpNames[match].end(); iter++) {
-                                    advRData->SetValue("name", *iter);
+                                if (tcpUdpNames.find(match) != tcpUdpNames.end()) {
+                                    for (std::list<String>::iterator iter = tcpUdpNames[match].begin(); iter != tcpUdpNames[match].end(); iter++) {
+                                        advRData->SetValue("name", *iter);
+                                    }
                                 }
-                            }
-                            if (packet->InterfaceIndexSet()) {
-                                tcpNames.erase(match);
-                                udpNames.erase(match);
-                                tcpUdpNames.erase(match);
+                                if (packet->InterfaceIndexSet()) {
+                                    tcpNames.erase(match);
+                                    udpNames.erase(match);
+                                    tcpUdpNames.erase(match);
+                                }
                             }
                         }
                         if (!ttlZero) {
@@ -5106,13 +5115,13 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 bool reliableTransportAllowed = (reliableTransportPort != 0);
                 bool unreliableTransportAllowed = (unreliableTransportPort != 0);
                 if (tcpQuestion && udpQuestion) {
-                    if (!reliableTransportAllowed) {
+                    if (!reliableTransportAllowed || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_TCP) == TRANSPORT_NONE)) {
                         removedTcp = true;
                         if (!packet->InterfaceIndexSet()) {
                             removedTcpQuestions.push_back(*questionTcp);
                         }
                         mdnsPacket->RemoveQuestion("_alljoyn._tcp.local.");
-                    } else if (!unreliableTransportAllowed) {
+                    } else if (!unreliableTransportAllowed || ((m_liveInterfaces[i].m_transportMask & TRANSPORT_UDP) == TRANSPORT_NONE)) {
                         removedUdp = true;
                         if (!packet->InterfaceIndexSet()) {
                             removedUdpQuestions.push_back(*questionUdp);
@@ -8154,8 +8163,6 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket,
 
 void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local)
 {
-    QCC_UNUSED(remote);
-
     bool isAllJoynQuery = true;
     // Check if someone is asking about an alljoyn service.
     MDNSQuestion* questionTcp;
@@ -8170,12 +8177,12 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
         completeTransportMask |= TRANSPORT_UDP;
     }
     if (!isAllJoynQuery) {
-        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery Ignoring Non-AllJoyn related query"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring Non-AllJoyn related query"));
         return;
     }
     MDNSResourceRecord* refRecord = nullptr;
     if ((!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) || (nullptr == refRecord)) {
-        QCC_DbgPrintf(("Ignoring query without sender info"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring query without sender info"));
 #ifndef NDEBUG
         mdnsPacket->Dump();
 #endif
@@ -8183,7 +8190,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
     }
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
     if (!refRData) {
-        QCC_DbgPrintf(("Ignoring query with invalid sender info"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring query with invalid sender info"));
         return;
     }
     qcc::IPEndpoint dst;
@@ -8197,7 +8204,22 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
     if (guid == m_guid) {
-        QCC_DbgPrintf(("Ignoring my own query"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring my own query"));
+        return;
+    }
+
+    bool senderAddressMatchesOurLiveInterfaces = false;
+    for (auto& liveInterface : m_liveInterfaces) {
+        if (!SameNetwork(liveInterface.m_prefixlen, liveInterface.m_address, remote.GetAddress())) {
+            continue;
+        }
+        if ((liveInterface.m_transportMask & completeTransportMask) != TRANSPORT_NONE) {
+            senderAddressMatchesOurLiveInterfaces = true;
+            break;
+        }
+    }
+    if (!senderAddressMatchesOurLiveInterfaces) {
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: rejecting %s:%d with transport mask %d", remote.GetAddress().ToString().c_str(), remote.GetPort(), completeTransportMask));
         return;
     }
     m_mutex.Lock(MUTEX_CONTEXT);
@@ -8213,7 +8235,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IP
     if (local.port == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
         if (!UpdateMDNSPacketTracker(guid, dst, refRData->GetSearchID())) {
-            QCC_DbgPrintf(("Ignoring query with duplicate burst ID"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery: Ignoring query with duplicate burst ID"));
             m_mutex.Unlock(MUTEX_CONTEXT);
             return;
         }
@@ -8253,13 +8275,14 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
     }
 
     vector<String> wkns;
-    //
-    // The who-has message doesn't specify which transport is doing the asking.
-    // This is an oversight and should be fixed in a subsequent version.  The
-    // only reasonable thing to do is to return name matches found in all of
-    // the advertising transports.
-    //
-    for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
+    vector<uint32_t> transportIndexArray;
+    if ((completeTransportMask & TRANSPORT_TCP) != TRANSPORT_NONE) {
+        transportIndexArray.push_back(TRANSPORT_INDEX_TCP);
+    }
+    if ((completeTransportMask & TRANSPORT_UDP) != TRANSPORT_NONE) {
+        transportIndexArray.push_back(TRANSPORT_INDEX_UDP);
+    }
+    for (auto index : transportIndexArray) {
 
         //
         // If there are no names being advertised by the transport identified by
@@ -8507,19 +8530,17 @@ set<String> IpNameServiceImpl::GetAdvertising(TransportMask transportMask) {
     std::set<String> empty;
     set_intersection(m_advertised[TRANSPORT_INDEX_TCP].begin(), m_advertised[TRANSPORT_INDEX_TCP].end(), m_advertised[TRANSPORT_INDEX_UDP].begin(), m_advertised[TRANSPORT_INDEX_UDP].end(), std::inserter(set_common, set_common.end()));
 
+    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
+        return set_common;
+    }
     if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
-
 
         uint32_t transportIndex = IndexFromBit(transportMask);
         if (transportIndex >= 16) {
             return empty;
         }
 
-        set_difference(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), set_common.begin(), set_common.end(), std::inserter(set_return, set_return.end()));
-        return set_return;
-    }
-    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
-        return set_common;
+        return m_advertised[transportIndex];
     }
 
     return empty;
@@ -8530,18 +8551,17 @@ set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask
     std::set<String> empty;
     set_intersection(m_advertised_quietly[TRANSPORT_INDEX_TCP].begin(), m_advertised_quietly[TRANSPORT_INDEX_TCP].end(), m_advertised_quietly[TRANSPORT_INDEX_UDP].begin(), m_advertised_quietly[TRANSPORT_INDEX_UDP].end(), std::inserter(set_common, set_common.end()));
 
+    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
+        return set_common;
+    }
     if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
+
         uint32_t transportIndex = IndexFromBit(transportMask);
         if (transportIndex >= 16) {
             return empty;
         }
 
-        set_difference(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), set_common.begin(), set_common.end(), std::inserter(set_return, set_return.end()));
-        return set_return;
-    }
-    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
-
-        return set_common;
+        return m_advertised_quietly[transportIndex];
     }
 
     return empty;
