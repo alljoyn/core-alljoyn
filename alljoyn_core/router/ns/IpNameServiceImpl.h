@@ -1039,6 +1039,8 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t m_flags;           /**< The flags we found during the qcc::IfConfig() that originally discovered this iface */
 
         bool m_messageSent;         /**< True if this interface has already been used to send a particular protocol message */
+
+        TransportMask m_transportMask; /**< All transports which are using this interface */
     };
 
     /**
