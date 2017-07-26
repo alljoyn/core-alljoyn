@@ -43,7 +43,7 @@ openssl req -new -key srveckey.pem -out srvcsr.pem -sha256 -batch \
 -subj '/OU=TestOrganization/CN=TestCommon'
 
 # Paste and format srvcert.pem into serviceecdsaCertChainX509PEM
-openssl x509 -req -in srvcsr.pem -out srvcert.pem -days 365 \
+openssl x509 -req -in srvcsr.pem -out srvcert.pem -days 3650 \
 -signkey srveckey.pem -set_serial 0x270F \
 -extfile openssl-ajekus-service.cnf -extensions identity
 
