@@ -912,9 +912,9 @@ TEST_F(SecurityX509Test, Test10) {
      * Only paste the private key section; omit the parameters section. */
     const char serviceecdsaPrivateKeyPEM[] = {
         "-----BEGIN EC PRIVATE KEY-----\n"
-        "MHcCAQEEIJbydZj/qEJuWoBnKIoWJozwumXzip1xxUsgep5lNbkwoAoGCCqGSM49\n"
-        "AwEHoUQDQgAEU7kk+YyM0jc3UmZpdceaqI5hrM+OuPC6kKU/5rEBZSspFoRSJEZR\n"
-        "uGv28xcXfggOsVc5h1oxDnMK84KgdMnd2w==\n"
+        "MHcCAQEEICJ0+q4rkymggQ1mBwKmb9k3JyYbd6C/TmmQn5kj0F9moAoGCCqGSM49\n"
+        "AwEHoUQDQgAE4BNoC9/kR12fgbSNfs4hKD2hMLv6keRiOEqdQjaGqM2f8eC/IYQV\n"
+        "3LJgsKS6K/2rxfKndup3IUGC6iiTUdaaig==\n"
         "-----END EC PRIVATE KEY-----\n"
     };
 
