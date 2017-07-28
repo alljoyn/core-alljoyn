@@ -1,4 +1,4 @@
-AllJoyn Standard Core Version 16.10.01 Release Notes
+AllJoyn Standard Core Version 16.10.02 Release Notes
 ==================================================
 
 Fully Validated Platforms
@@ -14,27 +14,28 @@ https://msdn.microsoft.com/en-us/library/windows/apps/windows.devices.alljoyn.as
 
 See the Core Release Review wiki page for other platforms that have not been
 fully verified, but may work:
-https://wiki.allseenalliance.org/core/core_16.10.01_release_review#regression_test
+https://wiki.allseenalliance.org/core/core_16.10.02_release_review#regression_test
 
 
-No features were added in Version 16.10.01
+No features were added in Version 16.10.02
 --------------------------------
 
 Full list of Jira's covering these can be found on the release plan page:
-https://wiki.allseenalliance.org/core/core_16.10.01_release_plan?&#themes_and_priorities
+https://wiki.allseenalliance.org/core/core_16.10.02_release_plan?&#themes_and_priorities
 
-Issues Addressed in Version 16.10.01
+Issues Addressed in Version 16.10.02
 ----------------------------------
-ASACORE-3144 About Service/Client Scalability Problems
-ASACORE-3433 ASACORE-3283 [IPNS] Quiet advertising works inconsistently between
-             IPv4 and IPv6
-ASACORE-3449 Unable to "unclaim" an application in Security Manager on Windows
+ASACORE-3619 Segfault when BusAttachment is created with concurrency set to 0
+ASACORE-3618 Cannot connect to router after resetting interface
+ASACORE-2797 AboutIconProxy::GetIcon ignores error return from GetContent
+ASACORE-2919 Provide explicit init and deinit for C++ objects and Java bindings
+ASACORE-3581 Unable to build iOS Security 2.0 Sample Apps
 
 For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20%3D%2016.10.01%20ORDER%20BY%20status%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20%3D%2016.10.02%20ORDER%20BY%20status%20ASC
 
 
-Known Issues in Version 16.10.01
+Known Issues in Version 16.10.02
 ------------------------------
 ASACORE-1244 Legacy About service truncates the AppID to 16 bytes
 ASACORE-1827 GetTimestamp() function on Darwin is not monotonic
@@ -46,31 +47,26 @@ ASACORE-2481 DefaultKeyStoreListener implementation uses faulty algorithm to
              derive keystore filename (closed "postponed" in 16.10)
 ASACORE-2741 Sharing a Key Store file between 64 bit and 32 apps is not
              supported (closed "won't fix" in 16.10)
-ASACORE-2797 AboutIconProxy::GetIcon ignores error return from GetContent
-ASACORE-2919 Provide explicit init and deinit for C++ objects and Java bindings
 ASACORE-3276 ASACORE-3283 [IPNS][Fix] Query responses are sent when shouldn't
 ASACORE-3298 openwrt SConscript loads the environment variable "TARGET_LDFLAGS"
              as its build variable "TARGET_LINKFLAGS".
-ASACORE-3343 ProxyBusObject:SecureConnection does not end up calling
-             AuthListener::AuthenticationComplete
 ASACORE-3446 bbtest does not advertise name when IPv6 only over loopback
 ASACORE-3467 Do not violate One Definition Rule as it can cause stack corruption
              when linked under Visual Studio. (NOTE: this issue has been closed,
              but is being included as it is a common pattern, especially when
              using the GTEST unit test framework for AllJoyn.)
-ASACORE-3581 Unable to build iOS Security 2.0 Sample Apps
 
 For a complete list of open issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20%28component%20in%20%28%22Router%2FSCL%22%2C%20SCONS%29%20OR%20component%20is%20EMPTY%29%20AND%20%28status%20%3D%20closed%20AND%20resolution%20%3D%20Postponed%20OR%20status%20not%20in%20%28closed%2C%20resolved%29%20AND%20issuetype%20%3D%20Bug%29%20ORDER%20BY%20Severity%20DESC%2C%20priority%20DESC%2C%20id%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20(%20(component%20in%20(%22Router%2FSCL%22%2C%20%22Thin%20Core%20Library%22%2C%20%22Security%20Manager%22%2C%20%22SCONS%22)%20OR%20component%20is%20EMPTY)%20AND%20status%20in%20(Open%2C%20Reopened%2C%20%22In%20Progress%22%2C%20%22In%20Review%22%2C%20New)%20OR%20resolution%3DPostponed)%20ORDER%20BY%20Severity%20ASC%2C%20Priority%20DESC
 
 
 Compatibility
 -------------
-Version 16.10.01:
-* Several iOS API additions were made to support Swift for iOS development
+Version 16.10.02:
+N/A
 
 More details on these changes may be found on the Core Release Review wiki page:
-https://wiki.allseenalliance.org/core/core_16.10.01_release_review#compatibility
+https://wiki.allseenalliance.org/core/core_16.10.02_release_review#compatibility
 
 For details of previous releases/release families please see the release notes:
 16.10: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB16.10
@@ -83,6 +79,8 @@ For details of previous releases/release families please see the release notes:
 
 Change history
 --------------
+16.10.02 Bug fixes, increased stability and performance, Android Security Manager
+         sample added, code cleanup
 16.10.01 Bug fixes, SDKs provided for Android and iOS, CocoaPods support added,
          iOS Swift support, iOS updated unit tests, iOS developer enhancements,
          iOS updated samples, Android secure door samples created
