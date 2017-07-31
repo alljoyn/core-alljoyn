@@ -610,8 +610,12 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                 }
             }
         }
-        vals.Set("a{sv}", readableAndAllowedCount, dict);
-        vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
+        if (status == ER_OK) {
+            vals.Set("a{sv}", readableAndAllowedCount, dict);
+            vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
+        } else {
+            delete [] dict;
+        }
     }
 
     QCC_DbgPrintf(("Properties.GetAll %s", QCC_StatusText(status)));
