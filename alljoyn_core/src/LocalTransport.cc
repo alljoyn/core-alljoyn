@@ -969,6 +969,7 @@ QStatus _LocalEndpoint::RegisterReplyHandler(MessageReceiver* receiver,
          * Add reply context.
          */
         replyMapLock.Lock(MUTEX_CONTEXT);
+        QCC_ASSERT(replyMap.find(methodCallMsg->msgHeader.serialNum) == replyMap.end());
         replyMap[methodCallMsg->msgHeader.serialNum] = rc;
         replyMapLock.Unlock(MUTEX_CONTEXT);
         /*
