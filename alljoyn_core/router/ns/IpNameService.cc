@@ -440,7 +440,7 @@ QStatus IpNameService::Enable(TransportMask transportMask,
                               const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
                               const std::map<qcc::String, uint16_t>& unreliablePortMap,
                               bool enableReliableIPv4, bool enableReliableIPv6,
-                              bool enableUnreliableIPv4, bool enableUnreliableIPv6)
+                              bool enableUnreliable)
 {
     //
     // If the entry gate has been closed, we do not allow an Enable to actually
@@ -455,7 +455,7 @@ QStatus IpNameService::Enable(TransportMask transportMask,
 
     ASSERT_STATE("Enable");
     m_pimpl->Enable(transportMask, reliableIPv4PortMap, reliableIPv6Port, unreliablePortMap,
-                    enableReliableIPv4, enableReliableIPv6, enableUnreliableIPv4, enableUnreliableIPv6);
+                    enableReliableIPv4, enableReliableIPv6, enableUnreliable);
     return ER_OK;
 }
 

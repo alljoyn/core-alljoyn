@@ -363,10 +363,7 @@ class IpNameService {
      * @param enableReliableIPv6
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
-     * @param enableUnreliableIPv4
-     *     - true indicates this protocol is enabled.
-     *     - false indicates this protocol is not enabled.
-     * @param enableUnreliableIPv6
+     * @param enableUnreliable
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
      */
@@ -374,7 +371,7 @@ class IpNameService {
                    const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
                    const std::map<qcc::String, uint16_t>& unreliablePortMap,
                    bool enableReliableIPv4, bool enableReliableIPv6,
-                   bool enableUnreliableIPv4, bool enableUnreliableIPv6);
+                   bool enableUnreliable);
 
     QStatus UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections,
                                uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients);
