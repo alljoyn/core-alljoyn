@@ -353,7 +353,7 @@ int CDECL_CALL main(int argc, char** argv)
     //
     std::map<qcc::String, uint16_t> portMap;
     portMap["*"] = port;
-    status = ns->Enable(TRANSPORT_TCP, portMap, port, portMap, true, true, true, true);
+    status = ns->Enable(TRANSPORT_TCP, portMap, port, portMap, true, true, true);
 
     if (status != ER_OK) {
         QCC_LogError(status, ("Enable failed"));

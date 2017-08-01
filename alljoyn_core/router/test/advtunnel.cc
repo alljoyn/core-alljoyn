@@ -334,7 +334,7 @@ QStatus AdvTunnel::RelayAdv()
             uint16_t port = static_cast<uint16_t>(qcc::StringToU32(argMap["r4port"]));
             std::map<qcc::String, uint16_t> portMap;
             portMap["*"] = (uint16_t)port;
-            status = ns->Enable(TRANSPORT_TCP, portMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
+            status = ns->Enable(TRANSPORT_TCP, portMap, 0, std::map<qcc::String, uint16_t>(), true, false, false);
             if (status == ER_OK) {
                 ns->OpenInterface(TRANSPORT_TCP, "*");
             }
@@ -491,7 +491,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     std::map<qcc::String, uint16_t> portMap;
     portMap["*"] = port;
-    ns.Enable(TRANSPORT_TCP, portMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
+    ns.Enable(TRANSPORT_TCP, portMap, 0, std::map<qcc::String, uint16_t>(), true, false, false);
 
     /*
      * In sniffMode we just report advertisements
