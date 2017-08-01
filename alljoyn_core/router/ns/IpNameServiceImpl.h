@@ -524,10 +524,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @param enableReliableIPv6
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
-     * @param enableUnreliableIPv4
-     *     - true indicates this protocol is enabled.
-     *     - false indicates this protocol is not enabled.
-     * @param enableUnreliableIPv6
+     * @param enableUnreliable
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
      */
@@ -535,7 +532,7 @@ class IpNameServiceImpl : public qcc::Thread {
                    const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
                    const std::map<qcc::String, uint16_t>& unreliablePortMap,
                    bool enableReliableIPv4, bool enableReliableIPv6,
-                   bool enableUnreliableIPv4, bool enableUnreliableIPv6);
+                   bool enableUnreliable);
 
     static uint32_t LoadParam(const ConfigDB* config, const qcc::String param);
 
@@ -1181,8 +1178,6 @@ class IpNameServiceImpl : public qcc::Thread {
      *     It is saved in TXT record (sender-info).
      * @param unicastIpv6Port The IPNS port that the daemon is listening to.
      *     It is saved in TXT record (sender-info).
-     * @param interface The network interface name over which the message
-     *     is to be sent.
      * @param reliableTransportPort The TCP port that the daemon is listening to.
      *     It is saved in SRV record.
      * @param unreliableTransportPort The UDP port that the daemon is listening to.
@@ -1191,7 +1186,7 @@ class IpNameServiceImpl : public qcc::Thread {
     void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
                                 bool haveIPv6Address, qcc::IPAddress ipv6address,
-                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0, const qcc::String& interface = qcc::String(),
+                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0,
                                 const uint16_t reliableTransportPort = 0, const uint16_t unreliableTransportPort = 0);
 
     /**

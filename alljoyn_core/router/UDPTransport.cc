@@ -9048,7 +9048,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
         if (m_isListening) {
             if (!m_isNsEnabled) {
                 QCC_ASSERT(!m_listenPortMap.empty());
-                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
+                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true);
                 m_isNsEnabled = true;
             }
         }
@@ -9149,7 +9149,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * enabled on any of the possible ports.
          */
         QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): Disabling NS"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -9314,7 +9314,7 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
                    isEmpty ? "true" : "false", m_isAdvertising ? "true" : "false"));
     if (isEmpty && !m_isAdvertising) {
         QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): Disabling NS"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -11813,7 +11813,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): IpNameService::Instance().Enable()"));
         QCC_ASSERT(!m_listenPortMap.empty());
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true);
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -11926,7 +11926,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
         addedList.clear();
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Disable NS"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false);
         m_isListening = false;
         m_isNsEnabled = false;
         m_listenPortMap.clear();

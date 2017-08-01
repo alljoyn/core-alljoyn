@@ -2299,7 +2299,7 @@ void TCPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
          */
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
+                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false);
                 m_isNsEnabled = true;
             }
         }
@@ -2390,7 +2390,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * name service.  We do this by telling it we don't want it to be
          * enabled on any of the possible ports.
          */
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -2474,7 +2474,7 @@ void TCPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
          */
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
+                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false);
                 m_isNsEnabled = true;
             }
         }
@@ -2549,7 +2549,7 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
      */
     if (isEmpty && !m_isAdvertising) {
 
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -4458,7 +4458,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * a zero port).  Remember the port we enabled so we can re-enable the name
          * service if listeners come and go.
          */
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false);
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -4556,7 +4556,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         for (list<pair<qcc::String, SocketFd> >::iterator it = addedList.begin(); it != addedList.end(); it++) {
             replacedList.push_back(it->first);
         }
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false);
         m_isListening = false;
         m_isNsEnabled = false;
         m_listenPortMap.clear();
