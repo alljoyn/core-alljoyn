@@ -1413,7 +1413,7 @@ TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
 
     //Wait all callbacks and listeners to be called.
     for (int i = 0; i < 300; ++i) {
-        if (sessionJoinedFlag && sessionMemberAddedFlagA) {
+        if (sessionJoinedFlag && sessionMemberAddedFlagA && (sessionMemberAddedCounter == 2)) {
             break;
         }
         qcc::Sleep(WAIT_TIME_10);
