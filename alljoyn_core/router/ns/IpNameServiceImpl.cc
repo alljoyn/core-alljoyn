@@ -1203,7 +1203,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     std::vector<qcc::IfConfigEntry> entries;
     QStatus status = qcc::IfConfig(entries);
     if (status != ER_OK) {
-        QCC_LogError(status, ("LazyUpdateInterfaces: IfConfig() failed"));
+        QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): IfConfig() failed"));
         ClearUnicastSocketAndEvent();
         return;
     }
@@ -1359,8 +1359,12 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         // If we aren't configured to use this entry, or have no idea how to use
         // this entry (not AF_INET or AF_INET6), try the next one.
         //
-        if (useEntry == false || (entries[i].m_family != qcc::QCC_AF_INET && entries[i].m_family != qcc::QCC_AF_INET6)) {
-            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Won't use this IfConfig entry"));
+        if (useEntry == false || ((entries[i].m_family != qcc::QCC_AF_INET) && (entries[i].m_family != qcc::QCC_AF_INET6))) {
+            if (useEntry == false) {
+                QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Won't use this IfConfig entry"));
+            } else {
+                QCC_ASSERT(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
+            }
             continue;
         }
 
@@ -1397,7 +1401,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         bool af_inet = entries[i].m_family == qcc::QCC_AF_INET;
 
         if (!loopback && !multicast && (!broadcast || !m_broadcast || !af_inet)) {
-            QCC_DbgPrintf(("LazyUpdateInterfaces: !loopback && !multicast && (!broadcast || !m_broadcast || !af_inet).  Ignoring family %d flags %d", entries[i].m_family, entries[i].m_flags));
+            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): !loopback && !multicast && (!broadcast || !m_broadcast || !af_inet).  Ignoring family %d flags %d", entries[i].m_family, entries[i].m_flags));
             continue;
         }
 
@@ -1414,22 +1418,17 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         qcc::SocketFd multicastMDNSsockFd = qcc::INVALID_SOCKET_FD;
         qcc::SocketFd multicastsockFd = qcc::INVALID_SOCKET_FD;
 
-        if ((entries[i].m_family != qcc::QCC_AF_INET) && (entries[i].m_family != qcc::QCC_AF_INET6)) {
-            QCC_ASSERT(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
-            continue;
-        }
-
         status = CreateMulticastSocket(entries[i], IPV4_MDNS_MULTICAST_GROUP, IPV6_MDNS_MULTICAST_GROUP, MULTICAST_MDNS_PORT,
                                        m_broadcast, multicastMDNSsockFd);
         if (status != ER_OK) {
-            QCC_DbgPrintf(("Failed to create multicast socket for MDNS packets."));
+            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Failed to create multicast socket for MDNS packets."));
             continue;
         }
 
         status = CreateMulticastSocket(entries[i], IPV4_ALLJOYN_MULTICAST_GROUP, IPV6_ALLJOYN_MULTICAST_GROUP, MULTICAST_PORT,
                                        m_broadcast, multicastsockFd);
         if (status != ER_OK) {
-            QCC_DbgPrintf(("Failed to create multicast socket for NS packets."));
+            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Failed to create multicast socket for NS packets."));
             qcc::Close(multicastMDNSsockFd);
             continue;
         }
@@ -1482,7 +1481,8 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
             if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
                 status = qcc::GetLocalAddress(m_ipv4UnicastSockFd, listenAddr, listenPort);
                 if (status != ER_OK) {
-                    QCC_LogError(status, ("GetLocalAddress(%d, %s, %u) failed", m_ipv4UnicastSockFd, listenAddr.ToString().c_str(), listenPort));
+                    QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): GetLocalAddress(%d, %s, %u) failed",
+                                          m_ipv4UnicastSockFd, listenAddr.ToString().c_str(), listenPort));
                 }
             }
         } else if (live.m_interfaceAddr.IsIPv6()) {
@@ -1498,14 +1498,15 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
             if (m_ipv6UnicastSockFd != qcc::INVALID_SOCKET_FD) {
                 status = qcc::GetLocalAddress(m_ipv6UnicastSockFd, listenAddr, listenPort);
                 if (status != ER_OK) {
-                    QCC_LogError(status, ("GetLocalAddress(%d, %s, %u) failed", m_ipv6UnicastSockFd, listenAddr.ToString().c_str(), listenPort));
+                    QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): GetLocalAddress(%d, %s, %u) failed",
+                                          m_ipv6UnicastSockFd, listenAddr.ToString().c_str(), listenPort));
                 }
             }
         }
 
         live.m_unicastPort = listenPort;
 
-        QCC_DbgPrintf(("Pushing back interface %s addr %s", live.m_interfaceName.c_str(), entries[i].m_addr.c_str()));
+        QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Pushing back interface %s addr %s", live.m_interfaceName.c_str(), entries[i].m_addr.c_str()));
         //
         // Lazy update is called with the mutex taken, so this is safe here.
         //
@@ -1589,7 +1590,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     }
 #endif
     if (refreshAdvertisements || processAnyTransport) {
-        QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces() is calling m_packetScheduler.Alert(), refreshAdvertisements: %d, processAnyTransport: %d\n", refreshAdvertisements, processAnyTransport));
+        QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Calling m_packetScheduler.Alert(), refreshAdvertisements: %d, processAnyTransport: %d\n", refreshAdvertisements, processAnyTransport));
         m_packetScheduler.Alert();
     }
 }
@@ -5507,7 +5508,7 @@ void* IpNameServiceImpl::Run(void* arg)
 void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quietly, const qcc::IPEndpoint destination, uint8_t type,
                                            TransportMask completeTransportMask, const int32_t interfaceIndex, const qcc::AddressFamily family)
 {
-    m_mutex.Lock(MUTEX_CONTEXT);
+    m_mutex.AssertOwnedByCurrentThread();
     bool tcpProcessed = false;
     bool udpProcessed = false;
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
@@ -5819,12 +5820,11 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
             udpProcessed = true;
         }
     }
-    m_mutex.Unlock(MUTEX_CONTEXT);
 }
 
 void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_t type, const int32_t interfaceIndex, const qcc::AddressFamily family)
 {
-    m_mutex.Lock(MUTEX_CONTEXT);
+    m_mutex.AssertOwnedByCurrentThread();
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
         if (m_enableV1 && (type & TRANSMIT_V0_V1) && !m_v0_v1_queries[transportIndex].empty()) {
 
@@ -6044,7 +6044,6 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
             }
         }
     }
-    m_mutex.Unlock(MUTEX_CONTEXT);
 }
 
 void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, const qcc::IPEndpoint& source, uint8_t type, TransportMask completeTransportMask, vector<qcc::String>& wkns, const int32_t interfaceIndex, const qcc::AddressFamily family)
