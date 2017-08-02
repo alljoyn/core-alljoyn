@@ -899,8 +899,10 @@ void ProxyBusObject::GetAllPropsMethodCBCommon(Message& message, void* context, 
             String errorDescription;
             String errorName = message->GetErrorName(&errorDescription);
             (ctxWithCustomError->listener->*ctxWithCustomError->callback)(ER_OK, this, *message->GetArg(0), errorName, errorDescription, unwrappedContext);
+            delete ctxWithCustomError;
         } else {
             (ctx->listener->*ctx->callback)(ER_OK, this, *message->GetArg(0), unwrappedContext);
+            delete ctx;
         }
 
     } else {
@@ -1144,8 +1146,10 @@ void ProxyBusObject::GetPropMethodCBCommon(Message& message, void* context, bool
             String errorDescription;
             String errorName = message->GetErrorName(&errorDescription);
             (ctxWithCustomError->listener->*ctxWithCustomError->callback)(ER_OK, this, *message->GetArg(0), errorName, errorDescription, unwrappedContext);
+            delete ctxWithCustomError;
         } else {
             (ctx->listener->*ctx->callback)(ER_OK, this, *message->GetArg(0), unwrappedContext);
+            delete ctx;
         }
     } else {
         const MsgArg noVal;
@@ -2133,6 +2137,7 @@ QStatus ProxyBusObject::MethodCallAsync(const InterfaceDescription::Member& meth
     }
     if (!replyHandler) {
         flags |= ALLJOYN_FLAG_NO_REPLY_EXPECTED;
+        QCC_ASSERT(context == nullptr);
     }
     /*
      * If the interface is secure or encryption is explicitly requested the method call must be encrypted.
