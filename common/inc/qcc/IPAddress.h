@@ -196,22 +196,12 @@ class IPAddress {
      * Test if two IPv6 addresses belong to the same network by comparing
      * their most significant 64 bits (routing prefix and subnet id).
      *
-     * @param other     The other IPAddress to compare against.
+     * @param other      The other IPAddress to compare against.
+     * @param prefixLen  The network prefix length of both networks.
      *
      * @return  "true" if two IPv6 addresses belong to the same network.
      */
-    bool IsSameIPv6Network(const IPAddress& other) const
-    {
-        if ((addrSize != IPv6_SIZE) || (other.addrSize != IPv6_SIZE)) {
-            return false;
-        }
-        for (size_t i = 0; i < (IPv6_SIZE / 2); ++i) {
-            if (addr[i] != other.addr[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
+    bool IsSameIPv6Network(const IPAddress& other, uint32_t prefixLen) const;
 
     /**
      * Test if IP address is a loopback address.

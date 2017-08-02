@@ -90,6 +90,29 @@ IPAddress::IPAddress(const qcc::String& addrString)
     }
 }
 
+bool IPAddress::IsSameIPv6Network(const IPAddress& other, uint32_t prefixLen) const
+{
+    if (!this->IsIPv6() || !other.IsIPv6()) {
+        return false;
+    }
+    if (prefixLen == 0) {
+        return true;
+    }
+
+    for (size_t i = 0; i < IPv6_SIZE; ++i) {
+        for (int j = 7; j >= 0; --j) {
+            uint8_t mask = (1 << j);
+            if ((addr[i] & mask) != (other.addr[i] & mask)) {
+                return false;
+            }
+            if (--prefixLen == 0) {
+                return true;
+            }
+        }
+    }
+    return true;
+}
+
 qcc::String AJ_CALL IPAddress::IPv4ToString(const uint8_t addr[])
 {
     qcc::String result = "";
