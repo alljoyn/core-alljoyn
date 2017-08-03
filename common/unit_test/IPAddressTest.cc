@@ -218,3 +218,16 @@ TEST(IPAddressTest, string_to_ipv4_negative_test_cases) {
     delete [] address_buffer;
     address_buffer = NULL;
 }
+
+TEST(IPAddressTest, comparing_ipv6_addresses_test_cases) {
+    IPAddress v6ULA1 = qcc::String("2001:db8::ff00:42:8329");
+    IPAddress v6ULA2 = qcc::String("2001:db8:fb0b:12f0::1");
+
+    EXPECT_TRUE(v6ULA1.IsSameIPv6Network(v6ULA1, 128));
+    EXPECT_TRUE(v6ULA2.IsSameIPv6Network(v6ULA2, 128));
+    EXPECT_TRUE(v6ULA1.IsSameIPv6Network(v6ULA1, 256));
+
+    EXPECT_TRUE(v6ULA1.IsSameIPv6Network(v6ULA2, 32));
+    EXPECT_FALSE(v6ULA1.IsSameIPv6Network(v6ULA2, 33));
+}
+
