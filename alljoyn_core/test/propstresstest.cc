@@ -178,7 +178,6 @@ QStatus PropTesterObject::Get(const char* ifcName, const char* propName, MsgArg&
     return status;
 }
 
-
 class _PropTesterProxyObject :
     public ProxyBusObject,
     private ProxyBusObject::PropertiesChangedListener {
@@ -202,14 +201,6 @@ typedef ManagedObj<_PropTesterProxyObject> PropTesterProxyObject;
 _PropTesterProxyObject::_PropTesterProxyObject(BusAttachment& bus, const String& service, const String& path, SessionId sessionId) :
     ProxyBusObject(bus, service.c_str(), path.c_str(), sessionId)
 {
-    const InterfaceDescription* ifc = bus.GetInterface(interfaceName);
-    if (!ifc) {
-        bus.CreateInterfacesFromXml(propStressTestInterfaceXML);
-        ifc = bus.GetInterface(interfaceName);
-    }
-    QCC_ASSERT(ifc);
-
-    AddInterface(*ifc);
     Register();
 }
 
@@ -220,7 +211,7 @@ _PropTesterProxyObject::~_PropTesterProxyObject()
 
 void _PropTesterProxyObject::Register()
 {
-    RegisterPropertiesChangedListener(interfaceName, props, ArraySize(props), *this, NULL);
+    RegisterPropertiesChangedListener(interfaceName, props, ArraySize(props), *this, nullptr);
 }
 
 void _PropTesterProxyObject::Unregister()
@@ -265,13 +256,14 @@ void _PropTesterProxyObject::PropertiesChanged(ProxyBusObject& obj,
     }
 }
 
-
 class App {
   public:
     virtual ~App() { }
     virtual void Execute(uint64_t timeToRun) = 0;
+  protected:
+    Mutex alljoynLock;
+    Mutex objectsLock;
 };
-
 
 class Service : public App, private SessionPortListener, private SessionListener {
   public:
@@ -318,10 +310,13 @@ Service::Service(BusAttachment& bus, int nbrOfObjects) :
 Service::~Service()
 {
     bus.UnbindSessionPort(port);
+    objectsLock.Lock();
     while (!objects.empty()) {
+        bus.UnregisterBusObject(*(objects.begin()->second));
         delete objects.begin()->second;
         objects.erase(objects.begin());
     }
+    objectsLock.Unlock();
 }
 
 void Service::Add(SessionId id, uint32_t number)
@@ -330,8 +325,10 @@ void Service::Add(SessionId id, uint32_t number)
     path += U32ToString(number);
     PropTesterObject* obj = new PropTesterObject(bus, path.c_str(), id);
     pair<SessionId, PropTesterObject*> item(id, obj);
-    objects.insert(item);
     bus.RegisterBusObject(*obj);
+    objectsLock.Lock();
+    objects.insert(item);
+    objectsLock.Unlock();
     QCC_SyncPrintf("Added to bus: \"%s\"\n", path.c_str());
 }
 
@@ -350,6 +347,7 @@ void Service::SessionLost(SessionId sessionId, ajn::SessionListener::SessionLost
 {
     QCC_UNUSED(reason);
     multimap<SessionId, PropTesterObject*>::iterator it;
+    objectsLock.Lock();
     it = objects.find(sessionId);
     while (it != objects.end()) {
         bus.UnregisterBusObject(*(it->second));
@@ -357,6 +355,7 @@ void Service::SessionLost(SessionId sessionId, ajn::SessionListener::SessionLost
         objects.erase(it);
         it = objects.find(sessionId);
     }
+    objectsLock.Unlock();
 }
 
 void Service::Execute(uint64_t timeToRun)
@@ -368,17 +367,18 @@ void Service::Execute(uint64_t timeToRun)
         int32_t int32 = 0;
         uint32_t uint32 = 0;
         String string = "Test";
-        for (it = objects.begin(); it != objects.end(); it++) {
+        objectsLock.Lock();
+        for (it = objects.begin(); (it != objects.end()) && !quit; it++) {
             int32++;
             uint32++;
             string += "t";
             it->second->Set(int32, uint32, string.c_str());
         }
+        objectsLock.Unlock();
         qcc::Sleep(100);
         stopTime = qcc::GetTimestamp64();
     }
 }
-
 
 class Client : public App, private BusListener, private BusAttachment::JoinSessionAsyncCB {
   public:
@@ -391,8 +391,7 @@ class Client : public App, private BusListener, private BusAttachment::JoinSessi
     BusAttachment& bus;
     int nbrOfObjects;
     multimap<SessionId, PropTesterProxyObject> objects;
-    set<String> foundNames;
-    Mutex lock;
+    map<String, SessionId> foundNames;
 
     void Add(const String& name, SessionId id, uint32_t number);
 
@@ -414,11 +413,13 @@ Client::Client(BusAttachment& bus, int nbrOfObjects) :
 
 Client::~Client()
 {
+    bus.UnregisterBusListener(*this);
+    objectsLock.Lock();
     while (!objects.empty()) {
-        //delete objects.begin()->second;
+        objects.begin()->second->Unregister();
         objects.erase(objects.begin());
     }
-    bus.UnregisterBusListener(*this);
+    objectsLock.Unlock();
 }
 
 
@@ -428,40 +429,55 @@ void Client::Add(const String& name, SessionId id, uint32_t number)
     path += U32ToString(number);
     PropTesterProxyObject obj(bus, name, path, id);
     pair<SessionId, PropTesterProxyObject> item(id, obj);
+    objectsLock.Lock();
     objects.insert(item);
+    objectsLock.Unlock();
 }
 
 void Client::FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
-    QCC_UNUSED(transport);
     QCC_UNUSED(namePrefix);
 
-    QCC_SyncPrintf("FoundAdvertisedName: \"%s\"\n", name);
     String nameStr = name;
-    lock.Lock();
-    set<String>::iterator it = foundNames.find(nameStr);
+    alljoynLock.Lock();
+    map<String, SessionId>::iterator it = foundNames.find(nameStr);
     if (it == foundNames.end()) {
-        QCC_SyncPrintf("Joining session with %s\n", name);
-        bus.EnableConcurrentCallbacks();
-        bus.JoinSessionAsync(name, PORT, NULL, SESSION_OPTS, this, new String(nameStr));
-        foundNames.insert(nameStr);
+        QCC_SyncPrintf("FoundAdvertisedName: \"%s\" (transport=%d)\n", name, transport);
+        foundNames[nameStr] = 0;
+        alljoynLock.Unlock();
+        QCC_SyncPrintf("FoundAdvertisedName: Joining session with %s\n", name);
+        bus.JoinSessionAsync(name, PORT, nullptr, SESSION_OPTS, this, new String(nameStr));
+    } else {
+        alljoynLock.Unlock();
     }
-    lock.Unlock();
 }
 
 void Client::LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
-    QCC_UNUSED(transport);
     QCC_UNUSED(namePrefix);
 
-    QCC_SyncPrintf("LostAdvertisedName: \"%s\"\n", name);
     String nameStr = name;
-    lock.Lock();
-    set<String>::iterator it = foundNames.find(nameStr);
+    SessionId sessionId = 0;
+    alljoynLock.Lock();
+    map<String, SessionId>::iterator it = foundNames.find(nameStr);
     if (it != foundNames.end()) {
+        QCC_SyncPrintf("LostAdvertisedName: \"%s\" (transport=%d)\n", name, transport);
+        sessionId = it->second;
         foundNames.erase(it);
+    } else {
+        alljoynLock.Unlock();
+        return;
     }
-    lock.Unlock();
+    objectsLock.Lock();
+    while (!objects.empty()) {
+        if (objects.begin()->first != sessionId) {
+            continue;
+        }
+        objects.begin()->second->Unregister();
+        objects.erase(objects.begin());
+    }
+    objectsLock.Unlock();
+    alljoynLock.Unlock();
 }
 
 void Client::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context)
@@ -469,16 +485,23 @@ void Client::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpt
     QCC_UNUSED(opts);
 
     String* nameStr = reinterpret_cast<String*>(context);
-    QCC_SyncPrintf("JoinSessionCB: name = %s   status = %s\n", nameStr->c_str(), QCC_StatusText(status));
-    if (status == ER_OK) {
-        lock.Lock();
-        for (int i = 0; i < nbrOfObjects; i++) {
-            QCC_SyncPrintf("Adding ProxyBusObject for name = %s\n", nameStr->c_str());
-            Add(*nameStr, sessionId, i);
-            QCC_SyncPrintf("Added ProxyBusObject for name = %s\n", nameStr->c_str());
-        }
-        lock.Unlock();
+    alljoynLock.Lock();
+    if (foundNames.find(*nameStr) == foundNames.end()) {
+        alljoynLock.Unlock();
+        delete nameStr;
+        return;
     }
+    QCC_SyncPrintf("JoinSessionCB: name = %s, status = %s\n", nameStr->c_str(), QCC_StatusText(status));
+    QCC_ASSERT(foundNames.find(*nameStr)->second == 0);
+    if (status == ER_OK) {
+        foundNames[*nameStr] = sessionId;
+        for (int i = 0; i < nbrOfObjects; i++) {
+            QCC_SyncPrintf("JoinSessionCB: Adding ProxyBusObject for name = %s\n", nameStr->c_str());
+            Add(*nameStr, sessionId, i);
+            QCC_SyncPrintf("JoinSessionCB: Added ProxyBusObject for name = %s\n", nameStr->c_str());
+        }
+    }
+    alljoynLock.Unlock();
     delete nameStr;
 }
 
@@ -493,7 +516,7 @@ void Client::Execute(uint64_t timeToRun)
         bool unregister = seed;
         seed = !unregister;
         QCC_SyncPrintf("Seed = %d\n", seed);
-        lock.Lock();
+        objectsLock.Lock();
         for (it = objects.begin(); it != objects.end(); it++) {
             if (unregister) {
                 QCC_SyncPrintf("Unregister\n");
@@ -504,7 +527,7 @@ void Client::Execute(uint64_t timeToRun)
             }
             unregister = !unregister;
         }
-        lock.Unlock();
+        objectsLock.Unlock();
         qcc::Sleep(1000);
         stopTime = qcc::GetTimestamp64();
     }
@@ -599,7 +622,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     QStatus status;
     int ret = 0;
-    BusAttachment* bus = new BusAttachment("PropertyStressTest", true);
+    BusAttachment* bus = new BusAttachment("PropertyStressTest", true, 0);
     Environ* env = Environ::GetAppEnviron();
     String connSpec = env->Find("DBUS_STARTER_ADDRESS");
 
@@ -660,7 +683,6 @@ int CDECL_CALL main(int argc, char** argv)
 exit:
     if (client) {
         bus->CancelFindAdvertisedNameByTransport(serviceName.c_str(), SESSION_OPTS.transports);
-        bus->Disconnect();
     } else {
         bus->CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
         bus->ReleaseName(serviceName.c_str());
@@ -668,9 +690,16 @@ exit:
 
     delete app;
 
-    bus->Stop();
-    bus->Join();
-    delete bus;
+    /* Clean up msg bus */
+    if (bus != nullptr) {
+        if (bus->IsConnected()) {
+            bus->Disconnect();
+        }
+        if (bus->Stop() == ER_OK) {
+            bus->Join();
+        }
+        delete bus;
+    }
 
 #ifdef ROUTER
     AllJoynRouterShutdown();
