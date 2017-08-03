@@ -1598,11 +1598,11 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
                                   const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
                                   const std::map<qcc::String, uint16_t>& unreliablePortMap,
                                   bool enableReliableIPv4, bool enableReliableIPv6,
-                                  bool enableUnreliableIPv4, bool enableUnreliableIPv6)
+                                  bool enableUnreliable)
 {
-    QCC_DbgHLPrintf(("IpNameServiceImpl::Enable(0x%x, %d., %d., %d., %d, %d, %d, %d )", transportMask,
+    QCC_DbgHLPrintf(("IpNameServiceImpl::Enable(0x%x, %d., %d., %d., %d, %d, %d)", transportMask,
                      reliableIPv4PortMap.size(), reliableIPv6Port, unreliablePortMap.size(),
-                     enableReliableIPv4, enableReliableIPv6, enableUnreliableIPv4, enableUnreliableIPv6));
+                     enableReliableIPv4, enableReliableIPv6, enableUnreliable));
 
     //
     // Exactly one bit must be set in a transport mask in order to identify the
@@ -1647,7 +1647,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
         }
     }
 
-    bool enabling = enableReliableIPv4 || enableUnreliableIPv4 || enableReliableIPv6 || enableUnreliableIPv6;
+    bool enabling = enableReliableIPv4 || enableReliableIPv6 || enableUnreliable;
 
     //
     // If enabling is true, then we need to cancel any pending disables since
@@ -1694,7 +1694,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
 
     it = unreliablePortMap.find("*");
     if (it != unreliablePortMap.end()) {
-        if (enableUnreliableIPv4 || enableUnreliableIPv6) {
+        if (enableUnreliable) {
             m_unreliablePortMap[i].clear();
             m_unreliablePortMap[i]["*"] = it->second;
         } else {
@@ -1702,7 +1702,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
         }
     } else {
         for (it = unreliablePortMap.begin(); it != unreliablePortMap.end(); it++) {
-            if (enableUnreliableIPv4 || enableUnreliableIPv6) {
+            if (enableUnreliable) {
                 m_unreliablePortMap[i][it->first] = it->second;
             } else {
                 m_unreliablePortMap[i].erase(it->first);
@@ -3789,11 +3789,10 @@ void IpNameServiceImpl::RewriteVersionSpecific(
     Packet packet,
     bool haveIPv4address, qcc::IPAddress ipv4address,
     bool haveIPv6address, qcc::IPAddress ipv6address,
-    uint16_t unicastIpv4Port, uint16_t unicastIpv6Port, const qcc::String& interface,
+    uint16_t unicastIpv4Port, uint16_t unicastIpv6Port,
     uint16_t const reliableTransportPort, const uint16_t unreliableTransportPort)
 {
-    QCC_UNUSED(interface);
-
+    QCC_ASSERT((haveIPv4address && !haveIPv6address) || (!haveIPv4address && haveIPv6address));
     QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific()"));
 
     //
@@ -3892,8 +3891,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                 if (unreliableTransportPort) {
                     if (haveIPv4address) {
                         isAt->SetUnreliableIPv4(ipv4address.ToString(), unreliableTransportPort);
-                    }
-                    if (haveIPv6address) {
+                    } else {
                         isAt->SetUnreliableIPv6(ipv6address.ToString(), unreliableTransportPort);
                     }
                 }
@@ -4456,7 +4454,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
              * NOTE: As for now there is always "haveIPv4address XOR haveIPv6address".
              */
             RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address,
-                                   unicastPortv4, unicastPortv6, m_liveInterfaces[i].m_interfaceName, reliableTransportPort, unreliableTransportPort);
+                                   unicastPortv4, unicastPortv6, reliableTransportPort, unreliableTransportPort);
 
             //
             // Send the protocol message described by the header, containing rewritten is-at messages.
@@ -4967,7 +4965,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
          * NOTE: As for now there is always "haveIPv4address XOR haveIPv6address".
          */
         RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address, unicastPortv4, unicastPortv6,
-                               m_liveInterfaces[i].m_interfaceName, reliableTransportPort, unreliableTransportPort);
+                               reliableTransportPort, unreliableTransportPort);
 
         //
         // Send the protocol message described by the header, containing rewritten is-at messages.
@@ -7642,24 +7640,24 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
     }
 
     if (!isAllJoynResponse) {
-        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse Ignoring Non-AllJoyn related response"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring Non-AllJoyn related response"));
         return;
     }
     MDNSResourceRecord* refRecord = nullptr;
     if ((!mdnsPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord)) || (nullptr == refRecord)) {
-        QCC_DbgPrintf(("Ignoring response without sender-info"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response without sender-info"));
         return;
     }
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
 
     if (!refRData) {
-        QCC_DbgPrintf(("Ignoring response with invalid sender-info"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid sender-info"));
         return;
     }
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
     if (guid == m_guid) {
-        QCC_DbgPrintf(("Ignoring my own response"));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring my own response"));
         return;
     }
     IPEndpoint r4, r6;
@@ -7670,18 +7668,18 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
     if (transportMask & TRANSPORT_TCP) {
         MDNSPtrRData* ptrRDataTcp = static_cast<MDNSPtrRData*>(answerTcp->GetRData());
         if (!ptrRDataTcp) {
-            QCC_DbgPrintf(("Ignoring response with invalid sender-info"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid sender-info"));
             return;
         }
 
         MDNSResourceRecord* srvAnswerTcp;
         if (!mdnsPacket->GetAnswer(ptrRDataTcp->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswerTcp)) {
-            QCC_DbgPrintf(("Ignoring response without srv"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response without srv"));
             return;
         }
         MDNSSrvRData* srvRDataTcp = static_cast<MDNSSrvRData*>(srvAnswerTcp->GetRData());
         if (!srvRDataTcp) {
-            QCC_DbgPrintf(("Ignoring response with invalid srv"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid srv"));
             return;
         }
         r4.port = srvRDataTcp->GetPort();
@@ -7689,7 +7687,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
         if (mdnsPacket->GetAnswer(ptrRDataTcp->GetPtrDName(), MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &txtAnswerTcp)) {
             MDNSTextRData* txtRDataTcp = static_cast<MDNSTextRData*>(txtAnswerTcp->GetRData());
             if (!txtRDataTcp) {
-                QCC_DbgPrintf(("Ignoring response with invalid txt"));
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid txt"));
                 return;
             }
             r6.port = StringToU32(txtRDataTcp->GetValue("r6port"));
@@ -7698,7 +7696,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
         if ((mdnsPacket->GetAdditionalRecord(srvRDataTcp->GetTarget(), MDNSResourceRecord::A, &aRecord)) && (nullptr != aRecord)) {
             MDNSARData* aRData = static_cast<MDNSARData*>(aRecord->GetRData());
             if (!aRData) {
-                QCC_DbgPrintf(("Ignoring response with invalid ipv4 address"));
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid ipv4 address"));
                 return;
             }
             r4.addr = aRData->GetAddr();
@@ -7708,7 +7706,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
         if ((mdnsPacket->GetAdditionalRecord(srvRDataTcp->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) && (nullptr != aaaaRecord)) {
             MDNSAAAARData* aaaaRData = static_cast<MDNSAAAARData*>(aaaaRecord->GetRData());
             if (!aaaaRData) {
-                QCC_DbgPrintf(("Ignoring response with invalid ipv6 address"));
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid ipv6 address"));
                 return;
             }
             r6.addr = aaaaRData->GetAddr();
@@ -7718,40 +7716,27 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
     if (transportMask & TRANSPORT_UDP) {
         MDNSPtrRData* ptrRDataUdp = static_cast<MDNSPtrRData*>(answerUdp->GetRData());
         if (!ptrRDataUdp) {
-            QCC_DbgPrintf(("Ignoring response with invalid sender-info"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid sender-info"));
             return;
         }
 
         MDNSResourceRecord* srvAnswerUdp = nullptr;
         if ((!mdnsPacket->GetAnswer(ptrRDataUdp->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswerUdp)) || (nullptr == srvAnswerUdp)) {
-            QCC_DbgPrintf(("Ignoring response without srv"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response without srv"));
             return;
         }
         MDNSSrvRData* srvRDataUdp = static_cast<MDNSSrvRData*>(srvAnswerUdp->GetRData());
         if (!srvRDataUdp) {
-            QCC_DbgPrintf(("Ignoring response with invalid srv"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid srv"));
             return;
         }
-        u4.port = srvRDataUdp->GetPort();
-        MDNSResourceRecord* txtAnswerUdp = nullptr;
-        if ((mdnsPacket->GetAnswer(ptrRDataUdp->GetPtrDName(), MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &txtAnswerUdp)) && (nullptr != txtAnswerUdp)) {
-            MDNSTextRData* txtRDataUdp = static_cast<MDNSTextRData*>(txtAnswerUdp->GetRData());
-            if (!txtRDataUdp) {
-                QCC_DbgPrintf(("Ignoring response with invalid txt"));
-                return;
-            }
-            if (txtRDataUdp->HasKey("u6port")) {
-                u6.port = StringToU32(txtRDataUdp->GetValue("u6port"));
-            } else {
-                QCC_DbgPrintf(("MDNS TXT record does not contain u6port information, using srvRDataUdp->GetPort()"));
-                u6.port = srvRDataUdp->GetPort();
-            }
-        }
+        u4.port = u6.port = srvRDataUdp->GetPort();
+
         MDNSResourceRecord* aRecord = nullptr;
         if ((mdnsPacket->GetAdditionalRecord(srvRDataUdp->GetTarget(), MDNSResourceRecord::A, &aRecord)) && (nullptr != aRecord)) {
             MDNSARData* aRData = static_cast<MDNSARData*>(aRecord->GetRData());
             if (!aRData) {
-                QCC_DbgPrintf(("Ignoring response with invalid ipv4 address"));
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid ipv4 address"));
                 return;
             }
             u4.addr = aRData->GetAddr();
@@ -7761,12 +7746,13 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
         if ((mdnsPacket->GetAdditionalRecord(srvRDataUdp->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) && (nullptr != aaaaRecord)) {
             MDNSAAAARData* aaaaRData = static_cast<MDNSAAAARData*>(aaaaRecord->GetRData());
             if (!aaaaRData) {
-                QCC_DbgPrintf(("Ignoring response with invalid ipv6 address"));
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with invalid ipv6 address"));
                 return;
             }
             u6.addr = aaaaRData->GetAddr();
             ns.addr = aaaaRData->GetAddr();
         }
+        QCC_ASSERT((aRecord == nullptr) || (aaaaRecord == nullptr));
     }
 
     m_mutex.Lock(MUTEX_CONTEXT);
@@ -7782,7 +7768,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
     if (local.port == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
         if (!UpdateMDNSPacketTracker(guid, ns, refRData->GetSearchID())) {
-            QCC_DbgPrintf(("Ignoring response with duplicate burst ID"));
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring response with duplicate burst ID"));
             m_mutex.Unlock(MUTEX_CONTEXT);
             return;
         }
@@ -7797,7 +7783,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc:
         // a warning.
         //
         if (remote.addr.IsIPv4()) {
-            QCC_DbgPrintf(("Ignoring advertisement from %s for %s received on %s",
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse: Ignoring advertisement from %s for %s received on %s",
                            remote.addr.ToString().c_str(),
                            r4.addr.ToString().c_str(),
                            ifName.c_str()));
