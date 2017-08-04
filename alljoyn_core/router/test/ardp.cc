@@ -56,7 +56,7 @@
 
 #include <ArdpProtocol.h>
 
-#define QCC_MODULE "ARDP"
+#define QCC_MODULE "ARDP_TEST"
 
 using namespace ajn;
 
@@ -75,7 +75,6 @@ const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT 
 const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
 const uint32_t UDP_SEGMAX = 50;      /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
 
-bool g_user = false;
 char const* g_localport = "9954";
 char const* g_foreignport = "9955";
 char const* g_address = "127.0.0.1";
@@ -102,9 +101,8 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
     QCC_DbgTrace(("AcceptCb(handle=%p, ipAddr=\"%s\", foreign=%d, conn=%p, buf=%p(\"%s\"), len=%d, status=%s)",
                   handle, ipAddr.ToString().c_str(), ipPort, conn, buf, (char*) buf, len, QCC_StatusText(status)));
 
-    uint16_t length = random() % UDP_SEGBMAX;
-    uint8_t* buffer = new uint8_t[length];
-    status = ARDP_Accept(handle, conn, UDP_SEGMAX, UDP_SEGBMAX, buffer, length);
+    status = ARDP_Accept(handle, conn, UDP_SEGMAX, UDP_SEGBMAX, reinterpret_cast<uint8_t*>(const_cast<char*>(g_ajnAcceptString)),
+                         strlen(g_ajnAcceptString) + 1);
     if (status != ER_OK) {
         QCC_DbgPrintf(("AcceptCb(): ARDP_Accept failed with %s", QCC_StatusText(status)));
     }
@@ -125,8 +123,8 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
         uint16_t length = random() % UDP_SEGBMAX;
         uint8_t* buffer = new uint8_t[length];
         QCC_DbgPrintf(("ConnectCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d)", handle, conn, buffer, length));
-
         status = ARDP_Send(handle, conn, buffer, length, 0);
+        delete [] buffer;
         if (status != ER_OK) {
             QCC_DbgPrintf(("ConnectCb(): ARDP_Send failed with %s", QCC_StatusText(status)));
         }
@@ -171,8 +169,8 @@ void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len
     uint16_t length = random() % UDP_SEGBMAX;
     uint8_t* buffer = new uint8_t[length];
     QCC_DbgTrace(("SendCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d.)", handle, conn, buffer, length));
-
     status = ARDP_Send(handle, conn, buffer, length, 0);
+    delete [] buffer;
     if (status != ER_OK) {
         QCC_DbgPrintf(("SendCb(): ARDP_Send failed with %s", QCC_StatusText(status)));
     }
@@ -205,20 +203,19 @@ void* Test::Run(void* arg)
     QCC_UNUSED(arg);
 
     qcc::SocketFd sock;
-
-    QStatus status = qcc::Socket(qcc::QCC_AF_INET, qcc::QCC_SOCK_DGRAM, sock);
+    qcc::IPAddress ipToConnectTo(g_address);
+    QStatus status = qcc::Socket(ipToConnectTo.IsIPv4() ? qcc::QCC_AF_INET : qcc::QCC_AF_INET6, qcc::QCC_SOCK_DGRAM, sock);
     if (status != ER_OK) {
         QCC_LogError(status, ("Test::Run(): Socket(): Failed"));
         return 0;
     }
-
     status = qcc::SetBlocking(sock, false);
     if (status != ER_OK) {
         QCC_LogError(status, ("Test::Run(): SetBlocking(): Failed"));
         return 0;
     }
 
-    status = qcc::Bind(sock, qcc::IPAddress("0.0.0.0"), atoi(g_localport));
+    status = qcc::Bind(sock, qcc::IPAddress(ipToConnectTo.IsIPv4() ? "0.0.0.0" : "::"), atoi(g_localport));
     if (status != ER_OK) {
         QCC_LogError(status, ("Test::Run(): Bind(): Failed"));
         return 0;
@@ -255,14 +252,14 @@ void* Test::Run(void* arg)
 
     bool connectSent = false;
 
-    while (IsRunning()) {
+    while ((!g_interrupt) && (IsRunning())) {
         std::vector<qcc::Event*> checkEvents, signaledEvents;
         checkEvents.push_back(&stopEvent);
         checkEvents.push_back(&timerEvent);
         checkEvents.push_back(sockEvent);
 
         status = qcc::Event::Wait(checkEvents, signaledEvents);
-        if (status != ER_OK && status != ER_TIMEOUT) {
+        if ((status != ER_OK) && (status != ER_TIMEOUT)) {
             QCC_LogError(status, ("Test::Run(): Event::Wait(): Failed"));
             break;
         }
@@ -272,13 +269,14 @@ void* Test::Run(void* arg)
                 QCC_DbgPrintf(("Test::Run(): Stop event fired"));
                 stopEvent.ResetEvent();
             } else if (*i == &timerEvent) {
-                if (g_user) {
-                    if (connectSent == false) {
-                        connectSent = true;
-                        ArdpConnRecord* conn;
-                        ARDP_Connect(ardpHandle, sock, qcc::IPAddress(g_address), atoi(g_foreignport), UDP_SEGMAX, UDP_SEGBMAX,
-                                     &conn, (uint8_t* )g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
-                        continue;
+                if (connectSent == false) {
+                    connectSent = true;
+                    ArdpConnRecord* conn;
+                    status = ARDP_Connect(ardpHandle, sock, ipToConnectTo,
+                                          atoi(g_foreignport), UDP_SEGMAX, UDP_SEGBMAX, &conn,
+                                          reinterpret_cast<uint8_t*>(const_cast<char*>(g_ajnConnString)), strlen(g_ajnConnString) + 1, NULL);
+                    if (status != ER_OK) {
+                        QCC_LogError(status, ("Test::Run(): ARDP_Connect failed with %s", QCC_StatusText(status)));
                     }
                 }
             } else {
@@ -289,7 +287,16 @@ void* Test::Run(void* arg)
         }
     }
     ARDP_FreeHandle(ardpHandle);
+    qcc::Close(sock);
+    delete sockEvent;
     return 0;
+}
+
+static void usage() {
+    printf("-l <local port to bind to> \n");
+    printf("-f <foreign port to connect to> \n");
+    printf("-a <address to connect to> \n");
+    exit(0);
 }
 
 int CDECL_CALL main(int argc, char** argv)
@@ -302,30 +309,40 @@ int CDECL_CALL main(int argc, char** argv)
         return 1;
     }
 
-    printf("%s main()\n", argv[0]);
-
     for (int i = 1; i < argc; ++i) {
         if (0 == strcmp("-l", argv[i])) {
-            g_localport = argv[i + 1];
-            i += 1;
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+            } else {
+                g_localport = argv[i];
+            }
         } else if (0 == strcmp("-f", argv[i])) {
-            g_foreignport = argv[i + 1];
-            i += 1;
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+            } else {
+                g_foreignport = argv[i];
+            }
         } else if (0 == strcmp("-a", argv[i])) {
-            g_address = argv[i + 1];
-            i += 1;
-        } else if (0 == strcmp("-u", argv[i])) {
-            g_user = true;
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+            } else {
+                g_address = argv[i];
+            }
         } else {
             printf("Unknown option %s\n", argv[i]);
-            exit(0);
+            usage();
         }
     }
 
-    printf("g_user == %d.\n", g_user);
-    printf("g_localport == %s\n", g_localport);
-    printf("g_foreignport == %s\n", g_foreignport);
-    printf("g_address == %s\n", g_address);
+    printf("local port to bind to  == %s\n", g_localport);
+    printf("foreign port to connect to == %s\n", g_foreignport);
+    printf("address to connect to == %s\n", g_address);
 
     signal(SIGINT, SigIntHandler);
 
@@ -336,8 +353,9 @@ int CDECL_CALL main(int argc, char** argv)
         qcc::Sleep(100);
     }
 
-    test->Stop();
-    test->Join();
+    if (test->Stop() == ER_OK) {
+        test->Join();
+    }
     delete test;
 
     AllJoynRouterShutdown();
