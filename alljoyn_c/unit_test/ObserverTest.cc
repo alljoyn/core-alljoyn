@@ -195,8 +195,8 @@ class Participant : public SessionPortListener, public SessionListener {
         for (it = objects.begin(); it != objects.end(); ++it) {
             if (it->second.second) {
                 bus.UnregisterBusObject(*(it->second.first));
-                delete it->second.first;
             }
+            delete it->second.first;
         }
 
         delete aboutObj;
@@ -334,6 +334,11 @@ struct ObserverListener {
 
     virtual ~ObserverListener() {
         alljoyn_observerlistener_destroy(listener);
+        ProxyVector::iterator it = proxies.begin();
+        while (it != proxies.end()) {
+            alljoyn_proxybusobject_ref_decref(*it);
+            it = proxies.erase(it);
+        }
     }
 
     void ExpectInvocations(int newCounter) {
@@ -458,11 +463,9 @@ static bool WaitForAll(vector<Event*>& events, uint32_t wait_ms = MAX_WAIT_MS)
 
 static int CountProxies(alljoyn_observer observer)
 {
-    int count;
-    alljoyn_proxybusobject_ref iter;
-    for (count = 0, iter = alljoyn_observer_getfirst(observer);
-         iter != NULL;
-         iter = alljoyn_observer_getnext(observer, iter)) {
+    int count = 0;
+    alljoyn_proxybusobject_ref iter = alljoyn_observer_getfirst(observer);
+    for (; iter != NULL; iter = alljoyn_observer_getnext(observer, iter)) {
         ++count;
     }
     return count;
@@ -1080,14 +1083,21 @@ TEST_F(ObserverTest, StressNumPartObjects) {
     EXPECT_TRUE(WaitForAll(events));
 
     //clean up
-    for (int i = 0; i < STRESS_FACTOR; i++) {
-        alljoyn_observer_unregisterlistener(observers[i], listeners[i]->listener);
-        alljoyn_observerlistener_destroy(listeners[i]->listener);
-        alljoyn_observer_destroy(observers[i]);
-        providers[i]->UnregisterObject("a");
-        providers[i]->UnregisterObject("b");
-        delete consumers[i];
-        delete providers[i];
+    for (size_t i = 0; i < STRESS_FACTOR; i++) {
+        if (i < providers.size()) {
+            providers[i]->UnregisterObject("a");
+            providers[i]->UnregisterObject("b");
+            delete providers[i];
+        }
+        if (i < observers.size()) {
+            alljoyn_observer_destroy(observers[i]);
+        }
+        if (i < listeners.size()) {
+            delete listeners[i];
+        }
+        if (i < consumers.size()) {
+            delete consumers[i];
+        }
     }
 
 }

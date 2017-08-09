@@ -362,7 +362,7 @@ extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_get(alljoyn_msgarg arg, const ch
 
 /**
  * create a copy of a message argument.  This will create a new alljoyn_msgarg and
- * must be cleaned up using alljoyn_msgarg_detroy.
+ * must be cleaned up using alljoyn_msgarg_destroy.
  *
  * @param source      the alljoyn_msgarg to be copied
  *

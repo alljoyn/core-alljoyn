@@ -162,12 +162,18 @@ class ApplicationStateListenerTest : public testing::Test {
 
 TEST_F(ApplicationStateListenerTest, shouldCreateListenerWithCallbacksAndNullContext)
 {
-    EXPECT_NE(nullptr, alljoyn_applicationstatelistener_create(&m_nonNullCallbacks, nullptr));
+    m_listener = alljoyn_applicationstatelistener_create(&m_nonNullCallbacks, nullptr);
+    EXPECT_NE(nullptr, m_listener);
+    alljoyn_applicationstatelistener_destroy(m_listener);
+    m_listener = nullptr;
 }
 
 TEST_F(ApplicationStateListenerTest, shouldCreateListenerWithCallbacksAndNonNullContext)
 {
-    EXPECT_NE(nullptr, alljoyn_applicationstatelistener_create(&m_nonNullCallbacks, this));
+    m_listener = alljoyn_applicationstatelistener_create(&m_nonNullCallbacks, this);
+    EXPECT_NE(nullptr, m_listener);
+    alljoyn_applicationstatelistener_destroy(m_listener);
+    m_listener = nullptr;
 }
 
 TEST_F(ApplicationStateListenerTest, shouldDestroyNullListenerWithoutException)

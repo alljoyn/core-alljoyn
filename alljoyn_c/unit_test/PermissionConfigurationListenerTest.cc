@@ -95,20 +95,17 @@ class PermissionConfigurationListenerTest : public testing::Test {
     }
 };
 
-TEST_F(PermissionConfigurationListenerTest, shouldCreateListenerWithCallbacksAndNullContext)
-{
-    EXPECT_NE(nullptr, alljoyn_permissionconfigurationlistener_create(&m_callbacks, nullptr));
-}
-
-TEST_F(PermissionConfigurationListenerTest, shouldCreateListenerWithCallbacksAndNonNullContext)
-{
-    EXPECT_NE(nullptr, alljoyn_permissionconfigurationlistener_create(&m_callbacks, this));
-}
-
-TEST_F(PermissionConfigurationListenerTest, shouldDestroyNonNullListenerWithoutException)
+TEST_F(PermissionConfigurationListenerTest, shouldCreateAndDestroyListenerWithCallbacksAndNullContext)
 {
     alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, nullptr);
+    EXPECT_NE(nullptr, listener);
+    alljoyn_permissionconfigurationlistener_destroy(listener);
+}
 
+TEST_F(PermissionConfigurationListenerTest, shouldCreateAndDestroyListenerWithCallbacksAndNonNullContext)
+{
+    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, this);
+    EXPECT_NE(nullptr, listener);
     alljoyn_permissionconfigurationlistener_destroy(listener);
 }
 
@@ -120,6 +117,8 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallFactoryResetCallback)
     ((PermissionConfigurationListener*)listener)->FactoryReset();
 
     EXPECT_TRUE(factoryResetHappened);
+
+    alljoyn_permissionconfigurationlistener_destroy(listener);
 }
 
 TEST_F(PermissionConfigurationListenerTest, shouldCallPolicyChangedCallback)
@@ -130,6 +129,7 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallPolicyChangedCallback)
     ((PermissionConfigurationListener*)listener)->PolicyChanged();
 
     EXPECT_TRUE(policyChangedHappened);
+    alljoyn_permissionconfigurationlistener_destroy(listener);
 }
 
 TEST_F(PermissionConfigurationListenerTest, shouldCallStartManagementCallback)
@@ -140,6 +140,7 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallStartManagementCallback)
     ((PermissionConfigurationListener*)listener)->StartManagement();
 
     EXPECT_TRUE(startManagementHappened);
+    alljoyn_permissionconfigurationlistener_destroy(listener);
 }
 
 TEST_F(PermissionConfigurationListenerTest, shouldCallEndManagementCallback)
@@ -150,4 +151,5 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallEndManagementCallback)
     ((PermissionConfigurationListener*)listener)->EndManagement();
 
     EXPECT_TRUE(endManagementHappened);
+    alljoyn_permissionconfigurationlistener_destroy(listener);
 }
