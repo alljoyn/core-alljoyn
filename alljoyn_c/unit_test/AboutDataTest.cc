@@ -191,6 +191,15 @@ TEST(AboutDataTest, SetAppId) {
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(originalAppId[i], appId[i]);
     }
+
+    int length = 17;
+    char appIdCopy[length];
+    EXPECT_EQ(length - 1, alljoyn_aboutdata_getappidlength(aboutData));
+    status = alljoyn_aboutdata_getappidcopy(aboutData, appIdCopy, length);
+    for (int i = 0; i < length - 1; i++) {
+        EXPECT_EQ(i, appIdCopy[i]);
+    }
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -247,6 +256,14 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
         EXPECT_EQ(i, appId[i]);
     }
 
+    size_t length = 17;
+    char appIdCopy[length];
+    EXPECT_EQ(length - 1, alljoyn_aboutdata_getappidlength(aboutData));
+    status = alljoyn_aboutdata_getappidcopy(aboutData, appIdCopy, length);
+    for (size_t i = 0; i < length - 1; i++) {
+        EXPECT_EQ(i, appIdCopy[i]);
+    }
+
     alljoyn_aboutdata aboutData2 = alljoyn_aboutdata_create("en");
 
     /* Use capital hex digits */
@@ -259,6 +276,11 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     ASSERT_EQ(16u, num);
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(i, appId[i]);
+    }
+    EXPECT_EQ(length - 1, alljoyn_aboutdata_getappidlength(aboutData2));
+    status = alljoyn_aboutdata_getappidcopy(aboutData2, appIdCopy, length);
+    for (size_t i = 0; i < length - 1; i++) {
+        EXPECT_EQ(i, appIdCopy[i]);
     }
 
     alljoyn_aboutdata aboutData3 = alljoyn_aboutdata_create("en");
@@ -274,6 +296,11 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(i, appId[i]);
     }
+    EXPECT_EQ(length - 1, alljoyn_aboutdata_getappidlength(aboutData3));
+    status = alljoyn_aboutdata_getappidcopy(aboutData3, appIdCopy, length);
+    for (size_t i = 0; i < length - 1; i++) {
+        EXPECT_EQ(i, appIdCopy[i]);
+    }
 
     alljoyn_aboutdata aboutData4 = alljoyn_aboutdata_create("en");
 
@@ -287,6 +314,11 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     ASSERT_EQ(16u, num);
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(i, appId[i]);
+    }
+    EXPECT_EQ(length - 1, alljoyn_aboutdata_getappidlength(aboutData4));
+    status = alljoyn_aboutdata_getappidcopy(aboutData4, appIdCopy, length);
+    for (size_t i = 0; i < length - 1; i++) {
+        EXPECT_EQ(i, appIdCopy[i]);
     }
     alljoyn_aboutdata_destroy(aboutData);
     alljoyn_aboutdata_destroy(aboutData2);
@@ -302,24 +334,40 @@ TEST(AboutDataTest, SetDeviceName) {
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("en", language);
     char* ajSoftwareVersion;
+    size_t length = 20;
+    char ajSoftwareVersionCopy[length];
     status = alljoyn_aboutdata_getajsoftwareversion(aboutData, &ajSoftwareVersion);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+    status = alljoyn_aboutdata_getajsoftwareversioncopy(aboutData, ajSoftwareVersionCopy, length);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersionCopy);
 
-    status = alljoyn_aboutdata_setdevicename(aboutData, "Device", "en");
+    const char englishDeviceName[] = "Device";
+    status = alljoyn_aboutdata_setdevicename(aboutData, englishDeviceName, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* deviceName;
-    status = alljoyn_aboutdata_getdevicename(aboutData, &deviceName, "en");
+    char* retrievedDeviceName;
+    char retrievedDeviceNameCopy[length];
+    status = alljoyn_aboutdata_getdevicename(aboutData, &retrievedDeviceName, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Device", deviceName);
+    EXPECT_STREQ(englishDeviceName, retrievedDeviceName);
+    EXPECT_EQ((sizeof(englishDeviceName) - 1), alljoyn_aboutdata_getdevicenamelength(aboutData, "en"));
+    status = alljoyn_aboutdata_getdevicenamecopy(aboutData, retrievedDeviceNameCopy, length, "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(englishDeviceName, retrievedDeviceNameCopy);
 
-    status = alljoyn_aboutdata_setdevicename(aboutData, "dispositivo", "es");
+    const char spanishDeviceName[] = "dispositivo";
+    status = alljoyn_aboutdata_setdevicename(aboutData, spanishDeviceName, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_aboutdata_getdevicename(aboutData, &deviceName, "es");
+    status = alljoyn_aboutdata_getdevicename(aboutData, &retrievedDeviceName, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("dispositivo", deviceName);
+    EXPECT_STREQ(spanishDeviceName, retrievedDeviceName);
+    EXPECT_EQ((sizeof(spanishDeviceName) - 1), alljoyn_aboutdata_getdevicenamelength(aboutData, "es"));
+    status = alljoyn_aboutdata_getdevicenamecopy(aboutData, retrievedDeviceNameCopy, length, "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(spanishDeviceName, retrievedDeviceNameCopy);
 
     alljoyn_aboutdata_destroy(aboutData);
 }
@@ -327,14 +375,21 @@ TEST(AboutDataTest, SetDeviceName) {
 TEST(AboutDataTest, SetDeviceId) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
-    status = alljoyn_aboutdata_setdeviceid(aboutData,
-                                           "avec-awe1213-1234559xvc123");
+    const char deviceId[] = "avec-awe1213-1234559xvc123";
+    status = alljoyn_aboutdata_setdeviceid(aboutData, deviceId);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* deviceId;
-    status = alljoyn_aboutdata_getdeviceid(aboutData, &deviceId);
+    char* retrievedDeviceId;
+    size_t length = 30;
+    char retrievedDeviceIdCopy[length];
+    status = alljoyn_aboutdata_getdeviceid(aboutData, &retrievedDeviceId);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("avec-awe1213-1234559xvc123", deviceId);
+    EXPECT_STREQ(deviceId, retrievedDeviceId);
+    EXPECT_EQ((sizeof(deviceId) - 1), alljoyn_aboutdata_getdeviceidlength(aboutData));
+    status = alljoyn_aboutdata_getdeviceidcopy(aboutData, retrievedDeviceIdCopy, length);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(deviceId, retrievedDeviceIdCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -345,17 +400,30 @@ TEST(AboutDataTest, SetAppName) {
     status = alljoyn_aboutdata_setappname(aboutData, "Application", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* appName;
-    status = alljoyn_aboutdata_getappname(aboutData, &appName, "en");
+    const char englishAppName[] = "Application";
+    char* retrievedAppName;
+    size_t length = 20;
+    char retrievedAppNameCopy[length];
+    status = alljoyn_aboutdata_getappname(aboutData, &retrievedAppName, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Application", appName);
+    EXPECT_STREQ(englishAppName, retrievedAppName);
+    EXPECT_EQ((sizeof(englishAppName) - 1), alljoyn_aboutdata_getappnamelength(aboutData, "en"));
+    status = alljoyn_aboutdata_getappnamecopy(aboutData, retrievedAppNameCopy, length, "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(englishAppName, retrievedAppNameCopy);
 
-    status = alljoyn_aboutdata_setappname(aboutData, "aplicacion", "es");
+    const char spanishAppName[] = "aplicacion";
+    status = alljoyn_aboutdata_setappname(aboutData, spanishAppName, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_aboutdata_getappname(aboutData, &appName, "es");
+    status = alljoyn_aboutdata_getappname(aboutData, &retrievedAppName, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("aplicacion", appName);
+    EXPECT_STREQ(spanishAppName, retrievedAppName);
+    EXPECT_EQ((sizeof(spanishAppName) - 1), alljoyn_aboutdata_getappnamelength(aboutData, "es"));
+    status = alljoyn_aboutdata_getappnamecopy(aboutData, retrievedAppNameCopy, length, "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(spanishAppName, retrievedAppNameCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -366,17 +434,29 @@ TEST(AboutDataTest, SetManufacturer) {
     status = alljoyn_aboutdata_setmanufacturer(aboutData, "Manufacturer", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* manufacturer;
-    status = alljoyn_aboutdata_getmanufacturer(aboutData, &manufacturer, "en");
+    const char englishManufacturer[] = "Manufacturer";
+    char* retrievedManufacturer;
+    size_t length = 20;
+    char retrievedManufacturerCopy[length];
+    status = alljoyn_aboutdata_getmanufacturer(aboutData, &retrievedManufacturer, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Manufacturer", manufacturer);
+    EXPECT_STREQ(englishManufacturer, retrievedManufacturer);
+    EXPECT_EQ((sizeof(englishManufacturer) - 1), alljoyn_aboutdata_getmanufacturerlength(aboutData, "en"));
+    status = alljoyn_aboutdata_getmanufacturercopy(aboutData, retrievedManufacturerCopy, length, "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(englishManufacturer, retrievedManufacturerCopy);
 
+    const char spanishManufacturer[] = "manufactura";
     status = alljoyn_aboutdata_setmanufacturer(aboutData, "manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_aboutdata_getmanufacturer(aboutData, &manufacturer, "es");
+    status = alljoyn_aboutdata_getmanufacturer(aboutData, &retrievedManufacturer, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("manufactura", manufacturer);
+    EXPECT_STREQ(spanishManufacturer, retrievedManufacturer);
+    EXPECT_EQ((sizeof(spanishManufacturer) - 1), alljoyn_aboutdata_getmanufacturerlength(aboutData, "es"));
+    status = alljoyn_aboutdata_getmanufacturercopy(aboutData, retrievedManufacturerCopy, length, "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(spanishManufacturer, retrievedManufacturerCopy);
 
     alljoyn_aboutdata_destroy(aboutData);
 }
@@ -385,13 +465,21 @@ TEST(AboutDataTest, SetModelNumber) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
 
-    status = alljoyn_aboutdata_setmodelnumber(aboutData, "xBnc345");
+    const char modelNumber[] = "xBnc345";
+    status = alljoyn_aboutdata_setmodelnumber(aboutData, modelNumber);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* modelNumber;
-    status = alljoyn_aboutdata_getmodelnumber(aboutData, &modelNumber);
+    char* retrievedModelNumber;
+    size_t length = 10;
+    char retrievedModelNumberCopy[length];
+    status = alljoyn_aboutdata_getmodelnumber(aboutData, &retrievedModelNumber);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("xBnc345", modelNumber);
+    EXPECT_STREQ(modelNumber, retrievedModelNumber);
+    EXPECT_EQ((sizeof(modelNumber) - 1), alljoyn_aboutdata_getmodelnumberlength(aboutData));
+    status = alljoyn_aboutdata_getmodelnumbercopy(aboutData, retrievedModelNumberCopy, length);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(modelNumber, retrievedModelNumberCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -414,6 +502,16 @@ TEST(AboutDataTest, SetSupportedLanguage) {
     delete [] languages;
     languages = NULL;
 
+    size_t copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    ASSERT_EQ(3u, copySize);
+    char* languagesCopy = new char[copySize];
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopy(aboutData, languagesCopy, copySize);
+    EXPECT_EQ(3u, copySize);
+    EXPECT_STREQ("en", languagesCopy);
+
+    delete [] languagesCopy;
+    languagesCopy = NULL;
+
     status = alljoyn_aboutdata_setsupportedlanguage(aboutData, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -430,6 +528,15 @@ TEST(AboutDataTest, SetSupportedLanguage) {
     EXPECT_STREQ("es", languages[1]);
     delete [] languages;
     languages = NULL;
+
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    ASSERT_EQ(6u, copySize);
+    languagesCopy = new char[copySize];
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopy(aboutData, languagesCopy, copySize);
+    EXPECT_EQ(6u, copySize);
+    EXPECT_STREQ("en,es", languagesCopy);
+
+    delete [] languagesCopy;
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -453,6 +560,9 @@ TEST(AboutDataTest, SetSupportedLanguage_Duplicate) {
      */
     size_t numRetLang = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, numRetLang);
+
+    size_t copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -477,6 +587,8 @@ TEST(AboutDataTest, DISABLED_SetSupportedLanguage_Invalid_Tag) {
     size_t numRetLang =
         alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(1u, numRetLang);
+    size_t copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(3u, copySize);
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -493,37 +605,54 @@ TEST(AboutDataTest, GetSupportedLanguages) {
 TEST(AboutDataTest, SetDescription) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
-    status = alljoyn_aboutdata_setdescription(aboutData,
-                                              "A poetic description of this application",
-                                              "en");
+    const char englishDescription[] = "A poetic description of this application";
+    status = alljoyn_aboutdata_setdescription(aboutData, englishDescription, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* description;
-    status = alljoyn_aboutdata_getdescription(aboutData, &description, "en");
+    char* retrievedDescription;
+    size_t length = 50;
+    char retrievedDescriptionCopy[length];
+    status = alljoyn_aboutdata_getdescription(aboutData, &retrievedDescription, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("A poetic description of this application", description);
+    EXPECT_STREQ(englishDescription, retrievedDescription);
+    EXPECT_EQ((sizeof(englishDescription) - 1), alljoyn_aboutdata_getdescriptionlength(aboutData, "en"));
+    status = alljoyn_aboutdata_getdescriptioncopy(aboutData, retrievedDescriptionCopy, length, "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(englishDescription, retrievedDescriptionCopy);
 
-    status = alljoyn_aboutdata_setdescription(aboutData,
-                                              "Una descripcion poetica de esta aplicacion",
-                                              "es");
+    const char spanishDescription[] = "Una descripcion poetica de esta aplicacion";
+    status = alljoyn_aboutdata_setdescription(aboutData, spanishDescription, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_aboutdata_getdescription(aboutData, &description, "es");
+    status = alljoyn_aboutdata_getdescription(aboutData, &retrievedDescription, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Una descripcion poetica de esta aplicacion", description);
+    EXPECT_STREQ(spanishDescription, retrievedDescription);
+    EXPECT_EQ((sizeof(spanishDescription) - 1), alljoyn_aboutdata_getdescriptionlength(aboutData, "es"));
+    status = alljoyn_aboutdata_getdescriptioncopy(aboutData, retrievedDescriptionCopy, length, "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(spanishDescription, retrievedDescriptionCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
 TEST(AboutDataTest, SetDateOfManufacture) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
-    status = alljoyn_aboutdata_setdateofmanufacture(aboutData, "2014-01-20");
+    const char dateOfManufacture[] = "2014-01-20";
+    status = alljoyn_aboutdata_setdateofmanufacture(aboutData, dateOfManufacture);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* dateOfManufacture;
-    status = alljoyn_aboutdata_getdateofmanufacture(aboutData, &dateOfManufacture);
+    char* retrievedDateOfManufacture;
+    size_t length = 15;
+    char retrievedDateOfManufactureCopy[length];
+    status = alljoyn_aboutdata_getdateofmanufacture(aboutData, &retrievedDateOfManufacture);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("2014-01-20", dateOfManufacture);
+    EXPECT_STREQ(dateOfManufacture, retrievedDateOfManufacture);
+    EXPECT_EQ((sizeof(dateOfManufacture) - 1), alljoyn_aboutdata_getdateofmanufacturelength(aboutData));
+    status = alljoyn_aboutdata_getdateofmanufacturecopy(aboutData, retrievedDateOfManufactureCopy, length);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(dateOfManufacture, retrievedDateOfManufactureCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -549,39 +678,63 @@ TEST(AboutDataTest, DISABLED_SetDateOfManufacture_Negative) {
 TEST(AboutDataTest, SetSoftwareVersion) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
-    status = alljoyn_aboutdata_setsoftwareversion(aboutData, "0.1.2");
+    const char softwareVersion[] = "0.1.2";
+    status = alljoyn_aboutdata_setsoftwareversion(aboutData, softwareVersion);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* softwareVersion;
-    status = alljoyn_aboutdata_getsoftwareversion(aboutData, &softwareVersion);
+    char* retrievedSoftwareVersion;
+    size_t length = 10;
+    char retrievedSoftwareVersionCopy[length];
+    status = alljoyn_aboutdata_getsoftwareversion(aboutData, &retrievedSoftwareVersion);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("0.1.2", softwareVersion);
+    EXPECT_STREQ(softwareVersion, softwareVersion);
+    EXPECT_EQ((sizeof(softwareVersion) - 1), alljoyn_aboutdata_getsoftwareversionlength(aboutData));
+    status = alljoyn_aboutdata_getsoftwareversioncopy(aboutData, retrievedSoftwareVersionCopy, length);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(softwareVersion, retrievedSoftwareVersionCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
 TEST(AboutDataTest, SetHardwareVersion) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
-    status = alljoyn_aboutdata_sethardwareversion(aboutData, "3.2.1");
+    const char hardwareVersion[] = "3.2.1";
+    status = alljoyn_aboutdata_sethardwareversion(aboutData, hardwareVersion);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* hardwareVersion;
-    status = alljoyn_aboutdata_gethardwareversion(aboutData, &hardwareVersion);
+    char* retrievedHardwareVersion;
+    size_t length = 10;
+    char retrievedHardwareVersionCopy[length];
+    status = alljoyn_aboutdata_gethardwareversion(aboutData, &retrievedHardwareVersion);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("3.2.1", hardwareVersion);
+    EXPECT_STREQ(retrievedHardwareVersion, hardwareVersion);
+    EXPECT_EQ((sizeof(hardwareVersion) - 1), alljoyn_aboutdata_gethardwareversionlength(aboutData));
+    status = alljoyn_aboutdata_gethardwareversioncopy(aboutData, retrievedHardwareVersionCopy, length);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(hardwareVersion, retrievedHardwareVersionCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
 TEST(AboutDataTest, SetSupportUrl) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
-    status = alljoyn_aboutdata_setsupporturl(aboutData, "www.example.com");
+    const char supportUrl[] = "www.example.com";
+    status = alljoyn_aboutdata_setsupporturl(aboutData, supportUrl);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* supportUrl;
-    status = alljoyn_aboutdata_getsupporturl(aboutData, &supportUrl);
+    char* retrievedSupportUrl;
+    size_t length = 20;
+    char retrievedSupportUrlCopy[length];
+    status = alljoyn_aboutdata_getsupporturl(aboutData, &retrievedSupportUrl);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("www.example.com", supportUrl);
+    EXPECT_STREQ(supportUrl, retrievedSupportUrl);
+    EXPECT_EQ((sizeof(supportUrl) - 1), alljoyn_aboutdata_getsupporturllength(aboutData));
+    status = alljoyn_aboutdata_getsupporturlcopy(aboutData, retrievedSupportUrlCopy, length);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ(supportUrl, retrievedSupportUrlCopy);
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
@@ -1280,6 +1433,8 @@ TEST(AboutDataTest, InitUsingMsgArg) {
     size_t number_languages =
         alljoyn_aboutdata_getsupportedlanguages(aboutDataInit, NULL, 0);
     EXPECT_EQ(2u, number_languages);
+    size_t copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutDataInit);
+    EXPECT_EQ(6u, copySize);
     /* TODO complete the test for language and other required */
     alljoyn_msgarg_destroy(aboutArg);
     alljoyn_aboutdata_destroy(aboutData);
@@ -1304,42 +1459,56 @@ TEST(AboutDataTest, caseInsensitiveLanguageTag) {
     size_t num_langs;
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    size_t copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     status = alljoyn_aboutdata_setdevicename(aboutData, "Device", "EN");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     status = alljoyn_aboutdata_setdevicename(aboutData, "Device", "En");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     status = alljoyn_aboutdata_setdevicename(aboutData, "Device", "eN");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     status = alljoyn_aboutdata_setdevicename(aboutData, "dispositivo", "ES");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     status = alljoyn_aboutdata_setdevicename(aboutData, "dispositivo", "Es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     status = alljoyn_aboutdata_setdevicename(aboutData, "dispositivo", "eS");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     num_langs = alljoyn_aboutdata_getsupportedlanguages(aboutData, NULL, 0);
     EXPECT_EQ(2u, num_langs);
+    copySize = alljoyn_aboutdata_getsupportedlanguagescopylength(aboutData);
+    EXPECT_EQ(6u, copySize);
 
     char* deviceName;
     status = alljoyn_aboutdata_getdevicename(aboutData, &deviceName, "EN");

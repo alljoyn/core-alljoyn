@@ -154,13 +154,25 @@ TEST(AboutDataTest, DefaultLanguageNotSpecified) {
     status = aboutData.SetDeviceName("Device Name");
     EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
 
+    status = aboutData.SetDeviceName(qcc::String("Device Name"));
+    EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
+
     status = aboutData.SetAppName("Application Name");
+    EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
+
+    status = aboutData.SetAppName(qcc::String("Application Name"));
     EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
 
     status = aboutData.SetManufacturer("Manufacturer Name");
     EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
 
+    status = aboutData.SetManufacturer(qcc::String("Manufacturer Name"));
+    EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
+
     status = aboutData.SetDescription("A description of the application.");
+    EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
+
+    status = aboutData.SetDescription(qcc::String("A description of the application."));
     EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status);
 }
 
@@ -291,11 +303,17 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     AboutData aboutData("en");
 
     // not a hex digit
-    status = aboutData.SetAppId("g00102030405060708090a0b0c0d0e0f");
+    const char* notAHexDigit = "g00102030405060708090a0b0c0d0e0f";
+    status = aboutData.SetAppId(notAHexDigit);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
+    status = aboutData.SetAppId(qcc::String(notAHexDigit));
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
 
     // odd number of characters parsing error
-    status = aboutData.SetAppId("00102030405060708090a0b0c0d0e0f");
+    const char* oddNumberOfChars = "00102030405060708090a0b0c0d0e0f";
+    status = aboutData.SetAppId(oddNumberOfChars);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
+    status = aboutData.SetAppId(qcc::String(oddNumberOfChars));
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
 
     // too few characters
@@ -303,18 +321,28 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
     // too many characters
-    status = aboutData.SetAppId("000102030405060708090a0b0c0d0e0f10");
+    const char* tooManyChars = "000102030405060708090a0b0c0d0e0f10";
+    status = aboutData.SetAppId(tooManyChars);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
+    status = aboutData.SetAppId(qcc::String(tooManyChars));
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
     // not valid uuid parsing error
-    status = aboutData.SetAppId("000102030405-060708090A0B-0C0D0E0F10");
+    const char* notValidUid = "000102030405-060708090A0B-0C0D0E0F10";
+    status = aboutData.SetAppId(notValidUid);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
+    status = aboutData.SetAppId(qcc::String(notValidUid));
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
 
     // not valid uuid parsing error
-    status = aboutData.SetAppId("00010203-04050607-0809-0A0B-0C0D0E0F");
+    const char* notValidUid2 = "00010203-04050607-0809-0A0B-0C0D0E0F";
+    status = aboutData.SetAppId(notValidUid2);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
+    status = aboutData.SetAppId(qcc::String(notValidUid2));
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status);
 
-    status = aboutData.SetAppId("000102030405060708090a0b0c0d0e0f");
+    const char* validUid = "000102030405060708090a0b0c0d0e0f";
+    status = aboutData.SetAppId(validUid);
     EXPECT_EQ(ER_OK, status);
 
     uint8_t* appId;
@@ -326,10 +354,20 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
         EXPECT_EQ(i, appId[i]);
     }
 
+    status = aboutData.SetAppId(qcc::String(validUid));
+    EXPECT_EQ(ER_OK, status);
+    qcc::String stringAppId;
+    status = aboutData.GetAppId(stringAppId);
+    ASSERT_EQ(16u, stringAppId.size());
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, stringAppId.c_str()[i]);
+    }
+
     AboutData aboutData2("en");
 
     //use capital hex digits
-    status = aboutData2.SetAppId("000102030405060708090A0B0C0D0E0F");
+    const char* capitalHex = "000102030405060708090A0B0C0D0E0F";
+    status = aboutData2.SetAppId(capitalHex);
     EXPECT_EQ(ER_OK, status);
 
     status = aboutData2.GetAppId(&appId, &num);
@@ -339,10 +377,21 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
         EXPECT_EQ(i, appId[i]);
     }
 
+    status = aboutData2.SetAppId(qcc::String(capitalHex));
+    EXPECT_EQ(ER_OK, status);
+
+    status = aboutData2.GetAppId(stringAppId);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_EQ(16u, stringAppId.size());
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, stringAppId.c_str()[i]);
+    }
+
     AboutData aboutData3("en");
 
     //use capital hex digits UUID as per RFC 4122
-    status = aboutData3.SetAppId("00010203-0405-0607-0809-0A0B0C0D0E0F");
+    const char* capitalHexRfc = "00010203-0405-0607-0809-0A0B0C0D0E0F";
+    status = aboutData3.SetAppId(capitalHexRfc);
     EXPECT_EQ(ER_OK, status);
 
     status = aboutData3.GetAppId(&appId, &num);
@@ -352,10 +401,21 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
         EXPECT_EQ(i, appId[i]);
     }
 
+    status = aboutData3.SetAppId(qcc::String(capitalHexRfc));
+    EXPECT_EQ(ER_OK, status);
+
+    status = aboutData3.GetAppId(stringAppId);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_EQ(16u, stringAppId.size());
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, stringAppId.c_str()[i]);
+    }
+
     AboutData aboutData4("en");
 
     //use lowercase hex digits UUID as per RFC 4122
-    status = aboutData4.SetAppId("00010203-0405-0607-0809-0a0b0c0d0e0f");
+    const char* lowercaseHexRfc = "00010203-0405-0607-0809-0a0b0c0d0e0f";
+    status = aboutData4.SetAppId(lowercaseHexRfc);
     EXPECT_EQ(ER_OK, status);
 
     status = aboutData4.GetAppId(&appId, &num);
@@ -363,6 +423,16 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     ASSERT_EQ(16u, num);
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(i, appId[i]);
+    }
+
+    status = aboutData4.SetAppId(qcc::String(lowercaseHexRfc));
+    EXPECT_EQ(ER_OK, status);
+
+    status = aboutData4.GetAppId(stringAppId);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_EQ(16u, stringAppId.size());
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, stringAppId.c_str()[i]);
     }
 }
 
@@ -394,6 +464,52 @@ TEST(AboutDataTest, SetDeviceName) {
     EXPECT_STREQ("dispositivo", deviceName);
 }
 
+TEST(AboutDataTest, GetDeviceNameString_nameSetAndThenChanged_retrievedNameDoesNotChange) {
+    AboutData aboutData("en");
+
+    // 1. Set the device name.
+    qcc::String oldName = "OldName";
+    QStatus status = aboutData.SetDeviceName(oldName);
+    EXPECT_EQ(ER_OK, status);
+    qcc::String stringDeviceName;
+
+    // 2. Use both the qcc::String and char* accessors to get the device name.
+    status = aboutData.GetDeviceName(stringDeviceName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(oldName, stringDeviceName);
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ(oldName.c_str(), deviceName);
+
+    // 3. Change the device name.
+    qcc::String newName = "NewName";
+    status = aboutData.SetDeviceName(newName);
+    EXPECT_EQ(ER_OK, status);
+
+    // 4. Make sure that the char* name changed, as it is only a pointer to the changed data.
+    //    The qcc::String name does not change since it is a copy.
+    EXPECT_EQ(oldName, stringDeviceName);
+    EXPECT_STREQ(newName.c_str(), deviceName);
+}
+
+TEST(AboutDataTest, SetDeviceNameString_nameSetForTwoLanguages_setNamesReturnedByGet) {
+    AboutData aboutData("en");
+
+    QStatus status = aboutData.SetDeviceName(qcc::String("Device"));
+    EXPECT_EQ(ER_OK, status);
+    qcc::String stringDeviceName;
+    status = aboutData.GetDeviceName(stringDeviceName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Device", stringDeviceName.c_str());
+
+    status = aboutData.SetDeviceName(qcc::String("dispositivo"), qcc::String("es"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.GetDeviceName(stringDeviceName, qcc::String("es"));
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("dispositivo", stringDeviceName.c_str());
+}
+
 TEST(AboutDataTest, SetDeviceId) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -405,6 +521,20 @@ TEST(AboutDataTest, SetDeviceId) {
     status = aboutData.GetDeviceId(&deviceId);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("avec-awe1213-1234559xvc123", deviceId);
+}
+
+TEST(AboutDataTest, SetDeviceIdString_idSet_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String setDeviceId("avec-awe1213-1234559xvc123");
+    status = aboutData.SetDeviceId(setDeviceId);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedDeviceId;
+    status = aboutData.GetDeviceId(retrievedDeviceId);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(setDeviceId, retrievedDeviceId);
 }
 
 TEST(AboutDataTest, SetAppName) {
@@ -427,6 +557,28 @@ TEST(AboutDataTest, SetAppName) {
     EXPECT_STREQ("aplicacion", appName);
 }
 
+TEST(AboutDataTest, SetAppNameString_nameSetForTwoLanguages_setNamesReturnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String englishName = "Application";
+    status = aboutData.SetAppName(englishName);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedName;
+    status = aboutData.GetAppName(retrievedName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(englishName, retrievedName);
+
+    qcc::String spanishName = "aplicacion";
+    status = aboutData.SetAppName(spanishName, "es");
+    EXPECT_EQ(ER_OK, status);
+
+    status = aboutData.GetAppName(retrievedName, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(spanishName, retrievedName);
+}
+
 TEST(AboutDataTest, SetManufacturer) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -447,6 +599,28 @@ TEST(AboutDataTest, SetManufacturer) {
     EXPECT_STREQ("manufactura", manufacturer);
 }
 
+TEST(AboutDataTest, SetManufacturerString_manufacturerSetForTwoLanguages_setNamesReturnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String englishManufacturer = "Manufacturer";
+    status = aboutData.SetManufacturer(englishManufacturer);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedManufacturer;
+    status = aboutData.GetManufacturer(retrievedManufacturer);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(englishManufacturer, retrievedManufacturer);
+
+    qcc::String spanishManufacturer = "manufactura";
+    status = aboutData.SetManufacturer(spanishManufacturer, "es");
+    EXPECT_EQ(ER_OK, status);
+
+    status = aboutData.GetManufacturer(retrievedManufacturer, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(spanishManufacturer, retrievedManufacturer);
+}
+
 TEST(AboutDataTest, SetModelNumber) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -458,6 +632,20 @@ TEST(AboutDataTest, SetModelNumber) {
     status = aboutData.GetModelNumber(&modelNumber);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("xBnc345", modelNumber);
+}
+
+TEST(AboutDataTest, SetModelNumberString_numberSet_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String setModelNumber = "xBnc345";
+    status = aboutData.SetModelNumber(setModelNumber);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedModelNumber;
+    status = aboutData.GetModelNumber(retrievedModelNumber);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(setModelNumber, retrievedModelNumber);
 }
 
 TEST(AboutDataTest, SetSupportedLanguage)
@@ -489,6 +677,30 @@ TEST(AboutDataTest, SetSupportedLanguage)
     EXPECT_STREQ("es", languages[1]);
     delete [] languages;
     languages = NULL;
+}
+
+TEST(AboutDataTest, GetSupportedLanguagesSet_onlyDefaultLanguageAvailable_returned)
+{
+    AboutData aboutData("en");
+
+    std::set<qcc::String> retrievedLanguages = aboutData.GetSupportedLanguagesSet();
+
+    EXPECT_EQ(1u, retrievedLanguages.size());
+    EXPECT_TRUE(retrievedLanguages.find("en") != retrievedLanguages.end());
+}
+
+TEST(AboutDataTest, GetSupportedLanguagesSet_newLanguageAdded_returned)
+{
+    AboutData aboutData("en");
+
+    QStatus status = aboutData.SetSupportedLanguage(qcc::String("es"));
+    EXPECT_EQ(ER_OK, status);
+
+    std::set<qcc::String> retrievedLanguages = aboutData.GetSupportedLanguagesSet();
+
+    EXPECT_EQ(2u, retrievedLanguages.size());
+    EXPECT_TRUE(retrievedLanguages.find("en") != retrievedLanguages.end());
+    EXPECT_TRUE(retrievedLanguages.find("es") != retrievedLanguages.end());
 }
 //ASACORE-910
 TEST(AboutDataTest, SetSupportedLanguage_Duplicate)
@@ -567,6 +779,28 @@ TEST(AboutDataTest, SetDescription) {
     EXPECT_STREQ("Una descripcion poetica de esta aplicacion", description);
 }
 
+TEST(AboutDataTest, SetDescriptionString_descriptionSetForTwoLanguages_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String englishDescription = "A poetic description of this application";
+    status = aboutData.SetDescription(englishDescription);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedDescription;
+    status = aboutData.GetDescription(retrievedDescription);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(englishDescription, retrievedDescription);
+
+    qcc::String spanishDescription = "Una descripcion poetica de esta aplicacion";
+    status = aboutData.SetDescription(spanishDescription, "es");
+    EXPECT_EQ(ER_OK, status);
+
+    status = aboutData.GetDescription(retrievedDescription, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(spanishDescription, retrievedDescription);
+}
+
 TEST(AboutDataTest, SetDateOfManufacture) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -581,6 +815,20 @@ TEST(AboutDataTest, SetDateOfManufacture) {
 
 }
 
+TEST(AboutDataTest, SetDateOfManufactureString_dateSet_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String setDate = "2017-08-02";
+    status = aboutData.SetDateOfManufacture(setDate);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedDate;
+    status = aboutData.GetDateOfManufacture(retrievedDate);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(setDate, retrievedDate);
+
+}
 // ASACORE-906
 TEST(AboutDataTest, DISABLED_SetDateOfManufacture_Negative) {
     QStatus status = ER_FAIL;
@@ -613,6 +861,20 @@ TEST(AboutDataTest, SetSoftwareVersion) {
     EXPECT_STREQ("0.1.2", softwareVersion);
 }
 
+TEST(AboutDataTest, SetSoftwareVersionString_versionSet_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String setVersion = "0.1.2";
+    status = aboutData.SetSoftwareVersion(setVersion);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedVersion;
+    status = aboutData.GetSoftwareVersion(retrievedVersion);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(setVersion, retrievedVersion);
+}
+
 TEST(AboutDataTest, SetHardwareVersion) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -626,6 +888,20 @@ TEST(AboutDataTest, SetHardwareVersion) {
     EXPECT_STREQ("3.2.1", hardwareVersion);
 }
 
+TEST(AboutDataTest, SetHardwareVersionString_versionSet_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String setVersion = "0.1.2";
+    status = aboutData.SetHardwareVersion(setVersion);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedVersion;
+    status = aboutData.GetHardwareVersion(retrievedVersion);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(setVersion, retrievedVersion);
+}
+
 TEST(AboutDataTest, SetSupportUrl) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -637,6 +913,20 @@ TEST(AboutDataTest, SetSupportUrl) {
     status = aboutData.GetSupportUrl(&supportUrl);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("www.example.com", supportUrl);
+}
+
+TEST(AboutDataTest, SetSupportUrlString_urlSet_returnedByGet) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    qcc::String setUrl = "www.example.com";
+    status = aboutData.SetSupportUrl(setUrl);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String retrievedUrl;
+    status = aboutData.GetSupportUrl(retrievedUrl);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_EQ(retrievedUrl, setUrl);
 }
 
 TEST(AboutDataTest, IsValid)
@@ -671,6 +961,41 @@ TEST(AboutDataTest, IsValid)
     status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status);
     status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_TRUE(aboutData.IsValid("es"));
+}
+
+TEST(AboutDataTest, IsValid_stringSettersUsedForValidData_returnsTrue)
+{
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    EXPECT_FALSE(aboutData.IsValid());
+    status = aboutData.SetAppId(qcc::String("000102030405060708090a0b0c0d0e0f"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetDeviceId(qcc::String("fakeID"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetAppName(qcc::String("Application"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetManufacturer(qcc::String("Manufacturer"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetModelNumber(qcc::String("123456"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetDescription(qcc::String("A poetic description of this application"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetSoftwareVersion(qcc::String("0.1.2"));
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_TRUE(aboutData.IsValid());
+
+    EXPECT_FALSE(aboutData.IsValid("es"));
+
+    status = aboutData.SetSupportedLanguage(qcc::String("es"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetAppName(qcc::String("aplicacion"), qcc::String("es"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetManufacturer(qcc::String("manufactura"), qcc::String("es"));
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetDescription(qcc::String("Una descripcion poetica de esta aplicacion"), qcc::String("es"));
     EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
@@ -816,6 +1141,106 @@ TEST(AboutDataTest, GetAboutData)
     char* modelNumber;
     args->Get("s", &modelNumber);
     EXPECT_STREQ("123456", modelNumber);
+}
+
+TEST(AboutDataTest, GetAboutData_stringSettersUsed_allDataRetrieved)
+{
+    AboutData aboutData("en");
+
+    qcc::String appId = "000102030405060708090a0b0c0d0e0f";
+    EXPECT_EQ(ER_OK, aboutData.SetAppId(appId));
+    qcc::String deviceId = "fakeId";
+    EXPECT_EQ(ER_OK, aboutData.SetDeviceId(deviceId));
+    qcc::String englishAppName = "Application";
+    EXPECT_EQ(ER_OK, aboutData.SetAppName(englishAppName));
+    qcc::String englishManufacturer = "Manufacturer";
+    EXPECT_EQ(ER_OK, aboutData.SetManufacturer(englishManufacturer));
+    qcc::String modelNumber = "123456";
+    EXPECT_EQ(ER_OK, aboutData.SetModelNumber(modelNumber));
+    qcc::String englishDescription = "A poetic description of this application";
+    EXPECT_EQ(ER_OK, aboutData.SetDescription(englishDescription));
+    qcc::String softwareVersion = "0.1.2";
+    EXPECT_EQ(ER_OK, aboutData.SetSoftwareVersion(softwareVersion));
+
+    EXPECT_TRUE(aboutData.IsValid());
+
+    EXPECT_EQ(ER_OK, aboutData.SetSupportedLanguage(qcc::String("es")));
+    qcc::String spanishAppName = "aplicacion";
+    EXPECT_EQ(ER_OK, aboutData.SetAppName(spanishAppName, "es"));
+    qcc::String spanishManufacturer = "manufactura";
+    EXPECT_EQ(ER_OK, aboutData.SetManufacturer(spanishManufacturer, "es"));
+    qcc::String spanishDescription = "Una descripcion poetica de esta aplicacion";
+    EXPECT_EQ(ER_OK, aboutData.SetDescription(spanishDescription, "es"));
+
+    EXPECT_TRUE(aboutData.IsValid("es"));
+
+    MsgArg englishAboutArg;
+    EXPECT_EQ(ER_OK, aboutData.GetAboutData(&englishAboutArg));
+
+    MsgArg* args;
+    englishAboutArg.GetElement("{sv}", AboutData::APP_ID, &args);
+    int8_t* appIdOut;
+    size_t appIdNum;
+    args->Get("ay", &appIdNum, &appIdOut);
+    ASSERT_EQ(16u, appIdNum);
+    for (size_t i = 0; i < appIdNum; ++i) {
+        EXPECT_EQ(i, appIdOut[i]);
+    }
+
+    englishAboutArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &args);
+    char* defaultLanguage;
+    args->Get("s", &defaultLanguage);
+    EXPECT_STREQ("en", defaultLanguage);
+
+    englishAboutArg.GetElement("{sv}", AboutData::DEVICE_ID, &args);
+    char* retrievedDeviceId;
+    args->Get("s", &retrievedDeviceId);
+    EXPECT_STREQ(deviceId.c_str(), retrievedDeviceId);
+
+    englishAboutArg.GetElement("{sv}", AboutData::APP_NAME, &args);
+    char* retrievedAppName;
+    args->Get("s", &retrievedAppName);
+    EXPECT_STREQ(englishAppName.c_str(), retrievedAppName);
+
+    englishAboutArg.GetElement("{sv}", AboutData::MANUFACTURER, &args);
+    char* retrievedManufacturer;
+    args->Get("s", &retrievedManufacturer);
+    EXPECT_STREQ(englishManufacturer.c_str(), retrievedManufacturer);
+
+    englishAboutArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &args);
+    char* retrievedModelNumber;
+    args->Get("s", &retrievedModelNumber);
+    EXPECT_STREQ(modelNumber.c_str(), retrievedModelNumber);
+
+    MsgArg spanishAboutArg;
+    EXPECT_EQ(ER_OK, aboutData.GetAboutData(&spanishAboutArg, "es"));
+
+    spanishAboutArg.GetElement("{sv}", AboutData::APP_ID, &args);
+    args->Get("ay", &appIdNum, &appIdOut);
+    ASSERT_EQ(16u, appIdNum);
+    for (size_t i = 0; i < appIdNum; ++i) {
+        EXPECT_EQ(i, appIdOut[i]);
+    }
+
+    spanishAboutArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &args);
+    args->Get("s", &defaultLanguage);
+    EXPECT_STREQ("en", defaultLanguage);
+
+    spanishAboutArg.GetElement("{sv}", AboutData::DEVICE_ID, &args);
+    args->Get("s", &retrievedDeviceId);
+    EXPECT_STREQ(deviceId.c_str(), retrievedDeviceId);
+
+    spanishAboutArg.GetElement("{sv}", AboutData::APP_NAME, &args);
+    args->Get("s", &retrievedAppName);
+    EXPECT_STREQ(spanishAppName.c_str(), retrievedAppName);
+
+    spanishAboutArg.GetElement("{sv}", AboutData::MANUFACTURER, &args);
+    args->Get("s", &retrievedManufacturer);
+    EXPECT_STREQ(spanishManufacturer.c_str(), retrievedManufacturer);
+
+    spanishAboutArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &args);
+    args->Get("s", &retrievedModelNumber);
+    EXPECT_STREQ(modelNumber.c_str(), retrievedModelNumber);
 }
 
 TEST(AboutDataTest, GetMsgArg_es_language)
@@ -1117,6 +1542,66 @@ TEST(AboutDataTest, GetAnnouncedAboutData)
     char* modelNumber;
     args->Get("s", &modelNumber);
     EXPECT_STREQ("123456", modelNumber);
+}
+
+TEST(AboutDataTest, GetAnnouncedAboutData_stringSettersUsed_allDataRetrieved)
+{
+    AboutData aboutData("en");
+
+    qcc::String appId = "000102030405060708090a0b0c0d0e0f";
+    EXPECT_EQ(ER_OK, aboutData.SetAppId(appId));
+    qcc::String deviceId = "fakeId";
+    EXPECT_EQ(ER_OK, aboutData.SetDeviceId(deviceId));
+    qcc::String englishAppName = "Application";
+    EXPECT_EQ(ER_OK, aboutData.SetAppName(englishAppName));
+    qcc::String englishManufacturer = "Manufacturer";
+    EXPECT_EQ(ER_OK, aboutData.SetManufacturer(englishManufacturer));
+    qcc::String modelNumber = "123456";
+    EXPECT_EQ(ER_OK, aboutData.SetModelNumber(modelNumber));
+    qcc::String englishDescription = "A poetic description of this application";
+    EXPECT_EQ(ER_OK, aboutData.SetDescription(englishDescription));
+    qcc::String softwareVersion = "0.1.2";
+    EXPECT_EQ(ER_OK, aboutData.SetSoftwareVersion(softwareVersion));
+
+    EXPECT_TRUE(aboutData.IsValid());
+
+    MsgArg aboutArg;
+    EXPECT_EQ(ER_OK, aboutData.GetAnnouncedAboutData(&aboutArg));
+
+    MsgArg* args;
+    aboutArg.GetElement("{sv}", AboutData::APP_ID, &args);
+    int8_t* appIdOut;
+    size_t appIdNum;
+    args->Get("ay", &appIdNum, &appIdOut);
+    ASSERT_EQ(16u, appIdNum);
+    for (size_t i = 0; i < appIdNum; ++i) {
+        EXPECT_EQ(i, appIdOut[i]);
+    }
+
+    aboutArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &args);
+    char* defaultLanguage;
+    args->Get("s", &defaultLanguage);
+    EXPECT_STREQ("en", defaultLanguage);
+
+    aboutArg.GetElement("{sv}", AboutData::DEVICE_ID, &args);
+    char* retrievedDeviceId;
+    args->Get("s", &retrievedDeviceId);
+    EXPECT_STREQ(deviceId.c_str(), retrievedDeviceId);
+
+    aboutArg.GetElement("{sv}", AboutData::APP_NAME, &args);
+    char* retrievedAppName;
+    args->Get("s", &retrievedAppName);
+    EXPECT_STREQ(englishAppName.c_str(), retrievedAppName);
+
+    aboutArg.GetElement("{sv}", AboutData::MANUFACTURER, &args);
+    char* retrievedManufacturer;
+    args->Get("s", &retrievedManufacturer);
+    EXPECT_STREQ(englishManufacturer.c_str(), retrievedManufacturer);
+
+    aboutArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &args);
+    char* retrievedModelNumber;
+    args->Get("s", &retrievedModelNumber);
+    EXPECT_STREQ(modelNumber.c_str(), retrievedModelNumber);
 }
 
 /*
@@ -2261,6 +2746,25 @@ TEST(AboutDataTest, caseInsensitiveLanguageTag) {
     status = aboutData.GetDeviceName(&deviceName, "eS");
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("dispositivo", deviceName);
+}
+
+TEST(AboutDataTest, GetDeviceNameString) {
+    AboutData aboutData("en");
+    QStatus status = aboutData.SetDeviceName("Device");
+    EXPECT_EQ(ER_OK, status);
+
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Device", deviceName);
+
+    qcc::String deviceNameString;
+    status = aboutData.GetDeviceName(deviceNameString, "");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Device", deviceNameString.c_str());
+
+    deviceName[1] = 'E';
+    EXPECT_STREQ("Device", deviceNameString.c_str());
 }
 
 //TEST(AboutDataTest, SetSupportUrlEmpty) {
