@@ -32,10 +32,10 @@
 
 #include <qcc/XmlElement.h>
 #include <qcc/String.h>
-#include <qcc/StringUtil.h>
 #include <qcc/StringSource.h>
 
 #include <stdio.h>
+#include <utility>
 
 #include "AboutDataInternal.h"
 
@@ -44,65 +44,93 @@ using ajn::AboutKeys;
 
 namespace ajn {
 
-AboutData::AboutData() {
+AboutData::AboutData()
+{
     InitializeFieldDetails();
 
     MsgArg arg;
     // The AllJoyn software version should always be set by default.
     arg.Set(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
-    SetField(AJ_SOFTWARE_VERSION, arg);
+    aboutDataInternal->SetField(AJ_SOFTWARE_VERSION, arg);
 
     //TODO should the constructor also set the DeviceID as well?
 }
 
-AboutData::AboutData(const char* defaultLanguage) {
+AboutData::AboutData(const char* defaultLanguage)
+{
     InitializeFieldDetails();
 
     // The user must specify a default language when creating the AboutData class
     MsgArg arg;
     arg.Set(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
-    SetField(DEFAULT_LANGUAGE, arg);
+    aboutDataInternal->SetField(DEFAULT_LANGUAGE, arg);
     // The default language should automatically be added to the list of supported languages
-    SetSupportedLanguage(defaultLanguage);
+    aboutDataInternal->SetSupportedLanguage(defaultLanguage);
     // The AllJoyn software version should always be set by default.
     arg.Set(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
-    SetField(AJ_SOFTWARE_VERSION, arg);
+    aboutDataInternal->SetField(AJ_SOFTWARE_VERSION, arg);
 
     //TODO should the constructor also set the DeviceID as well?
 }
 
-AboutData::AboutData(const MsgArg arg, const char* language) {
+AboutData::AboutData(const qcc::String& defaultLanguage)
+{
     InitializeFieldDetails();
 
-    QStatus status = CreatefromMsgArg(arg, language);
+    MsgArg arg;
+    arg.Set(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage.c_str());
+    aboutDataInternal->SetField(DEFAULT_LANGUAGE, arg);
+    // The default language should automatically be added to the list of supported languages
+    aboutDataInternal->SetSupportedLanguage(defaultLanguage.c_str());
+    // The AllJoyn software version should always be set by default.
+    arg.Set(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
+    aboutDataInternal->SetField(AJ_SOFTWARE_VERSION, arg);
+}
+
+AboutData::AboutData(const MsgArg arg, const char* language)
+{
+    InitializeFieldDetails();
+
+    QStatus status = aboutDataInternal->CreateFromMsgArg(arg, language);
     if (ER_OK != status) {
         QCC_LogError(status, ("AboutData::AboutData(MsgArg): failed to parse MsgArg."));
     }
 }
 
-AboutData::AboutData(const AboutData& src) {
+AboutData::AboutData(const MsgArg arg, const qcc::String& language)
+{
     InitializeFieldDetails();
+
+    QStatus status = aboutDataInternal->CreateFromMsgArg(arg, language.c_str());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("AboutData::AboutData(MsgArg): failed to parse MsgArg."));
+    }
+}
+
+AboutData::AboutData(const AboutData& src)
+{
+    InitializeFieldDetails();
+    src.aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     *aboutDataInternal = *(src.aboutDataInternal);
     if (src.aboutDataInternal->translator == &src.aboutDataInternal->defaultTranslator) {
         aboutDataInternal->translator = &aboutDataInternal->defaultTranslator;
     }
+    src.aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
 }
 
-AboutData& AboutData::operator=(const AboutData& src) {
+AboutData& AboutData::operator=(const AboutData& src)
+{
     if (&src == this) {
         return *this;
     }
-    delete aboutDataInternal;
-    aboutDataInternal = NULL;
-    InitializeFieldDetails();
-    *aboutDataInternal = *(src.aboutDataInternal);
-    if (src.aboutDataInternal->translator == &src.aboutDataInternal->defaultTranslator) {
-        aboutDataInternal->translator = &aboutDataInternal->defaultTranslator;
-    }
+    AboutData temp(src);
+    std::swap(aboutDataInternal, temp.aboutDataInternal);
     return *this;
 }
 
-void AboutData::InitializeFieldDetails() {
+void AboutData::InitializeFieldDetails()
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     aboutDataInternal = new AboutData::Internal();
     // FieldDetails: Required, Announced, Localized, signature
     aboutDataInternal->aboutFields[APP_ID] = FieldDetails(REQUIRED | ANNOUNCED, "ay");
@@ -120,21 +148,17 @@ void AboutData::InitializeFieldDetails() {
     aboutDataInternal->aboutFields[HARDWARE_VERSION] = FieldDetails(EMPTY_MASK, "s");
     aboutDataInternal->aboutFields[SUPPORT_URL] = FieldDetails(EMPTY_MASK, "s");
     aboutDataInternal->translator = &aboutDataInternal->defaultTranslator;
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
 }
 
 AboutData::~AboutData()
 {
     delete aboutDataInternal;
-    aboutDataInternal = NULL;
+    aboutDataInternal = nullptr;
 }
 
-bool isHexChar(char c) {
-    return ((c >= '0' && c <= '9') ||
-            (c >= 'A' && c <= 'F') ||
-            (c >= 'a' && c <= 'f'));
-}
-
-QStatus AboutData::CreateFromXml(const char* aboutDataXml) {
+QStatus AboutData::CreateFromXml(const char* aboutDataXml)
+{
     return CreateFromXml(qcc::String(aboutDataXml));
 }
 
@@ -157,6 +181,8 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
      */
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     MsgArg arg;
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         // Supported languages are implicitly added no need to look for a
         // SupportedLanguages languages tag.
@@ -168,11 +194,11 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
         if (it->first == AJ_SOFTWARE_VERSION) {
             continue;
         }
-        if (!IsFieldLocalized(it->first.c_str())) {
+        if (!aboutDataInternal->IsFieldLocalized(it->first.c_str())) {
             // if we are unable to find one of the required fields continue
             // trying to find the rest of the fields.
-            if (root->GetChild(it->first) == NULL) {
-                if (IsFieldRequired(it->first.c_str())) {
+            if (root->GetChild(it->first) == nullptr) {
+                if (aboutDataInternal->IsFieldRequired(it->first.c_str())) {
                     returnStatus = ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
                 }
                 continue;
@@ -183,7 +209,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                 // Since Languages are implicitly added we don't look for the
                 // SupportedLanguages tag.
                 if (it->first == APP_ID) {
-                    status = SetAppId(root->GetChild(it->first)->GetContent().c_str());
+                    status = aboutDataInternal->SetAppId(root->GetChild(it->first)->GetContent().c_str());
                     if (ER_OK != status) {
                         returnStatus = status;
                         continue;
@@ -191,7 +217,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                 } else {
                     QCC_ASSERT(aboutDataInternal->aboutFields[it->first].signature == "s");
                     arg.Set("s", root->GetChild(it->first)->GetContent().c_str());
-                    status = SetField(it->first.c_str(), arg);
+                    status = aboutDataInternal->SetField(it->first.c_str(), arg);
                     if (status != ER_OK) {
                         returnStatus = status;
                         continue;
@@ -199,7 +225,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                     // Make sure the DefaultLanguage is added to the list of
                     // SupportedLanguages.
                     if (it->first == DEFAULT_LANGUAGE) {
-                        status = SetSupportedLanguage(root->GetChild(it->first)->GetContent().c_str());
+                        status = aboutDataInternal->SetSupportedLanguage(root->GetChild(it->first)->GetContent().c_str());
                         if (status != ER_OK) {
                             returnStatus = status;
                             continue;
@@ -221,416 +247,331 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
      */
     std::vector<qcc::XmlElement*> elements = root->GetChildren();
     for (std::vector<qcc::XmlElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
-        if (IsFieldLocalized((*it)->GetName().c_str()) ||
+        if (aboutDataInternal->IsFieldLocalized((*it)->GetName().c_str()) ||
             (aboutDataInternal->aboutFields.find((*it)->GetName()) == aboutDataInternal->aboutFields.end())) {
             status = arg.Set("s", (*it)->GetContent().c_str());
             if (status != ER_OK) {
                 returnStatus = status;
                 continue;
             }
-            status = SetField((*it)->GetName().c_str(), arg, (*it)->GetAttribute("lang").c_str());
+            status = aboutDataInternal->SetField((*it)->GetName().c_str(), arg, (*it)->GetAttribute("lang").c_str());
             if (status != ER_OK) {
                 returnStatus = status;
                 continue;
             }
         }
     }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
 
     return returnStatus;
 }
 
 bool AboutData::IsValid(const char* language)
 {
-    if (language == nullptr) {
-        char* defaultLanguage;
-        if (GetDefaultLanguage(&defaultLanguage) != ER_OK) {
-            // No default language exists.
-            return false;
-        }
-        language = const_cast<char*>(defaultLanguage);
-    }
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    bool isValid = aboutDataInternal->IsValid(language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return isValid;
+}
 
-    /*
-     * required fields
-     * AppId
-     * DefaultLanguage
-     * DeviceId
-     * AppName
-     * Manufacture
-     * ModelNumber
-     * SupportedLanguages
-     * Description
-     * SoftwareVersion
-     * AJSoftwareVersion
-     */
-    /*
-     * This will iterate through the list of known fields in the about data.  If
-     * the field is required check to see if the field has been set. When
-     * checking localizing will be taken into account. If the language is not
-     * specified the default language is assumed.
-     */
-    typedef std::map<qcc::String, FieldDetails>::const_iterator it_aboutFields;
-    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
-        const char* fieldname = it->first.c_str();
-        if (IsFieldRequired(fieldname)) {
-            if (IsFieldLocalized(fieldname)) {
-                MsgArg* arg;
-                if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), language, fieldname, arg) != ER_OK) || (arg->typeId == ALLJOYN_INVALID)) {
-                    return false;
-                }
-            } else {
-                if (aboutDataInternal->propertyStore.find(it->first) == aboutDataInternal->propertyStore.end()) {
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
+bool AboutData::IsValid(const qcc::String& language)
+{
+    return IsValid(language.c_str());
 }
 
 QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
 {
-    QStatus status = ER_OK;
-    char* defaultLanguage = NULL;
-    MsgArg* fields;
-    size_t numFields;
-    status = arg.Get("a{sv}", &numFields, &fields);
-    if (status != ER_OK) {
-        return status;
-    }
-    if (language == NULL) {
-        MsgArg* argDefaultLang;
-        status = arg.GetElement("{sv}", DEFAULT_LANGUAGE, &argDefaultLang);
-        if (status != ER_OK) {
-            //printf("GetElement Failed");
-            return status;
-        }
-        status = argDefaultLang->Get("s", &defaultLanguage);
-        if (status != ER_OK) {
-            //printf("Get default language failed: \n%s\n %s\n", argDefaultLang->ToString().c_str());
-            return status;
-        }
-    }
-    for (size_t i = 0; (i < numFields) && (status == ER_OK); ++i) {
-        char* fieldName;
-        MsgArg* fieldValue;
-        status = fields[i].Get("{sv}", &fieldName, &fieldValue);
-        if (status != ER_OK) {
-            return status;
-        }
-        // OEM-specific field found. Add that field to the aboutDataInternal->m_aboutFields.
-        if (aboutDataInternal->aboutFields.find(fieldName) == aboutDataInternal->aboutFields.end()) {
-            aboutDataInternal->aboutFields[fieldName] = FieldDetails(LOCALIZED, fieldValue->Signature().c_str());
-        }
-        if (fieldValue->Signature() != aboutDataInternal->aboutFields[fieldName].signature) {
-            return ER_BUS_SIGNATURE_MISMATCH;
-        }
-        if (IsFieldLocalized(fieldName)) {
-            if (language != NULL) {
-                status = aboutDataInternal->translator->AddMsgArgTranslation(fieldName, fieldValue, language);
-            } else {
-                status = aboutDataInternal->translator->AddMsgArgTranslation(fieldName, fieldValue, defaultLanguage);
-            }
-        } else {
-            aboutDataInternal->propertyStore[fieldName] = *fieldValue;
-
-            // Since the GetSupportedLanguages function looks at the
-            // translator's target languages, we must set up the make sure
-            // the member is filled in.
-            if (strcmp(SUPPORTED_LANGUAGES, fieldName) == 0) {
-                size_t language_count;
-                MsgArg* languagesArg;
-                fieldValue->Get(this->GetFieldSignature(SUPPORTED_LANGUAGES), &language_count, &languagesArg);
-                for (size_t j = 0; j < language_count; ++j) {
-                    char* lang;
-                    languagesArg[j].Get("s", &lang);
-                    status = aboutDataInternal->translator->AddTargetLanguage(lang);
-                }
-            }
-        }
-    }
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->CreateFromMsgArg(arg, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
+}
+
+QStatus AboutData::CreateFromMsgArg(const MsgArg& arg, const qcc::String& language)
+{
+    return CreatefromMsgArg(arg, language.c_str());
 }
 
 QStatus AboutData::SetAppId(const uint8_t* appId, const size_t num)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), num, appId);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(APP_ID, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    if (num != 16) {
-        status = ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE;
-    }
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetAppId(appId, num);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
 QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
 {
     QStatus status;
     MsgArg* arg;
-    status = GetField(APP_ID, arg);
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    status = aboutDataInternal->GetField(APP_ID, arg);
     if (status != ER_OK) {
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
         return status;
     }
     status = arg->Get(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), num, appId);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
     return status;
 }
 
-QStatus AboutData::SetAppId(const char* appId) {
-    QStatus status = ER_OK;
-    //The number of bytes needed to make a 128-bit AppId
-    const size_t APPID_BYTE_SIZE = 16;
-    //APPID_BYTE_SIZE * 2 + 4 the number of hex characers to make a 128-bit AppId
-    // plus four for each possible '-' character from a RFC 4122 UUID. (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
-    size_t strSize = strnlen(appId, APPID_BYTE_SIZE * 2 + 4);
-    if (strSize % 2 == 0) {
-        if (strSize / 2 == APPID_BYTE_SIZE) {
-            //Check that every character is a hex char
-            for (size_t i = 0; i < strSize; ++i) {
-                if (!isHexChar(appId[i])) {
-                    return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
-                }
-            }
-            uint8_t appId_bytes[APPID_BYTE_SIZE];
-            qcc::HexStringToBytes(static_cast<const qcc::String>(appId), appId_bytes, APPID_BYTE_SIZE);
-            status = SetAppId(appId_bytes, APPID_BYTE_SIZE);
-            if (status != ER_OK) {
-                return status;
-            }
-            aboutDataInternal->propertyStore[APP_ID].Stabilize();
-        } else if (strSize / 2 == 18) {
-            // since the sting is 36 characters long we assume its a UUID as per
-            // section 3 of RFC 4122  (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
-            // The UUID according to RFC 4122 is basically a 16-byte array encoded
-            // in hexOctets with '-' characters separating parts of the string.
-            // After checking that the '-' characters are in the correct location
-            // we remove the '-' characters and pass the string without the '-'
-            // back to the SetAppId function.
+QStatus AboutData::GetAppId(qcc::String& appId) const
+{
+    QStatus status;
+    MsgArg* arg;
+    size_t num;
+    char* appIdChar;
 
-            // The four locations of the '-' character according to RFC 4122
-            size_t TIME_LOW_END = 8;               //location of fist '-' char
-            size_t TIME_MID_END = 13;              //location of second '-' char
-            size_t TIME_HIGH_AND_VERSION_END = 18; //location of third '-' char
-            size_t CLOCK_SEQ_END = 23;              // location of fourth '-' char
-            if (appId[TIME_LOW_END] != '-' ||
-                appId[TIME_MID_END] != '-' ||
-                appId[TIME_HIGH_AND_VERSION_END] != '-' ||
-                appId[CLOCK_SEQ_END] != '-') {
-                return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
-            }
-            //APPID_BYTE_SIZE * 2 + 1 number of hex characters +1 for nul
-            char hexAppId[APPID_BYTE_SIZE * 2 + 1];
-            size_t location = 0;
-            for (size_t i = 0; i < strSize; ++i) {
-                if (appId[i] != '-') {
-                    hexAppId[location] = appId[i];
-                    ++location;
-                }
-            }
-            hexAppId[location] = '\0';
-            return SetAppId(hexAppId);
-        } else {
-            return ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE;
-        }
-    } else {
-        return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    status = aboutDataInternal->GetField(APP_ID, arg);
+    if (status != ER_OK) {
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+        return status;
     }
+    status = arg->Get(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), &num, &appIdChar);
+    if (status == ER_OK) {
+        appId.assign_std(appIdChar, num);
+    }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
     return status;
 }
+
+QStatus AboutData::SetAppId(const char* appId)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetAppId(appId);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::SetAppId(const qcc::String& appId)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetAppId(appId.c_str());
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::SetDefaultLanguage(const char* defaultLanguage)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(DEFAULT_LANGUAGE, arg);
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    status = aboutDataInternal->SetField(DEFAULT_LANGUAGE, defaultLanguage);
     //The default language should automatically be added to the supported languages
-    SetSupportedLanguage(defaultLanguage);
+    aboutDataInternal->SetSupportedLanguage(defaultLanguage);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
+    return status;
+}
+
+QStatus AboutData::SetDefaultLanguage(const qcc::String& defaultLanguage)
+{
+    QStatus status = ER_OK;
+    MsgArg arg;
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    status = aboutDataInternal->SetField(DEFAULT_LANGUAGE, defaultLanguage);
+    //The default language should automatically be added to the supported languages
+    aboutDataInternal->SetSupportedLanguage(defaultLanguage.c_str());
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
     return status;
 }
 
 QStatus AboutData::GetDefaultLanguage(char** defaultLanguage) const
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(DEFAULT_LANGUAGE, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetDefaultLanguage(defaultLanguage);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetDefaultLanguage(qcc::String& defaultLanguage) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DEFAULT_LANGUAGE, defaultLanguage);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetDeviceName(const char* deviceName, const char* language)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[DEVICE_NAME].signature.c_str(), deviceName);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(DEVICE_NAME, arg, language);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DEVICE_NAME, deviceName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::SetDeviceName(const qcc::String& deviceName, const qcc::String& language)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DEVICE_NAME, deviceName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::GetDeviceName(char** deviceName, const char* language)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(DEVICE_NAME, arg, language);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[DEVICE_NAME].signature.c_str(), deviceName);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DEVICE_NAME, deviceName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetDeviceName(qcc::String& deviceName, const qcc::String& language) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DEVICE_NAME, deviceName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetDeviceId(const char* deviceId)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[DEVICE_ID].signature.c_str(), deviceId);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(DEVICE_ID, arg);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DEVICE_ID, deviceId);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus AboutData::SetDeviceId(const qcc::String& deviceId)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DEVICE_ID, deviceId);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::GetDeviceId(char** deviceId)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(DEVICE_ID, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[DEVICE_ID].signature.c_str(), deviceId);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DEVICE_ID, deviceId);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetDeviceId(qcc::String& deviceId) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DEVICE_ID, deviceId);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetAppName(const char* appName, const char* language)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[APP_NAME].signature.c_str(), appName);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(APP_NAME, arg, language);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(APP_NAME, appName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::SetAppName(const qcc::String& appName, const qcc::String& language)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(APP_NAME, appName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::GetAppName(char** appName, const char* language)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(APP_NAME, arg, language);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[APP_NAME].signature.c_str(), appName);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(APP_NAME, appName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetAppName(qcc::String& appName, const qcc::String& language) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(APP_NAME, appName, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetManufacturer(const char* manufacturer, const char* language)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(MANUFACTURER, arg, language);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(MANUFACTURER, manufacturer, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus AboutData::SetManufacturer(const qcc::String& manufacturer, const qcc::String& language)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(MANUFACTURER, manufacturer, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::GetManufacturer(char** manufacturer, const char* language)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(MANUFACTURER, arg, language);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(MANUFACTURER, manufacturer, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetManufacturer(qcc::String& manufacturer, const qcc::String& language) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(MANUFACTURER, manufacturer, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetModelNumber(const char* modelNumber)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[MODEL_NUMBER].signature.c_str(), modelNumber);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(MODEL_NUMBER, arg);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(MODEL_NUMBER, modelNumber);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus AboutData::SetModelNumber(const qcc::String& modelNumber)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(MODEL_NUMBER, modelNumber);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::GetModelNumber(char** modelNumber)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(MODEL_NUMBER, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[MODEL_NUMBER].signature.c_str(), modelNumber);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(MODEL_NUMBER, modelNumber);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetModelNumber(qcc::String& modelNumber) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(MODEL_NUMBER, modelNumber);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetSupportedLanguage(const char* language)
 {
-    //TODO add in logic to check information about the tag all of the tags must
-    //     conform to the RFC5646 there is currently nothing to make sure the
-    //     tags conform to this RFC
-    bool added;
-    QStatus status = aboutDataInternal->translator->AddTargetLanguage(language, &added);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetSupportedLanguage(language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
 
-    if (status == ER_OK) {
-        size_t supportedLangsNum = aboutDataInternal->translator->NumTargetLanguages();
-        if (!added) {
-            // Verify the language numbers in translator and about field are the same
-            size_t size = 0;
-            MsgArg* arg;
-            QStatus status = GetField(SUPPORTED_LANGUAGES, arg);
-            if (ER_OK == status) {
-                MsgArg* langs;
-                status = arg->Get(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), &size, &langs);
-                added = (size != supportedLangsNum);    // Numbers don't match. Need to update the field
-            }
-        }
-
-        if (added) {
-            // A new language has been added. Rebuild the MsgArg and update the field.
-            char** supportedLangs = new char*[supportedLangsNum];
-
-            for (size_t count = 0; count < supportedLangsNum; count++) {
-                qcc::String lang;
-                aboutDataInternal->translator->GetTargetLanguage(count, lang);
-                supportedLangs[count] = new char[lang.length() + 1];
-                strcpy(supportedLangs[count], lang.c_str());
-            }
-
-            MsgArg arg;
-            status = arg.Set(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
-            if (status == ER_OK) {
-                status = SetField(SUPPORTED_LANGUAGES, arg);
-            }
-
-            for (size_t count = 0; count < supportedLangsNum; count++) {
-                delete[](supportedLangs[count]);
-            }
-            delete[] supportedLangs;
-        }
-    }
-
+QStatus AboutData::SetSupportedLanguage(const qcc::String& language)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetSupportedLanguage(language.c_str());
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
@@ -639,12 +580,15 @@ size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
     size_t size = 0;
     MsgArg* arg = nullptr;
     MsgArg* args = nullptr;
-    QStatus status = GetField(SUPPORTED_LANGUAGES, arg);
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(SUPPORTED_LANGUAGES, arg);
     if (ER_OK == status) {
         status = arg->Get(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), &size, &args);
     }
 
     if (languageTags == nullptr) {
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
         return size;
     }
 
@@ -654,205 +598,245 @@ size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
             args[count].Get("s", &(languageTags[count]));
         }
     }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
 
     return count;
 }
 
+std::set<qcc::String> AboutData::GetSupportedLanguagesSet() const
+{
+    size_t size = 0;
+    MsgArg* arg = nullptr;
+    MsgArg* args = nullptr;
+    std::set<qcc::String> languageTags;
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(SUPPORTED_LANGUAGES, arg);
+    if (status == ER_OK) {
+        status = arg->Get(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), &size, &args);
+    }
+
+    if ((status == ER_OK) && (args != nullptr)) {
+        for (size_t count = 0; count < size; count++) {
+            char* languageTag;
+            args[count].Get("s", &languageTag);
+            languageTags.insert(qcc::String(languageTag));
+        }
+    }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
+    return languageTags;
+}
+
 QStatus AboutData::SetDescription(const char* description, const char* language)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[DESCRIPTION].signature.c_str(), description);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(DESCRIPTION, arg, language);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DESCRIPTION, description, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::SetDescription(const qcc::String& description, const qcc::String& language)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DESCRIPTION, description, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::GetDescription(char** description, const char* language)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(DESCRIPTION, arg, language);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[DESCRIPTION].signature.c_str(), description);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DESCRIPTION, description, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetDescription(qcc::String& description, const qcc::String& language) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DESCRIPTION, description, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetDateOfManufacture(const char* dateOfManufacture)
 {
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     //TODO check that the dateOfManufacture string is of the correct format YYYY-MM-DD
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[DATE_OF_MANUFACTURE].signature.c_str(), dateOfManufacture);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(DATE_OF_MANUFACTURE, arg);
+    QStatus status = aboutDataInternal->SetField(DATE_OF_MANUFACTURE, dateOfManufacture);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus AboutData::SetDateOfManufacture(const qcc::String& dateOfManufacture)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(DATE_OF_MANUFACTURE, dateOfManufacture);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::GetDateOfManufacture(char** dateOfManufacture)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(DATE_OF_MANUFACTURE, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[DATE_OF_MANUFACTURE].signature.c_str(), dateOfManufacture);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DATE_OF_MANUFACTURE, dateOfManufacture);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetDateOfManufacture(qcc::String& dateOfManufacture) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(DATE_OF_MANUFACTURE, dateOfManufacture);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetSoftwareVersion(const char* softwareVersion)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[SOFTWARE_VERSION].signature.c_str(), softwareVersion);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(SOFTWARE_VERSION, arg);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(SOFTWARE_VERSION, softwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus AboutData::SetSoftwareVersion(const qcc::String& softwareVersion)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(SOFTWARE_VERSION, softwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::GetSoftwareVersion(char** softwareVersion)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(SOFTWARE_VERSION, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[SOFTWARE_VERSION].signature.c_str(), softwareVersion);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(SOFTWARE_VERSION, softwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetSoftwareVersion(qcc::String& softwareVersion) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(SOFTWARE_VERSION, softwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::GetAJSoftwareVersion(char** ajSoftwareVersion)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(AJ_SOFTWARE_VERSION, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), ajSoftwareVersion);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(AJ_SOFTWARE_VERSION, ajSoftwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetAJSoftwareVersion(qcc::String& ajSoftwareVersion) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(AJ_SOFTWARE_VERSION, ajSoftwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetHardwareVersion(const char* hardwareVersion)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[HARDWARE_VERSION].signature.c_str(), hardwareVersion);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(HARDWARE_VERSION, arg);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(HARDWARE_VERSION, hardwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::SetHardwareVersion(const qcc::String& hardwareVersion)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(HARDWARE_VERSION, hardwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::GetHardwareVersion(char** hardwareVersion)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(HARDWARE_VERSION, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[HARDWARE_VERSION].signature.c_str(), hardwareVersion);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(HARDWARE_VERSION, hardwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::GetHardwareVersion(qcc::String& hardwareVersion) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(HARDWARE_VERSION, hardwareVersion);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutData::SetSupportUrl(const char* supportUrl)
 {
-    QStatus status = ER_OK;
-    MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[SUPPORT_URL].signature.c_str(), supportUrl);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(SUPPORT_URL, arg);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(SUPPORT_URL, supportUrl);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus AboutData::SetSupportUrl(const qcc::String& supportUrl)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(SUPPORT_URL, supportUrl);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 QStatus AboutData::GetSupportUrl(char** supportUrl)
 {
-    QStatus status;
-    MsgArg* arg;
-    status = GetField(SUPPORT_URL, arg);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = arg->Get(aboutDataInternal->aboutFields[SUPPORT_URL].signature.c_str(), supportUrl);
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(SUPPORT_URL, supportUrl);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
-QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* language) {
-    QStatus status = ER_OK;
-    // The user is adding an OEM-specific field.
-    // At this time OEM-specific fields are added as
-    //    not required
-    //    not announced
-    //    if the field is a string it can be localized not localized otherwise
-    if (aboutDataInternal->aboutFields.find(name) == aboutDataInternal->aboutFields.end()) {
-        if (value.Signature() == "s") {
-            aboutDataInternal->aboutFields[name] = FieldDetails(LOCALIZED, value.Signature().c_str());
-        } else {
-            aboutDataInternal->aboutFields[name] = FieldDetails(EMPTY_MASK, value.Signature().c_str());
-        }
-    }
-    if (IsFieldLocalized(name)) {
-        if (language == NULL || strcmp(language, "") == 0) {
-            std::map<qcc::String, MsgArg>::iterator it = aboutDataInternal->propertyStore.find(DEFAULT_LANGUAGE);
-            if (it == aboutDataInternal->propertyStore.end()) {
-                return ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED;
-            }
-            char* defaultLanguage;
-            status = it->second.Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
-            if (status != ER_OK) {
-                return status;
-            }
-            aboutDataInternal->translator->AddMsgArgTranslation(name, &value, defaultLanguage);
-        } else {
-            aboutDataInternal->translator->AddMsgArgTranslation(name, &value, language);
-
-            // Implicitly add all language tags to the supported languages.
-            status = SetSupportedLanguage(language);
-            if (status != ER_OK) {
-                return status;
-            }
-        }
-    } else {
-        aboutDataInternal->propertyStore[name] = value;
-    }
+QStatus AboutData::GetSupportUrl(qcc::String& supportUrl) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(SUPPORT_URL, supportUrl);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
+}
+
+QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* language)
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->SetField(name, value, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus AboutData::SetField(const qcc::String& name, ajn::MsgArg value, const qcc::String& language)
+{
+    return SetField(name.c_str(), value, language.c_str());
 }
 
 QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* language) const
 {
-    QStatus status = ER_OK;
-    if (!IsFieldLocalized(name)) {
-        value = &(aboutDataInternal->propertyStore[name]);
-    } else {
-        if (language == NULL || strcmp(language, "") == 0) {
-            char* defaultLanguage;
-            status = aboutDataInternal->propertyStore[DEFAULT_LANGUAGE].Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
-            if (status != ER_OK) {
-                return status;
-            }
-            status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, name, value);
-        } else {
-            status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), language, name, value);
-        }
-    }
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    QStatus status = aboutDataInternal->GetField(name, value, language);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return status;
+}
+
+QStatus AboutData::GetField(const qcc::String& name, ajn::MsgArg*& value, const qcc::String& language) const
+{
+    return GetField(name.c_str(), value, language.c_str());
 }
 
 size_t AboutData::GetFields(const char** fields, size_t num_fields) const
 {
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     size_t numLocalizedFields = aboutDataInternal->defaultTranslator.NumFields();
-    if (fields == NULL) {
+    if (fields == nullptr) {
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
         return (aboutDataInternal->propertyStore.size() + numLocalizedFields);
     }
     size_t field_count = 0;
@@ -864,25 +848,46 @@ size_t AboutData::GetFields(const char** fields, size_t num_fields) const
         ++field_count;
     }
 
-    qcc::String text;
     for (size_t index = 0; index < numLocalizedFields; index++) {
         fields[field_count] = aboutDataInternal->defaultTranslator.GetFieldId(index);
         ++field_count;
     }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     return field_count;
+}
+
+std::set<qcc::String> AboutData::GetFieldsSet() const
+{
+    std::set<qcc::String> fields;
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    for (auto const& itP : aboutDataInternal->propertyStore) {
+        fields.insert(itP.first);
+    }
+
+    size_t numLocalizedFields = aboutDataInternal->defaultTranslator.NumFields();
+    for (size_t index = 0; index < numLocalizedFields; index++) {
+        fields.insert(aboutDataInternal->defaultTranslator.GetFieldId(index));
+    }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
+    return fields;
 }
 
 QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 {
     QStatus status = ER_OK;
-    if (!IsValid()) {
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    if (!IsValid(nullptr)) {
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
         return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
     }
 
-    char* defaultLanguage = NULL;
-    GetDefaultLanguage(&defaultLanguage);
+    char* defaultLanguage = nullptr;
+    aboutDataInternal->GetDefaultLanguage(&defaultLanguage);
     // A default language must exist or IsValid would have been false above.
-    QCC_ASSERT(defaultLanguage != NULL);
+    QCC_ASSERT(defaultLanguage != nullptr);
 
     qcc::String defaultLang(defaultLanguage);
     qcc::String bestLanguage;
@@ -890,16 +895,16 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 
     // At least a default language must exist or IsValid would have been
     // false above.
-    QCC_ASSERT(bestLanguage.c_str() != NULL);
+    QCC_ASSERT(bestLanguage.c_str() != nullptr);
 
     size_t dictionarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         const char* fieldname = it->first.c_str();
-        if (IsFieldRequired(fieldname)) {
+        if (aboutDataInternal->IsFieldRequired(fieldname)) {
             dictionarySize++;
         } else {
-            if (IsFieldLocalized(fieldname)) {
+            if (aboutDataInternal->IsFieldLocalized(fieldname)) {
                 MsgArg* arg;
                 if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), bestLanguage.c_str(), fieldname, arg) == ER_OK) && (arg->typeId == ALLJOYN_STRING)) {
                     dictionarySize++;
@@ -917,8 +922,8 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         const char* fieldname = it->first.c_str();
-        if (IsFieldRequired(fieldname)) {
-            if (IsFieldLocalized(fieldname)) {
+        if (aboutDataInternal->IsFieldRequired(fieldname)) {
+            if (aboutDataInternal->IsFieldLocalized(fieldname)) {
                 MsgArg* arg;
                 status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), bestLanguage.c_str(), fieldname, arg);
                 if (status == ER_OK) {
@@ -928,7 +933,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
                 status = aboutDictionary[count++].Set("{sv}", fieldname, &aboutDataInternal->propertyStore[it->first]);
             }
         } else {
-            if (IsFieldLocalized(fieldname)) {
+            if (aboutDataInternal->IsFieldLocalized(fieldname)) {
                 MsgArg* arg;
                 if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), bestLanguage.c_str(), fieldname, arg) == ER_OK) &&
                     (arg->typeId == ALLJOYN_STRING)) {
@@ -941,10 +946,12 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
             }
         }
         if (status != ER_OK) {
+            aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
             delete [] aboutDictionary;
             return status;
         }
     }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
     QCC_ASSERT(dictionarySize == count);
 
     msgArg->Set("a{sv}", dictionarySize, aboutDictionary);
@@ -953,28 +960,37 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
     return status;
 }
 
+QStatus AboutData::GetAboutData(MsgArg* msgArg, const qcc::String& language)
+{
+    return GetAboutData(msgArg, language.c_str());
+}
+
 QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
 {
     QStatus status;
-    if (!IsValid()) {
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    if (!aboutDataInternal->IsValid()) {
         // TODO put in an ER code that is more meaningful
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
         return ER_FAIL;
     }
     char* defaultLanguage;
-    status = GetDefaultLanguage(&defaultLanguage);
+    status = aboutDataInternal->GetDefaultLanguage(&defaultLanguage);
     //QStatus status = m_defaultLanguage.Get(aboutDataInternal->m_aboutFields[DEFAULT_LANGUAGE].dataType.c_str(), &defaultLanguage);
     if (status != ER_OK) {
+        aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
         return status;
     }
 
     size_t dictionarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
-        if (IsFieldAnnounced(it->first.c_str())) {
-            if (IsFieldRequired(it->first.c_str())) {
+        if (aboutDataInternal->IsFieldAnnounced(it->first.c_str())) {
+            if (aboutDataInternal->IsFieldRequired(it->first.c_str())) {
                 dictionarySize++;
             } else {
-                if (IsFieldLocalized(it->first.c_str())) {
+                if (aboutDataInternal->IsFieldLocalized(it->first.c_str())) {
                     MsgArg* arg;
                     if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, it->first.c_str(), arg) == ER_OK) && (arg->typeId == ALLJOYN_STRING)) {
                         dictionarySize++;
@@ -991,9 +1007,9 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
     MsgArg* announceDictionary = new MsgArg[dictionarySize];
     size_t count = 0;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
-        if (IsFieldAnnounced(it->first.c_str())) {
-            if (IsFieldRequired(it->first.c_str())) {
-                if (IsFieldLocalized(it->first.c_str())) {
+        if (aboutDataInternal->IsFieldAnnounced(it->first.c_str())) {
+            if (aboutDataInternal->IsFieldRequired(it->first.c_str())) {
+                if (aboutDataInternal->IsFieldLocalized(it->first.c_str())) {
                     MsgArg* arg;
                     status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, it->first.c_str(), arg);
                     if (status == ER_OK) {
@@ -1003,7 +1019,7 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
                     status = announceDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
                 }
             } else {
-                if (IsFieldLocalized(it->first.c_str())) {
+                if (aboutDataInternal->IsFieldLocalized(it->first.c_str())) {
                     MsgArg* arg;
                     if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, it->first.c_str(), arg) == ER_OK) &&
                         (arg->typeId == ALLJOYN_STRING)) {
@@ -1016,11 +1032,13 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
                 }
             }
             if (status != ER_OK) {
+                aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
                 delete [] announceDictionary;
                 return status;
             }
         }
     }
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
 
     QCC_ASSERT(dictionarySize == count);
 
@@ -1030,51 +1048,86 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
     return status;
 }
 
-bool AboutData::IsFieldRequired(const char* fieldName) {
-    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
-        return ((aboutDataInternal->aboutFields[fieldName].fieldMask & REQUIRED) == REQUIRED);
-    }
-    return false;
-}
-bool AboutData::IsFieldAnnounced(const char* fieldName) {
-    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
-        return ((aboutDataInternal->aboutFields[fieldName].fieldMask & ANNOUNCED) == ANNOUNCED);
-    }
-    return false;
+bool AboutData::IsFieldRequired(const char* fieldName) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    bool isRequired = aboutDataInternal->IsFieldRequired(fieldName);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return isRequired;
 }
 
-bool AboutData::IsFieldLocalized(const char* fieldName) const {
-    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
-        return ((aboutDataInternal->aboutFields[fieldName].fieldMask & LOCALIZED) == LOCALIZED);
-    }
-    return false;
+bool AboutData::IsFieldRequired(const qcc::String& fieldName) const
+{
+    return IsFieldRequired(fieldName.c_str());
 }
 
-const char* AboutData::GetFieldSignature(const char* fieldName) {
-    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
-        return aboutDataInternal->aboutFields[fieldName].signature.c_str();
-    }
-    return NULL;
+bool AboutData::IsFieldAnnounced(const char* fieldName) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    bool isAnnounced = aboutDataInternal->IsFieldAnnounced(fieldName);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return isAnnounced;
+}
+
+bool AboutData::IsFieldAnnounced(const qcc::String& fieldName) const
+{
+    return IsFieldAnnounced(fieldName.c_str());
+}
+
+bool AboutData::IsFieldLocalized(const char* fieldName) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    bool isLocalized = aboutDataInternal->IsFieldLocalized(fieldName);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return isLocalized;
+}
+
+bool AboutData::IsFieldLocalized(const qcc::String& fieldName) const
+{
+    return IsFieldLocalized(fieldName.c_str());
+}
+
+const char* AboutData::GetFieldSignature(const char* fieldName) const
+{
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    const char* signature = aboutDataInternal->GetFieldSignature(fieldName);
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return signature;
+}
+
+qcc::String AboutData::GetFieldSignature(const qcc::String& fieldName) const
+{
+    return GetFieldSignature(fieldName.c_str());
 }
 
 QStatus AboutData::SetNewFieldDetails(const char* fieldName, AboutFieldMask fieldMask, const char* signature)
 {
+    QStatus status = ER_OK;
+
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     if (aboutDataInternal->aboutFields.find(fieldName) == aboutDataInternal->aboutFields.end()) {
         aboutDataInternal->aboutFields[fieldName] = FieldDetails(fieldMask, signature);
     } else {
-        return ER_ABOUT_FIELD_ALREADY_SPECIFIED;
+        status = ER_ABOUT_FIELD_ALREADY_SPECIFIED;
     }
-    return ER_OK;
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+
+    return status;
 }
 
 void AboutData::SetTranslator(Translator* translator)
 {
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
     aboutDataInternal->translator = translator;
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
 }
 
 Translator* AboutData::GetTranslator() const
 {
-    return aboutDataInternal->translator;
+    aboutDataInternalLock.Lock(MUTEX_CONTEXT);
+    Translator* translator = aboutDataInternal->translator;
+    aboutDataInternalLock.Unlock(MUTEX_CONTEXT);
+    return translator;
 }
 
 } //end namespace ajn
