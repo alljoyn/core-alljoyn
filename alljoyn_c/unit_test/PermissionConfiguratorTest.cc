@@ -161,7 +161,8 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
 
     PermissionConfiguratorTestWithSecurity() :
         PermissionConfiguratorTestWithoutSecurity(),
-        m_callbacks()
+        m_callbacks(),
+        m_listener(nullptr)
     { }
 
   protected:
@@ -180,23 +181,32 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
         m_configuratorUnderTest = alljoyn_busattachment_getpermissionconfigurator(m_appUnderTest);
     }
 
+    virtual void TearDown()
+    {
+        if (m_listener != nullptr) {
+            alljoyn_permissionconfigurationlistener_destroy(m_listener);
+        }
+        PermissionConfiguratorTestWithoutSecurity::TearDown();
+    }
+
     void PassFlagsToCallbacks(bool* policyChanged, bool* factoryResetHappened)
     {
         m_callbacksContext.factoryResetHappened = factoryResetHappened;
         m_callbacksContext.policyChanged = policyChanged;
-        alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, &m_callbacksContext);
+        m_listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, &m_callbacksContext);
         ASSERT_EQ(ER_OK, alljoyn_busattachment_enablepeersecuritywithpermissionconfigurationlistener(m_appUnderTest,
                                                                                                      NULL_AUTH_MECHANISM,
                                                                                                      nullptr,
                                                                                                      nullptr,
                                                                                                      QCC_TRUE,
-                                                                                                     listener));
+                                                                                                     m_listener));
         FlushUnwantedCallback(policyChanged);
     }
 
   private:
 
     alljoyn_permissionconfigurationlistener_callbacks m_callbacks;
+    alljoyn_permissionconfigurationlistener m_listener;
 
     struct CallbacksContext {
         bool* policyChanged;
@@ -795,6 +805,7 @@ TEST_F(PermissionConfiguratorPreClaimTest, shouldPassSignManifest)
 {
     AJ_PSTR signedManifestXmls[1];
     EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_signmanifest(m_configuratorUnderTest, m_identityCertificate, s_validAllowAllManifestTemplate, &signedManifestXmls[0]));
+    alljoyn_permissionconfigurator_manifest_destroy(signedManifestXmls[0]);
 }
 
 TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithInvalidPublicKey)

@@ -210,6 +210,8 @@ TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringUnknownLis
     CreateApplicationStateListener(&listener);
 
     EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldRegisterSuccessfullyForNewListener)
@@ -218,6 +220,8 @@ TEST_F(BusAttachmentSecurity20Test, shouldRegisterSuccessfullyForNewListener)
     CreateApplicationStateListener(&listener);
 
     EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldUnregisterSuccessfullyForSameListener)
@@ -226,8 +230,9 @@ TEST_F(BusAttachmentSecurity20Test, shouldUnregisterSuccessfullyForSameListener)
     CreateApplicationStateListener(&listener);
 
     ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
-
     EXPECT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringSameListenerTwice)
@@ -236,8 +241,9 @@ TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringSameListener
     CreateApplicationStateListener(&listener);
 
     ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
-
     EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringSameListenerTwice)
@@ -247,8 +253,9 @@ TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringSameListen
 
     ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
-
     EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldRegisterSameListenerSuccessfullyAfterUnregister)
@@ -260,6 +267,8 @@ TEST_F(BusAttachmentSecurity20Test, shouldRegisterSameListenerSuccessfullyAfterU
     ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
 
     EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldCallStateListenerAfterRegister)
@@ -272,6 +281,8 @@ TEST_F(BusAttachmentSecurity20Test, shouldCallStateListenerAfterRegister)
     ChangeApplicationState();
 
     EXPECT_TRUE(WaitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldNotCallStateListenerAfterUnregister)
@@ -285,6 +296,8 @@ TEST_F(BusAttachmentSecurity20Test, shouldNotCallStateListenerAfterUnregister)
     ChangeApplicationState();
 
     EXPECT_FALSE(WaitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
+
+    alljoyn_applicationstatelistener_destroy(listener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldCallAllStateListeners)
@@ -302,6 +315,9 @@ TEST_F(BusAttachmentSecurity20Test, shouldCallAllStateListeners)
 
     EXPECT_TRUE(WaitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
     EXPECT_TRUE(WaitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+
+    alljoyn_applicationstatelistener_destroy(firstListener);
+    alljoyn_applicationstatelistener_destroy(secondListener);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldCallOnlyOneStateListenerWhenOtherUnregistered)
@@ -320,6 +336,9 @@ TEST_F(BusAttachmentSecurity20Test, shouldCallOnlyOneStateListenerWhenOtherUnreg
 
     EXPECT_FALSE(WaitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
     EXPECT_TRUE(WaitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+
+    alljoyn_applicationstatelistener_destroy(firstListener);
+    alljoyn_applicationstatelistener_destroy(secondListener);
 }
 
 TEST(BusAttachmentTest, createinterface) {

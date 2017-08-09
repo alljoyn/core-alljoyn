@@ -1329,6 +1329,7 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetManifests)
     alljoyn_manifestarray manifestArray;
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmanifests(m_managedAppSecurityApplicationProxy, &manifestArray));
     EXPECT_EQ(1U, manifestArray.count);
+    alljoyn_securityapplicationproxy_manifestarray_cleanup(&manifestArray);
 }
 
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassResetForValidProxyAndInstalledMembership)
@@ -1445,13 +1446,14 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassRemoveMembership)
                                                                        m_certIds.ids[0].issuerPublicKey,
                                                                        nullptr,
                                                                        0U));
-
+    alljoyn_securityapplicationproxy_certificateidarray_cleanup(&m_certIds);
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipsummaries(m_managedAppSecurityApplicationProxy, &m_certIds));
     EXPECT_EQ(0U, m_certIds.count);
 }
 
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassInstallManifests)
 {
+    SecurityApplicationProxyTestHelper::DestroyCertificate(m_managedAppIdentityCertificate);
     SecurityApplicationProxyTestHelper::CreateIdentityCert(m_securityManager, m_managedApp, &m_managedAppIdentityCertificate, false);
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_signmanifest(s_validManagedAppManifestTemplate,
                                                                    m_managedAppIdentityCertificate,

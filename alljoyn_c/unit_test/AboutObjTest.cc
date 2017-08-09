@@ -177,13 +177,16 @@ static about_obj_test_about_listener_2* create_about_obj_test_about_listener_2()
 
 static void destroy_about_obj_test_about_listener_2(about_obj_test_about_listener_2* listener)
 {
-    if (listener->busName) {
-        free(listener->busName);
-        listener->busName = NULL;
-    }
-    if (listener->listener) {
-        alljoyn_aboutlistener_destroy(listener->listener);
-        listener = NULL;
+    if (listener != NULL) {
+        if (listener->busName) {
+            free(listener->busName);
+            listener->busName = NULL;
+        }
+        if (listener->listener) {
+            alljoyn_aboutlistener_destroy(listener->listener);
+            listener->listener = NULL;
+        }
+        free(listener);
     }
 }
 
@@ -244,6 +247,7 @@ class AboutObjTest : public testing::Test {
 
         listener = alljoyn_sessionportlistener_create(&callbacks, NULL);
         status = alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
+        alljoyn_sessionopts_destroy(opts);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -351,6 +355,7 @@ TEST_F(AboutObjTest, AnnounceMissingRequiredField) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_aboutdata_destroy(badAboutData);
+    alljoyn_aboutobj_destroy(aboutObj);
 }
 
 TEST_F(AboutObjTest, SetAnnounceFlag) {

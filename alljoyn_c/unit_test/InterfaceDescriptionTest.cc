@@ -1988,6 +1988,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlan
     ASSERT_NE(nullptr, testIntf);
 
     EXPECT_EQ(0u, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage__NoDescriptionInRequestedLanguage__Returns0)
@@ -2003,6 +2005,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlan
     alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "German Description", "de");
 
     EXPECT_EQ(0u, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage_DescriptionsInMultipleLanguages_ReturnsRequested)
@@ -2028,6 +2032,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlan
     EXPECT_STREQ(FRENCH_DESCRIPTION, description);
     EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "es"));
     EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage_ExtendedLanguagesRequested_ReturnsMatchingDescriptions)
@@ -2060,6 +2066,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlan
     EXPECT_STREQ(GERMAN_LATIN_DESCRIPTION, description);
     EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "de-Deva-DE"));
     EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescriptionforlanguage__NoDescriptionSet__Returns0)
@@ -2076,6 +2084,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescripti
     ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(testIntf, PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
 
     EXPECT_EQ(0u, alljoyn_interfacedescription_getpropertydescriptionforlanguage(testIntf, PROPERTY_NAME, description, SIZE, "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setpropertydescriptionforlanguage__NoPropertySet__ReturnsNoSuchProperty)
@@ -2089,6 +2099,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setpropertydescripti
 
     EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
                   testIntf, PROPERTY_NAME, "Description", "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescriptionforlanguage__DescriptionsInMultipleLanguages__ReturnsRequested)
@@ -2123,6 +2135,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescripti
     EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
                   testIntf, PROPERTY_NAME, description, SIZE, "es"));
     EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescriptionforlanguage__MultipleProperties__ReturnsRequested)
@@ -2167,6 +2181,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescripti
     EXPECT_EQ(sizeof(SECOND_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
                   testIntf, SECOND_PROPERTY_NAME, description, SIZE, "fr"));
     EXPECT_STREQ(SECOND_FRENCH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__NoDescriptionSet__Returns0)
@@ -2184,6 +2200,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescription
 
     EXPECT_EQ(0u, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
                   testIntf, MEMBER_NAME, description, SIZE, "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setmemberdescriptionforlanguage__NoMemberAdded__ReturnsNoSuchMember)
@@ -2197,6 +2215,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setmemberdescription
 
     EXPECT_EQ(ER_BUS_INTERFACE_NO_SUCH_MEMBER, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
                   testIntf, MEMBER_NAME, "Description", "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__DescriptionsInMultipleLanguages_ReturnsRequested)
@@ -2231,6 +2251,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescription
     EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
                   testIntf, MEMBER_NAME, description, SIZE, "es"));
     EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__MultipleMembers__ReturnsRequested)
@@ -2273,6 +2295,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescription
     EXPECT_EQ(sizeof(SECOND_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
                   testIntf, SECOND_MEMBER_NAME, description, SIZE, "fr"));
     EXPECT_STREQ(SECOND_FRENCH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getargdescriptionforlanguage__NoDescriptionSet__Returns0)
@@ -2290,6 +2314,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getargdescriptionfor
 
     EXPECT_EQ(0u, alljoyn_interfacedescription_getargdescriptionforlanguage(
                   testIntf, MEMBER_NAME, "inStr", description, SIZE, "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setargdescriptionforlanguage__NoMemberAdded__ReturnsNoSuchMember)
@@ -2303,6 +2329,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setargdescriptionfor
 
     EXPECT_EQ(ER_BUS_INTERFACE_NO_SUCH_MEMBER, alljoyn_interfacedescription_setargdescriptionforlanguage(
                   testIntf, MEMBER_NAME, "arg", "Description", "en"));
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getargdescriptionforlanguage__DescriptionsInMultipleLanguages__ReturnsRequested)
@@ -2338,6 +2366,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getargdescriptionfor
     EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
                   testIntf, MEMBER_NAME, ARG_NAME, description, SIZE, "es"));
     EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__MultipleArgs__ReturnsRequested)
@@ -2380,6 +2410,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescription
     EXPECT_EQ(sizeof(SECOND_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
                   testIntf, MEMBER_NAME, SECOND_ARG_NAME, description, SIZE, "fr"));
     EXPECT_STREQ(SECOND_FRENCH_DESCRIPTION, description);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__NoDescriptionSet__ReturnsZeroSize)
@@ -2393,6 +2425,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     size_t returnedSize = alljoyn_interfacedescription_getdescriptionlanguages2(
         testIntf, nullptr, 0);
     EXPECT_EQ(0u, returnedSize);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__DescriptionsInDifferentLanguages__ReturnsTotalSize)
@@ -2423,6 +2457,8 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     size_t expectedSize = strlen("en-US") + 1 + strlen("en") + 1 + strlen("de") + 1 + strlen("fr") + 1;
     size_t returnedSize = alljoyn_interfacedescription_getdescriptionlanguages2(testIntf, nullptr, 0);
     EXPECT_EQ(expectedSize, returnedSize);
+
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__InterfaceDescriptionSet__ProvidesItsLanguage)
@@ -2448,6 +2484,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     EXPECT_STREQ(expectedLanguages, returnedLanguages);
 
     free(returnedLanguages);
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__PropertyDescriptionSet__ProvidesItsLanguage)
@@ -2477,6 +2514,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     EXPECT_STREQ(expectedLanguages, returnedLanguages);
 
     free(returnedLanguages);
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__MemberDescriptionSet__ProvidesItsLanguage)
@@ -2506,6 +2544,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     EXPECT_STREQ(expectedLanguages, returnedLanguages);
 
     free(returnedLanguages);
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__ArgumentDescriptionSet__ProvidesItsLanguage)
@@ -2535,6 +2574,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     EXPECT_STREQ(expectedLanguages, returnedLanguages);
 
     free(returnedLanguages);
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__DescriptionsInDifferentLanguages__ReturnsAllLanguages)
@@ -2575,6 +2615,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     EXPECT_STREQ(expectedLanguages, returnedLanguages);
 
     free(returnedLanguages);
+    alljoyn_busattachment_destroy(bus);
 }
 
 TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__MaximumSizeSmallerThanTagsList__OmitsTheLastTag)
@@ -2617,4 +2658,5 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlangua
     EXPECT_STREQ(expectedLanguages, returnedLanguages);
 
     free(returnedLanguages);
+    alljoyn_busattachment_destroy(bus);
 }

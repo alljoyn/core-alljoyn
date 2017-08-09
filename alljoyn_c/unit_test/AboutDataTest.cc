@@ -1122,6 +1122,8 @@ TEST(AboutDataTest, GetMsgArgWithOEMSpecificField) {
     status = alljoyn_aboutdata_setfield(aboutData, "SupportNumber", arg, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    alljoyn_msgarg_destroy(arg);
+
     alljoyn_msgarg aboutArg = alljoyn_msgarg_create();
     status = alljoyn_aboutdata_getaboutdata(aboutData, aboutArg, "en");
 
@@ -1223,6 +1225,8 @@ TEST(AboutDataTest, InitUsingMsgArg) {
 
     status = alljoyn_aboutdata_setfield(aboutData, "SupportNumber", arg, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg_destroy(arg);
 
     alljoyn_msgarg aboutArg = alljoyn_msgarg_create();
     status = alljoyn_aboutdata_getaboutdata(aboutData, aboutArg, "en");

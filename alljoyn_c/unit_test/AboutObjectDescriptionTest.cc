@@ -135,6 +135,7 @@ TEST(AboutObjectDescriptionTest, Construct) {
     status = alljoyn_abouticon_seturl(aicon, "image/png", "http://www.example.com");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_abouticonobj aboutIconObj = alljoyn_abouticonobj_create(bus, aicon);
+    alljoyn_abouticon_destroy(aicon);
 
     const qcc::String interfaceQcc = "<node>"
                                      "<interface name='org.alljoyn.test'>"
@@ -228,6 +229,7 @@ TEST(AboutObjectDescriptionTest, GetMsgArg) {
     alljoyn_msgarg argObj = alljoyn_msgarg_create();
     ((BusAttachment*)bus)->GetInternal().GetAnnouncedObjectDescription(*((MsgArg*)argObj));
     alljoyn_aboutobjectdescription aod = alljoyn_aboutobjectdescription_create_full(argObj);
+    alljoyn_msgarg_destroy(argObj);
 
     alljoyn_msgarg arg = alljoyn_msgarg_create();
     alljoyn_aboutobjectdescription_getmsgarg(aod, arg);

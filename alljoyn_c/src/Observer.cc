@@ -181,6 +181,13 @@ ObserverC::ObserverC(alljoyn_busattachment _cbus,
 
 ObserverC::~ObserverC()
 {
+    proxiesLock.Lock(MUTEX_CONTEXT);
+    ObjectMap::iterator it = proxies.begin();
+    while (it != proxies.end()) {
+        alljoyn_proxybusobject_ref_decref(it->second);
+        it = proxies.erase(it);
+    }
+    proxiesLock.Unlock(MUTEX_CONTEXT);
 }
 
 void ObserverC::Detach()
@@ -261,6 +268,7 @@ void ObserverC::UnregisterAllListeners()
         if (it != listeners.end()) {
             ProtectedObserverListener l = *it;
             listeners.erase(it);
+            delete (*l);
         }
         it = listeners.begin();
     }
@@ -383,6 +391,13 @@ void ObserverC::ObjectDiscovered(const ObjectId& oid,
     /* insert in proxy map */
     alljoyn_proxybusobject_ref proxyref = alljoyn_proxybusobject_ref_create(proxy);
     proxiesLock.Lock(MUTEX_CONTEXT);
+    for (auto it = proxies.begin(); it != proxies.end(); ++it) {
+        if (it->first == oid) {
+            alljoyn_proxybusobject_ref_decref(it->second);
+            proxies.erase(it);
+            break;
+        }
+    }
     proxies[oid] = proxyref;
     proxiesLock.Unlock(MUTEX_CONTEXT);
 
