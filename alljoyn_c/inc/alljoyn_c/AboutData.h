@@ -196,6 +196,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setappid_fromstring(alljoyn_abou
  * AppId IS part of the Announce signal
  * AppId CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data  alljoyn_aboutdata object this call is made for
  * @param[out] appId a pointer to an array of bytes used as a globally unique ID for an application
  * @param[out] num   the size of the appId array
@@ -205,6 +209,36 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setappid_fromstring(alljoyn_abou
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getappid(alljoyn_aboutdata data,
                                                          uint8_t** appId,
                                                          size_t* num);
+
+/**
+ * Get a copy of the AppId from the About data
+ *
+ * AppId IS required
+ * AppId IS part of the Announce signal
+ * AppId CAN NOT be localized for other languages
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ * @param[out] appId a user-allocated string to store the obtained application ID
+ *                   (alljoyn_aboutdata_getappidlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of bytes to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getappidcopy(alljoyn_aboutdata data,
+                                                             char* appId,
+                                                             size_t maxLength);
+
+/**
+ * Get length of the AppId stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getappidcopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the AppId, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getappidlength(alljoyn_aboutdata data);
 
 /**
  * The given language is automatically added to the SupportedLanguage list.
@@ -227,10 +261,45 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdefaultlanguage(alljoyn_about
  * @param[in]  data            alljoyn_aboutdata object this call is made for
  * @param[out] defaultLanguage a pointer to the default language tag
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @return ER_OK on success
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdefaultlanguage(alljoyn_aboutdata data,
                                                                    char** defaultLanguage);
+
+/**
+ * Get a copy of the DefaultLanguage from the About data
+ *
+ * AppId IS required
+ * AppId IS part of the Announce signal
+ * AppId CAN NOT be localized for other languages
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ * @param[out] defaultLanguage a user-allocated string to store the obtained default langauge
+ *                             (alljoyn_aboutdata_getdefaultlanguagelength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of bytes to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdefaultlanguagecopy(alljoyn_aboutdata data,
+                                                                       char* defaultLanguage,
+                                                                       size_t maxLength);
+
+/**
+ * Get length of the default language of the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getdefaultlanguagecopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the default language, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getdefaultlanguagelength(alljoyn_aboutdata data);
+
 /**
  * Set the DeviceName to the About data
  *
@@ -260,6 +329,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdevicename(alljoyn_aboutdata 
  * DeviceName is part of the Announce signal
  * DeviceName can be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data alljoyn_aboutdata object this call is made for
  * @param[out] deviceName the deviceName found in the About data (alljoyn_aboutdata data, UTF-8 encoded string)
  * @param[in]  language the IETF language tag specified by RFC 5646
@@ -270,6 +343,43 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdevicename(alljoyn_aboutdata 
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdevicename(alljoyn_aboutdata data,
                                                               char** deviceName,
                                                               const char* language);
+
+/**
+ * Get a copy of the DeviceName from the About data
+ *
+ * DeviceName is not required
+ * DeviceName is part of the Announce signal
+ * DeviceName can be localized for other languages
+ *
+ * @param[in]  data alljoyn_aboutdata object this call is made for
+ * @param[out] deviceName a user-allocated string to store the deviceName found in the About data
+ *                        (alljoyn_aboutdata data, UTF-8 encoded string)
+ *                        (alljoyn_aboutdata_getdevicenamelength() can be called to determine the required string size).
+ * @param[in]  maxLength the maximum number of bytes to be written to the user-allocated string
+ * @param[in]  language the IETF language tag specified by RFC 5646
+ *             If language is NULL the DeviceName for the default language will be returned
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdevicenamecopy(alljoyn_aboutdata data,
+                                                                  char* deviceName,
+                                                                  size_t maxLength,
+                                                                  const char* language);
+
+/**
+ * Get length of the DeviceName stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getdevicenamecopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ * @param[in]  language the IETF language tag specified by RFC 5646
+ *             If language is NULL the length of the DeviceName for the default language will be returned
+ *
+ * @return length (in bytes) of the DeviceName, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getdevicenamelength(alljoyn_aboutdata data,
+                                                                   const char* language);
 
 /**
  * Set the DeviceId from the About data
@@ -294,6 +404,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdeviceid(alljoyn_aboutdata da
  * DeviceId IS part of the announce signal
  * DeviceId CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data     alljoyn_aboutdata object this call is made for
  * @param[out] deviceId UTF-8 string with a value generated using platform specific means
  *
@@ -301,6 +415,37 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdeviceid(alljoyn_aboutdata da
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdeviceid(alljoyn_aboutdata data,
                                                             char** deviceId);
+
+/**
+ * Get a copy of the DeviceId from the About data
+ *
+ * DeviceId IS required
+ * DeviceId IS part of the announce signal
+ * DeviceId CAN NOT be localized for other languages
+ *
+ * @param[in]  data     alljoyn_aboutdata object this call is made for
+ * @param[out] deviceId a user-allocated string to store the UTF-8 string
+ *                      with a value generated using platform specific means
+ *                      (alljoyn_aboutdata_getdeviceidlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of bytes to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdeviceidcopy(alljoyn_aboutdata data,
+                                                                char* deviceId,
+                                                                size_t maxLength);
+
+/**
+ * Get length of the DeviceId stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getdeviceidcopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the DeviceId, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getdeviceidlength(alljoyn_aboutdata data);
 
 /**
  * Set the AppName to the About data
@@ -331,6 +476,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setappname(alljoyn_aboutdata dat
  * AppName is part of the announce signal
  * AppName can be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data     alljoyn_aboutdata object this call is made for
  * @param[out] appName  the AppName found in the About data (alljoyn_aboutdata data, UTF-8 encoded string)
  * @param[in]  language the IETF language tag specified by RFC 5646
@@ -341,6 +490,43 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setappname(alljoyn_aboutdata dat
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getappname(alljoyn_aboutdata data,
                                                            char** appName,
                                                            const char* language);
+
+/**
+ * Get a copy of the AppName from the About data
+ *
+ * AppName is required
+ * AppName is part of the announce signal
+ * AppName can be localized for other languages
+ *
+ * @param[in]  data     alljoyn_aboutdata object this call is made for
+ * @param[out] appName  a user-allocated string to store the AppName found in the About data
+ *                      (alljoyn_aboutdata data, UTF-8 encoded string)
+ *                      (alljoyn_aboutdata_getappnamelength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of bytes to be written to the user-allocated string
+ * @param[in]  language the IETF language tag specified by RFC 5646
+ *                      If language is NULL the AppName for the default language will be returned.
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getappnamecopy(alljoyn_aboutdata data,
+                                                               char* appName,
+                                                               size_t maxLength,
+                                                               const char* language);
+
+/**
+ * Get length of the AppName stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getappnamecopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ * @param[in]  language the IETF language tag specified by RFC 5646
+ *             If language is NULL the length of the AppName for the default language will be returned
+ *
+ * @return length (in bytes) of the AppName, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getappnamelength(alljoyn_aboutdata data,
+                                                                const char* language);
 
 /**
  * Set the Manufacturer to the About data
@@ -371,6 +557,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setmanufacturer(alljoyn_aboutdat
  * Manufacturer is part of the announce signal
  * Manufacturer can be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data         alljoyn_aboutdata object this call is made for
  * @param[out] manufacturer the Manufacturer found in the About data (alljoyn_aboutdata data, UTF-8 encoded string)
  * @param[in]  language     the IETF language tag specified by RFC 5646
@@ -381,6 +571,43 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setmanufacturer(alljoyn_aboutdat
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getmanufacturer(alljoyn_aboutdata data,
                                                                 char** manufacturer,
                                                                 const char* language);
+
+/**
+ * Get a copy of the Manufacturer from the About data
+ *
+ * Manufacturer is required
+ * Manufacturer is part of the announce signal
+ * Manufacturer can be localized for other languages
+ *
+ * @param[in]  data         alljoyn_aboutdata object this call is made for
+ * @param[out] manufacturer a user-allocated string to store the Manufacturer found in the About data
+ *                          (alljoyn_aboutdata data, UTF-8 encoded string)
+ *                          (alljoyn_aboutdata_getmanufacturerlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of bytes to be written to the user-allocated string
+ * @param[in]  language     the IETF language tag specified by RFC 5646
+ *                          If language is NULL the Manufacturer for the default language will be returned.
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getmanufacturercopy(alljoyn_aboutdata data,
+                                                                    char* manufacturer,
+                                                                    size_t maxLength,
+                                                                    const char* language);
+
+/**
+ * Get length of the Manufacturer stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getmanufacturercopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ * @param[in]  language the IETF language tag specified by RFC 5646
+ *             If language is NULL the length of the Manufacturer for the default language will be returned
+ *
+ * @return length (in bytes) of the Manufacturer, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getmanufacturerlength(alljoyn_aboutdata data,
+                                                                     const char* language);
 
 /**
  * Set the ModelNumber to the About data
@@ -404,6 +631,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setmodelnumber(alljoyn_aboutdata
  * ModelNumber IS part of the announce signal
  * ModelNumber CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data        alljoyn_aboutdata object this call is made for
  * @param[out] modelNumber the application model number
  *
@@ -411,6 +642,36 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setmodelnumber(alljoyn_aboutdata
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getmodelnumber(alljoyn_aboutdata data,
                                                                char** modelNumber);
+
+/**
+ * Get a copy of the ModelNumber from the About data
+ *
+ * ModelNumber IS required
+ * ModelNumber IS part of the announce signal
+ * ModelNumber CAN NOT be localized for other languages
+ *
+ * @param[in]  data        alljoyn_aboutdata object this call is made for
+ * @param[out] modelNumber a user-allocated string to store the application model number
+ *                         (alljoyn_aboutdata_getmodelnumberlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of bytes to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getmodelnumbercopy(alljoyn_aboutdata data,
+                                                                   char* modelNumber,
+                                                                   size_t maxLength);
+
+/**
+ * Get length of the ModelNumber stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getmodelnumbercopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the ModelNumber, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getmodelnumberlength(alljoyn_aboutdata data);
 
 /**
  * Set a supported language.
@@ -432,6 +693,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setsupportedlanguage(alljoyn_abo
 /**
  * Get an array of supported languages
  *
+ * @note This function provides pointers to AboutData's internal data storage. Any change to the
+ * languages in AboutData will also entail a change under the obtained pointers.
+ * If a copy of the data is needed, please use the "copy" variant of the function.
+ *
  * @param data         alljoyn_aboutdata object this call is made for
  * @param languageTags a pointer to a languageTags array to receive the
  *                     language tags. Can be NULL in which case no
@@ -445,6 +710,34 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setsupportedlanguage(alljoyn_abo
 extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getsupportedlanguages(alljoyn_aboutdata data,
                                                                      const char** languageTags,
                                                                      size_t num);
+
+/**
+ * Get copies of language tags for all the supported languages
+ *
+ * The function writes into the user-allocated languageTags string language tags (as defined in RFC 5646)
+ * for all the supported languages.
+ * The language tags are sorted alphabetically and delimited with commas, e.g., "de,en,en-US,fr".
+ * The array is NULL-terminated.
+ *
+ * @param data         alljoyn_aboutdata object this call is made for
+ * @param languageTags a user-allocated string to store the language tags
+ *                     (alljoyn_aboutdata_getsupportedlanguagescopylength() can be called to determine the required string size).
+ * @param maxLength    the maximum number of bytes to be written to the user-allocated string.
+ *
+ * @return the number of bytes written.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getsupportedlanguagescopy(alljoyn_aboutdata data,
+                                                                         char* languageTags,
+                                                                         size_t maxLength);
+
+/**
+ * Get length of the languageTags string obtained using alljoyn_aboutdata_getsupportedlanguagescopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the languageTags string, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getsupportedlanguagescopylength(alljoyn_aboutdata data);
 
 /**
  * Set the Description to the About data
@@ -474,6 +767,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdescription(alljoyn_aboutdata
  * Description IS NOT part of the announce signal
  * Description CAN BE localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data        alljoyn_aboutdata object this call is made for
  * @param[out] description the Description found in the About data (alljoyn_aboutdata data, UTF-8 encoded string)
  * @param[in]  language    the IETF language tag specified by RFC 5646
@@ -484,6 +781,44 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdescription(alljoyn_aboutdata
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdescription(alljoyn_aboutdata data,
                                                                char** description,
                                                                const char* language);
+
+/**
+ * Get a copy of the Description from the About data
+ *
+ * Description IS required
+ * Description IS NOT part of the announce signal
+ * Description CAN BE localized for other languages
+ *
+ * @param[in]  data        alljoyn_aboutdata object this call is made for
+ * @param[out] description a user-allocated string to store the Description found in the About data
+ *                         (alljoyn_aboutdata data, UTF-8 encoded string)
+ *                         (alljoyn_aboutdata_getdescriptionlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of characters to be written to the user-allocated string
+ * @param[in]  language    the IETF language tag specified by RFC 5646
+ *                         If language is NULL the Description for the default language will be returned.
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdescriptioncopy(alljoyn_aboutdata data,
+                                                                   char* description,
+                                                                   size_t maxLength,
+                                                                   const char* language);
+
+/**
+ * Get length of the Description stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getdescriptioncopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ * @param[in]  language the IETF language tag specified by RFC 5646
+ *             If language is NULL the length of the Description for the default language will be returned
+ *
+ * @return length (in bytes) of the Description, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getdescriptionlength(alljoyn_aboutdata data,
+                                                                    const char* language);
+
 
 /**
  * Set the DateOfManufacture to the About data
@@ -513,6 +848,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdateofmanufacture(alljoyn_abo
  * DateOfManufacture IS NOT part of the announce signal
  * DateOfManufacture CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data              alljoyn_aboutdata object this call is made for
  * @param[out] dateOfManufacture the date of manufacture using YYYY-MM-DD format
  *
@@ -520,6 +859,39 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setdateofmanufacture(alljoyn_abo
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdateofmanufacture(alljoyn_aboutdata data,
                                                                      char** dateOfManufacture);
+
+/**
+ * Get a copy of the DateOfManufacture from the About data
+ *
+ * The date of manufacture using the format YYYY-MM-DD.  Known as XML
+ * DateTime format.
+ *
+ * DateOfManufacture IS NOT required
+ * DateOfManufacture IS NOT part of the announce signal
+ * DateOfManufacture CAN NOT be localized for other languages
+ *
+ * @param[in]  data              alljoyn_aboutdata object this call is made for
+ * @param[out] dateOfManufacture a user-allocated string to store the date of manufacture using YYYY-MM-DD format
+ *                               (alljoyn_aboutdata_getdateofmanufacturelength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of characters to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getdateofmanufacturecopy(alljoyn_aboutdata data,
+                                                                         char* dateOfManufacture,
+                                                                         size_t maxLength);
+
+/**
+ * Get length of the DateOfManufacture stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getdateofmanufacturecopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the DateOfManufacture, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getdateofmanufacturelength(alljoyn_aboutdata data);
 
 /**
  * Set the SoftwareVersion to the About data
@@ -543,6 +915,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setsoftwareversion(alljoyn_about
  * SoftwareVersion IS NOT part of the announce signal
  * SoftwareVersion CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data            alljoyn_aboutdata object this call is made for
  * @param[out] softwareVersion the software version for the OEM software
  *
@@ -550,6 +926,36 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setsoftwareversion(alljoyn_about
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getsoftwareversion(alljoyn_aboutdata data,
                                                                    char** softwareVersion);
+
+/**
+ * Get a copy of the SoftwareVersion from the About data
+ *
+ * SoftwareVersion IS required
+ * SoftwareVersion IS NOT part of the announce signal
+ * SoftwareVersion CAN NOT be localized for other languages
+ *
+ * @param[in]  data            alljoyn_aboutdata object this call is made for
+ * @param[out] softwareVersion a user-allocated string to store the software version for the OEM software
+ *                             (alljoyn_aboutdata_getsoftwareversionlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of characters to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getsoftwareversioncopy(alljoyn_aboutdata data,
+                                                                       char* softwareVersion,
+                                                                       size_t maxLength);
+
+/**
+ * Get length of the SoftwareVersion stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getsoftwareversioncopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the SoftwareVersion, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getsoftwareversionlength(alljoyn_aboutdata data);
 
 /**
  * Get the AJSoftwareVersion from the About data
@@ -561,6 +967,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getsoftwareversion(alljoyn_about
  * AJSoftwareVersion IS NOT part of the announce signal
  * AJSoftwareVersion CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data              alljoyn_aboutdata object this call is made for
  * @param[out] ajSoftwareVersion the current version of AllJoyn SDK utilized
  *                               by the application
@@ -569,6 +979,40 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getsoftwareversion(alljoyn_about
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getajsoftwareversion(alljoyn_aboutdata data,
                                                                      char** ajSoftwareVersion);
+
+/**
+ * Get a copy of the AJSoftwareVersion from the About data
+ *
+ * The AJSoftwareVersion is automatically set when the About data is created
+ * or when it is read from remote device.
+ *
+ * AJSoftwareVersion IS required
+ * AJSoftwareVersion IS NOT part of the announce signal
+ * AJSoftwareVersion CAN NOT be localized for other languages
+ *
+ * @param[in]  data              alljoyn_aboutdata object this call is made for
+ * @param[out] ajSoftwareVersion a user-allocated string to store the current version of AllJoyn SDK utilized
+ *                               by the application
+ *                               (alljoyn_aboutdata_getajsoftwareversionlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of characters to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getajsoftwareversioncopy(alljoyn_aboutdata data,
+                                                                         char* ajSoftwareVersion,
+                                                                         size_t maxLength);
+
+/**
+ * Get length of the AJSoftwareVersion stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getajsoftwareversioncopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the AJSoftwareVersion, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getajsoftwareversionlength(alljoyn_aboutdata data);
 
 /**
  * Set the HardwareVersion to the About data
@@ -592,6 +1036,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_sethardwareversion(alljoyn_about
  * HardwareVersion IS NOT part of the announce signal
  * HardwareVersion CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data            alljoyn_aboutdata object this call is made for
  * @param[out] hardwareVersion the device hardware version
  *
@@ -599,6 +1047,35 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_sethardwareversion(alljoyn_about
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_gethardwareversion(alljoyn_aboutdata data,
                                                                    char** hardwareVersion);
+
+/**
+ * Get a copy of the HardwareVersion from the About data
+ *
+ * HardwareVersion IS NOT required
+ * HardwareVersion IS NOT part of the announce signal
+ * HardwareVersion CAN NOT be localized for other languages
+ *
+ * @param[in]  data            alljoyn_aboutdata object this call is made for
+ * @param[out] hardwareVersion a user-allocated string to store the device hardware version
+ *                             (alljoyn_aboutdata_gethardwareversionlength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of characters to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_gethardwareversioncopy(alljoyn_aboutdata data,
+                                                                       char* hardwareVersion,
+                                                                       size_t maxLength);
+/**
+ * Get length of the HardwareVersion stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_gethardwareversioncopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the HardwareVersion, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_gethardwareversionlength(alljoyn_aboutdata data);
 
 /**
  * Set the SupportUrl to the About data
@@ -622,6 +1099,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setsupporturl(alljoyn_aboutdata 
  * SupportUrl IS NOT part of the announce signal
  * SupportUrl CAN NOT be localized for other languages
  *
+ * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+ * field in AboutData will also entail a change under the obtained pointer.
+ * If a copy of the data is needed, please use "copy" variant of the function.
+ *
  * @param[in]  data       alljoyn_aboutdata object this call is made for
  * @param[out] supportUrl the support URL
  *
@@ -629,6 +1110,35 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setsupporturl(alljoyn_aboutdata 
  */
 extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getsupporturl(alljoyn_aboutdata data,
                                                               char** supportUrl);
+
+/**
+ * Get a copy of the SupportUrl from the About data
+ *
+ * SupportUrl IS NOT required
+ * SupportUrl IS NOT part of the announce signal
+ * SupportUrl CAN NOT be localized for other languages
+ *
+ * @param[in]  data       alljoyn_aboutdata object this call is made for
+ * @param[out] supportUrl a user-allocated string to store the support URL
+ *                        (alljoyn_aboutdata_getsupporturllength() can be called to determine the required string size).
+ * @param[in] maxLength the maximum number of characters to be written to the user-allocated string
+ *
+ * @return ER_OK on success
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getsupporturlcopy(alljoyn_aboutdata data,
+                                                                  char* supportUrl,
+                                                                  size_t maxLength);
+/**
+ * Get length of the SupportUrl stored in the About data
+ *
+ * This function can be used to determine the needed size of the user-allocated string
+ * to be passed to alljoyn_aboutdata_getsupporturlcopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the SupportUrl, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getsupporturllength(alljoyn_aboutdata data);
 
 /**
  * Generic way to set a new field.  Everything could be done this way.
@@ -682,6 +1192,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getfield(alljoyn_aboutdata data,
  * are permitted. Use the GetFields method to get a list of all fields
  * currently found known by the alljoyn_aboutdata.
  *
+ * @note This function provides pointers to AboutData's internal data storage. Any change to the
+ * field names in AboutData will also entail a change under the obtained pointers.
+ * If a copy of the data is needed, please use the "copy" variant of the function.
+ *
  * @param[in]  data       alljoyn_aboutdata object this call is made for
  * @param[out] fields     an array of const char* that will contain all the strings
  * @param[in]  num_fields the size of the array
@@ -692,6 +1206,35 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_getfield(alljoyn_aboutdata data,
 extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getfields(alljoyn_aboutdata data,
                                                          const char** fields,
                                                          size_t num_fields);
+
+/**
+ * Get all the fields contained in this alljoyn_aboutdata object.
+ *
+ * This is required if the About data comes from a remote source. User defined fields
+ * are permitted. Use the GetFields method to get a list of all fields
+ * currently found known by the alljoyn_aboutdata.
+ * The function writes into the user-allocated fields string names of all the available fields.
+ * The field names are sorted alphabetically and delimited with commas, e.g., "AppId,DefaultLanguage,DeviceId".
+ * The array is NULL-terminated.
+ *
+ * @param data         alljoyn_aboutdata object this call is made for
+ * @param fields       a user-allocated string to store the field names.
+ * @param maxLength    the maximum number of bytes to be written to the user-allocated string.
+ *
+ * @return the number of bytes written.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getfieldscopy(alljoyn_aboutdata data,
+                                                             char* fields,
+                                                             size_t maxLength);
+
+/**
+ * Get length of the fields string obtained using alljoyn_aboutdata_getfieldscopy().
+ *
+ * @param[in]  data  alljoyn_aboutdata object this call is made for
+ *
+ * @return length (in bytes) of the fields string, including the terminating null character.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getfieldscopylength(alljoyn_aboutdata data);
 
 /**
  * @param[in]  data alljoyn_aboutdata object this call is made for

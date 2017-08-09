@@ -32,7 +32,6 @@
 #include <set>
 
 #include <alljoyn/AboutData.h>
-#include <qcc/Mutex.h>
 #include <algorithm>
 #include <cctype>
 
@@ -106,8 +105,7 @@ class MsgArgTableTranslator : public LookupTableTranslator {
      * Local member variable mapping a field id to a set of translations
      * in various languages.
      */
-    std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare>
-> localizedStore;
+    std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> > localizedStore;
 
     /**
      * typedef localized store iterator
@@ -131,6 +129,257 @@ class AboutData::Internal {
     }
 
   private:
+    /**
+     * Check if the given character is a hexadecimal digit.
+     *
+     * @param c The character to check.
+     * @return
+     *  - true if the character is in one of the ranges: 0..9; a..f; A..F.
+     *  - false otherwise.
+     */
+    bool isHexChar(char c) const;
+
+    /**
+     * Set field based on MsgArg.
+     *
+     * @param[in] name the name of the field to set
+     * @param[in] value a MsgArg that contains the value that is set for the field
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the default language will be used.  Only
+     *            used for fields that are marked as localizable.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetField(const char* name, MsgArg value, const char* language = nullptr);
+
+    /**
+     * Set field based on string value (char* version).
+     *
+     * @param[in] name the name of the field to set
+     * @param[in] value the value to be set
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the default language will be used.  Only
+     *            used for fields that are marked as localizable.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetField(const char* fieldName, const char* value, const char* language = nullptr);
+
+    /**
+     * Set field based on string value (qcc::String version).
+     *
+     * @param[in] name the name of the field to set
+     * @param[in] value the value to be set
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the default language will be used.  Only
+     *            used for fields that are marked as localizable.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetField(const qcc::String& fieldName, const qcc::String& value, const qcc::String& language = "");
+
+    /**
+     * Get field into a MsgArg.
+     *
+     * @param[in] name the name of the field to get
+     * @param[out] value MsgArg holding a variant value that represents the field
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the field for the default language will be
+     *            returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetField(const char* name, MsgArg*& value, const char* language = nullptr);
+
+    /**
+     * Get field into a string (char** version)
+     *
+     * @param[in] name the name of the field to get
+     * @param[out] value the retrieved value
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the field for the default language will be
+     *            returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetField(const char* fieldName, char** value, const char* language = nullptr);
+
+    /**
+     * Get field into a string (qcc::String version)
+     *
+     * @param[in] name the name of the field to get
+     * @param[out] value the retrieved value
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the field for the default language will be
+     *            returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetField(const qcc::String& fieldName, qcc::String& value, const qcc::String& language = "");
+
+    /**
+     * Set a supported language.
+     *
+     * This is a string representing a single language. The language is
+     * specified using IETF language tags specified by the RFC 5646.
+     *
+     * If the language tag has already been added, ER_OK will be returned with no
+     * additional changes being made.
+     *
+     * @param[in] language the IETF language tag
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetSupportedLanguage(const char* language);
+
+    /**
+     * Fill in the AboutData fields using a MsgArg
+     *
+     * The MsgArg must contain a dictionary of type a{sv} The expected use of this
+     * class is to fill in the AboutData using a MsgArg obtain from the Announce
+     * signal or the GetAboutData method from org.alljoyn.about interface.
+     *
+     * @param arg MsgArg containing AboutData dictionary.
+     * @param language the language for the MsgArg AboutData.
+     *                 If nullptr the default language will be used
+     *
+     * @return ER_OK on success
+     */
+    QStatus CreateFromMsgArg(const MsgArg& arg, const char* language);
+
+    /**
+     * Is the given field name required to make an About announcement
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is required to make an About announcement
+     *  - false otherwise.  If the fieldName is unknown, false will be returned
+     */
+    bool IsFieldRequired(const char* fieldName) const;
+
+    /**
+     * Is the given field part of the announce signal
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is part of the announce signal
+     *  - false otherwise.  If the fieldName is unknown, false will be returned
+     */
+    bool IsFieldAnnounced(const char* fieldName) const;
+
+    /**
+     * Is the given field a localized field.
+     *
+     * Localized fields should be provided for every supported language
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is a localizable value
+     *  - false otherwise.  If the fieldName is unknown, false will be returned.
+     */
+    bool IsFieldLocalized(const char* fieldName) const;
+
+    /**
+     * Get the signature for the given field.
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - the signature of the field
+     *  - nullptr is field is unknown
+     */
+    const char* GetFieldSignature(const char* fieldName) const;
+
+    /**
+     * Set the AppId for the AboutData
+     *
+     * AppId Should be a 128-bit UUID as specified in by RFC 4122.
+     *
+     * Passing in non-128-bit byte arrays will still Set the AppId but the
+     * SetAppId member function will always return
+     * ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE and the application will fail
+     * certification and compliance testing.
+     *
+     * AppId IS required
+     * AppId IS part of the Announce signal
+     * AppId CAN NOT be localized for other languages
+     *
+     * @param[in] appId the a globally unique array of bytes used as an ID for the application
+     * @param[in] num   the number of bites in the appId array
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE if the AppId is not a 128-bits (16 bytes)
+     */
+    QStatus SetAppId(const uint8_t* appId, const size_t num);
+
+    /**
+     * Set the AppId for the AboutData using a string.
+     *
+     * The string must be either a 32-character hex digit string
+     * (i.e. 4a354637564945188a48323c158bc02d).
+     * or a UUID string as specified in RFC 4122
+     * (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
+     * AppId should be a 128-bit UUID as specified in by RFC 4122
+     *
+     * Unlike SetAppId(const uint8_t*, const size_t) this member function will
+     * only set the AppId if the string is a 32-character hex digit string or a
+     * UUID as specified by RFC 4122.
+     *
+     * AppId IS required
+     * AppId IS part of the Announce signal
+     * AppId CAN NOT be localized for other languages
+     *
+     * @see #SetAppId(const uint8_t*, const size_t)
+     *
+     * @param[in] appId String representing a globally unique array of bytes
+     *                  used as an ID for the application.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE if the AppId is not a 128-bits (16 bytes)
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if unable to parse the appId string.
+     */
+    QStatus SetAppId(const char* appId);
+
+    /**
+     * The AboutData has all of the required fields
+     *
+     * If a language field is given this will return if all required fields are
+     * listed for the given language.
+     *
+     * If no language is given, the default language will be checked
+     *
+     * @param[in] language IETF language tag specified by RFC 5646
+     *
+     * @return true if all required field are listed for the given language
+     */
+    bool IsValid(const char* language = nullptr);
+
+    /**
+     * Get the DefaultLanguage from the AboutData
+     *
+     * @param[out] defaultLanguage a pointer to the default language tag
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetDefaultLanguage(char** defaultLanguage);
+
     /**
      * A std::map that maps the field name to its FieldDetails.
      */
@@ -169,11 +418,6 @@ class AboutData::Internal {
      * as field name.
      */
     qcc::String keyLanguage;
-
-    /**
-     * mutex lock to protect the property store.
-     */
-    qcc::Mutex propertyStoreLock;
 };
 
 }
