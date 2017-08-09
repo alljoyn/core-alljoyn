@@ -40,7 +40,10 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
 
+#include <qcc/Mutex.h>
 #include <qcc/String.h>
+
+#include <set>
 
 namespace ajn {
 
@@ -65,14 +68,21 @@ class AboutData : public AboutDataListener, public AboutKeys {
     AboutData();
 
     /**
-     * constructor
+     * Constructor
      *
      * @param defaultLanguage the default language for the AboutData fields
      */
     AboutData(const char* defaultLanguage);
 
     /**
-     * constructor
+     * Constructor
+     *
+     * @param defaultLanguage the default language for the AboutData fields
+     */
+    AboutData(const qcc::String& defaultLanguage);
+
+    /**
+     * Constructor
      *
      * Fill in the fields of the AboutData class using a MsgArg.  The provided
      * MsgArg must contain a dictionary with signature a{sv} with AboutData fields.
@@ -83,9 +93,25 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * member function to fill in the AboutData class.
      *
      * @param arg MsgArg with signature a{sv}containing AboutData fields.
-     * @param language the language of the arg MsgArg. Use NULL for default language
+     * @param language the language of the arg MsgArg. Use nullptr for default language
      */
-    AboutData(const MsgArg arg, const char* language = NULL);
+    AboutData(const MsgArg arg, const char* language = nullptr);
+
+    /**
+     * Constructor
+     *
+     * Fill in the fields of the AboutData class using a MsgArg.  The provided
+     * MsgArg must contain a dictionary with signature a{sv} with AboutData fields.
+     *
+     * If the passed in MsgArg is an ill formed AboutData MsgArg this constructor
+     * will fail silently. If the MsgArg does not come from About Announce signal
+     * it is best to create an empty AboutData class and use the CreatFromMsgArg
+     * member function to fill in the AboutData class.
+     *
+     * @param arg MsgArg with signature a{sv}containing AboutData fields.
+     * @param language the language of the arg MsgArg.
+     */
+    AboutData(const MsgArg arg, const qcc::String& language);
 
     /**
      * Copy constructor
@@ -208,7 +234,21 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return true if all required field are listed for the given language
      */
-    bool IsValid(const char* language = NULL);
+    bool IsValid(const char* language = nullptr);
+
+    /**
+     * The AboutData has all of the required fields
+     *
+     * If a language field is given this will return if all required fields are
+     * listed for the given language.
+     *
+     * If no language is given, the default language will be checked
+     *
+     * @param[in] language IETF language tags specified by RFC 5646
+     *
+     * @return true if all required field are listed for the given language
+     */
+    bool IsValid(const qcc::String& language) const;
 
     /**
      * Fill in the AboutData fields using a MsgArg
@@ -217,13 +257,27 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * class is to fill in the AboutData using a MsgArg obtain from the Announce
      * signal or the GetAboutData method from org.alljoyn.about interface.
      *
-     * @param arg MsgArg contain AboutData dictionary
+     * @param arg MsgArg containing AboutData dictionary.
      * @param language the language for the MsgArg AboutData.
-     *                 If NULL the default language will be used
+     *                 If nullptr the default language will be used
      *
      * @return ER_OK on success
      */
-    QStatus CreatefromMsgArg(const MsgArg& arg, const char* language = NULL);
+    QStatus CreatefromMsgArg(const MsgArg& arg, const char* language = nullptr);
+
+    /**
+     * Fill in the AboutData fields using a MsgArg
+     *
+     * The MsgArg must contain a dictionary of type a{sv} The expected use of this
+     * class is to fill in the AboutData using a MsgArg obtain from the Announce
+     * signal or the GetAboutData method from org.alljoyn.about interface.
+     *
+     * @param arg MsgArg containing AboutData dictionary.
+     * @param language the language for the MsgArg AboutData.
+     *
+     * @return ER_OK on success
+     */
+    QStatus CreateFromMsgArg(const MsgArg& arg, const qcc::String& language);
 
     /**
      * Set the AppId for the AboutData
@@ -255,7 +309,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * AppId IS part of the Announce signal
      * AppId CAN NOT be localized for other languages
      *
-     * @param[out] appId a pointer to an array of bites used as a globally unique ID for an application
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] appId a pointer to an array of bytes used as a globally unique ID for an application
      * @param[out] num   the size of the appId array
      *
      * @return ER_OK on success
@@ -263,22 +321,34 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus GetAppId(uint8_t** appId, size_t* num);
 
     /**
+     * Get the AppId from the AboutData
+     *
+     * AppId IS required
+     * AppId IS part of the Announce signal
+     * AppId CAN NOT be localized for other languages
+     *
+     * @param[out] appId a string containing the unique ID for an application
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetAppId(qcc::String& appId) const;
+
+    /**
      * Set the AppId for the AboutData using a string.
      *
-     * The string must be a ether a 32-character hex digit string
+     * The string must be either a 32-character hex digit string
      * (i.e. 4a354637564945188a48323c158bc02d).
      * or a UUID string as specified in RFC 4122
      * (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
      * AppId should be a 128-bit UUID as specified in by RFC 4122
      *
      * Unlike SetAppId(const uint8_t*, const size_t) this member function will
-     * only set the AppId if the string is 32-character hex digit string or a
+     * only set the AppId if the string is a 32-character hex digit string or a
      * UUID as specified by RFC 4122.
      *
      * AppId IS required
      * AppId IS part of the Announce signal
      * AppId CAN NOT be localized for other languages
-     *
      *
      * @see #SetAppId(const uint8_t*, const size_t)
      *
@@ -291,6 +361,35 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if unable to parse the appId string.
      */
     QStatus SetAppId(const char* appId);
+
+    /**
+     * Set the AppId for the AboutData using a string.
+     *
+     * The string must be either a 32-character hex digit string
+     * (i.e. 4a354637564945188a48323c158bc02d).
+     * or a UUID string as specified in RFC 4122
+     * (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
+     * AppId should be a 128-bit UUID as specified in by RFC 4122
+     *
+     * Unlike SetAppId(const uint8_t*, const size_t) this member function will
+     * only set the AppId if the string is a 32-character hex digit string or a
+     * UUID as specified by RFC 4122.
+     *
+     * AppId IS required
+     * AppId IS part of the Announce signal
+     * AppId CAN NOT be localized for other languages
+     *
+     * @see #SetAppId(const uint8_t*, const size_t)
+     *
+     * @param[in] appId String representing a globally unique array of bytes
+     *                  used as an ID for the application.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE if the AppId is not a 128-bits (16 bytes)
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if unable to parse the appId string.
+     */
+    QStatus SetAppId(const qcc::String& appId);
 
     /**
      * This language is automatically added to the SupportedLanguage list. The
@@ -306,13 +405,39 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetDefaultLanguage(const char* defaultLanguage);
 
     /**
+     * This language is automatically added to the SupportedLanguage list. The
+     * language tag should be an IETF language tag specified by RFC 5646
+     *
+     * DefaultLanguage is Required
+     * DefaultLanguage is part of the Announce signal
+     *
+     * @param[in] defaultLanguage the IETF language tag
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetDefaultLanguage(const qcc::String& defaultLanguage);
+
+    /**
      * Get the DefaultLanguage from the AboutData
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
      *
      * @param[out] defaultLanguage a pointer to the default language tag
      *
      * @return ER_OK on success
      */
     QStatus GetDefaultLanguage(char** defaultLanguage) const;
+
+    /**
+     * Get the DefaultLanguage from the AboutData
+     *
+     * @param[out] defaultLanguage a string containing the default language tag
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetDefaultLanguage(qcc::String& defaultLanguage) const;
 
     /**
      * Set the Translator that provides this InterfaceDescription's
@@ -339,7 +464,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[in] deviceName the deviceName (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the DeviceName will be set for the default language.
+     *            if language is nullptr, the DeviceName will be set for the default language.
      *
      * @return
      *  - #ER_OK on success
@@ -347,7 +472,45 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *                                             and the default language is also
      *                                             not found.
      */
-    QStatus SetDeviceName(const char* deviceName, const char* language = NULL);
+    QStatus SetDeviceName(const char* deviceName, const char* language = nullptr);
+
+    /**
+     * Set the DeviceName to the AboutData
+     *
+     * DeviceName is not required
+     * DeviceName is part of the Announce signal
+     * DeviceName can be localized for other languages
+     *
+     * @param[in] deviceName the deviceName (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the DeviceName will be set for the default language.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetDeviceName(const qcc::String& deviceName, const qcc::String& language = "");
+
+    /**
+     * Get the DeviceName from the About data
+     *
+     * DeviceName is not required
+     * DeviceName is part of the Announce signal
+     * DeviceName can be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] deviceName the deviceName found in the AboutData (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the DeviceName for the default language will be returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetDeviceName(char** deviceName, const char* language = nullptr);
 
     /**
      * Get the DeviceName from the About data
@@ -358,11 +521,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[out] deviceName the deviceName found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the DeviceName for the default language will be returned.
+     *            if language is empty, the DeviceName for the default language will be returned.
      *
      * @return ER_OK on success
      */
-    QStatus GetDeviceName(char** deviceName, const char* language = NULL);
+    QStatus GetDeviceName(qcc::String& deviceName, const qcc::String& language = "") const;
 
     /**
      * Set the DeviceId from the AboutData
@@ -376,6 +539,20 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * @return ER_OK on success
      */
     QStatus SetDeviceId(const char* deviceId);
+
+    /**
+     * Set the DeviceId from the AboutData
+     *
+     * DeviceId IS required
+     * DeviceId IS part of the announce signal
+     * DeviceId CAN NOT be localized for other languages
+     *
+     * @param[in] deviceId is a string with a value generated using platform specific means
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetDeviceId(const qcc::String& deviceId);
+
     /**
      * Get the DeviceId from the AboutData
      *
@@ -383,11 +560,29 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * DeviceId IS part of the announce signal
      * DeviceId CAN NOT be localized for other languages
      *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
      * @param[out] deviceId is a string with a value generated using platform specific means
      *
      * @return ER_OK on success
      */
     QStatus GetDeviceId(char** deviceId);
+
+    /**
+     * Get the DeviceId from the AboutData
+     *
+     * DeviceId IS required
+     * DeviceId IS part of the announce signal
+     * DeviceId CAN NOT be localized for other languages
+     *
+     * @param[out] deviceId a string with a value generated using platform specific means
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetDeviceId(qcc::String& deviceId) const;
+
     /**
      * Set the AppName to the AboutData
      *
@@ -397,7 +592,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[in] appName the AppName (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the AppName will be set for the default language.
+     *            if language is nullptr, the AppName will be set for the default language.
      *
      * @return
      *  - #ER_OK on success
@@ -405,7 +600,45 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *                                             and the default language is also
      *                                             not found.
      */
-    QStatus SetAppName(const char* appName, const char* language = NULL);
+    QStatus SetAppName(const char* appName, const char* language = nullptr);
+
+    /**
+     * Set the AppName to the AboutData
+     *
+     * AppName is required
+     * AppName is part of the announce signal
+     * AppName can be localized for other languages
+     *
+     * @param[in] appName the AppName (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the AppName will be set for the default language.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetAppName(const qcc::String& appName, const qcc::String& language = "");
+
+    /**
+     * Get the AppName from the About data
+     *
+     * AppName is required
+     * AppName is part of the announce signal
+     * AppName can be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] appName the AppName found in the AboutData (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the AppName for the default language will be returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetAppName(char** appName, const char* language = nullptr);
 
     /**
      * Get the AppName from the About data
@@ -416,11 +649,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[out] appName the AppName found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the AppName for the default language will be returned.
+     *            if language is empty, the AppName for the default language will be returned.
      *
      * @return ER_OK on success
      */
-    QStatus GetAppName(char** appName, const char* language = NULL);
+    QStatus GetAppName(qcc::String& appName, const qcc::String& language = "") const;
 
     /**
      * Set the Manufacturer to the AboutData
@@ -431,7 +664,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[in] manufacturer the Manufacturer (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Manufacturer will be set for the default language.
+     *            if language is nullptr, the Manufacturer will be set for the default language.
      *
      * @return
      *  - #ER_OK on success
@@ -439,7 +672,45 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *                                             and the default language is also
      *                                             not found.
      */
-    QStatus SetManufacturer(const char* manufacturer, const char* language = NULL);
+    QStatus SetManufacturer(const char* manufacturer, const char* language = nullptr);
+
+    /**
+     * Set the Manufacturer to the AboutData
+     *
+     * Manufacturer is required
+     * Manufacturer is part of the announce signal
+     * Manufacturer can be localized for other languages
+     *
+     * @param[in] manufacturer the Manufacturer (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the Manufacturer will be set for the default language.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetManufacturer(const qcc::String& manufacturer, const qcc::String& language = "");
+
+    /**
+     * Get the Manufacturer from the About data
+     *
+     * Manufacturer is required
+     * Manufacturer is part of the announce signal
+     * Manufacturer can be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] manufacturer the Manufacturer found in the AboutData (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the Manufacturer for the default language will be returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetManufacturer(char** manufacturer, const char* language = nullptr);
 
     /**
      * Get the Manufacturer from the About data
@@ -450,11 +721,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[out] manufacturer the Manufacturer found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Manufacturer for the default language will be returned.
+     *            if language is empty, the Manufacturer for the default language will be returned.
      *
      * @return ER_OK on success
      */
-    QStatus GetManufacturer(char** manufacturer, const char* language = NULL);
+    QStatus GetManufacturer(qcc::String& manufacturer, const qcc::String& language = "") const;
 
     /**
      * Set the ModelNumber to the AboutData
@@ -470,6 +741,36 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetModelNumber(const char* modelNumber);
 
     /**
+     * Set the ModelNumber to the AboutData
+     *
+     * ModelNumber is required
+     * ModelNumber is part of the announce signal
+     * ModelNumber can not be localized for other languages
+     *
+     * @param[in] modelNumber the application model number
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetModelNumber(const qcc::String& modelNumber);
+
+    /**
+     * Get the ModelNumber from the AboutData
+     *
+     * ModelNumber IS required
+     * ModelNumber IS part of the announce signal
+     * ModelNumber CAN NOT be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] modelNumber the application model number
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetModelNumber(char** modelNumber);
+
+    /**
      * Get the ModelNumber from the AboutData
      *
      * ModelNumber IS required
@@ -480,15 +781,15 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetModelNumber(char** modelNumber);
+    QStatus GetModelNumber(qcc::String& modelNumber) const;
 
     /**
      * Set a supported language.
      *
-     * This is a string representing the a single language. The language is
+     * This is a string representing a single language. The language is
      * specified using IETF language tags specified by the RFC 5646.
      *
-     * If the language tag has already been added ER_OK will be returned with no
+     * If the language tag has already been added, ER_OK will be returned with no
      * additional changes being made.
      *
      * @param[in] language the IETF language tag
@@ -498,18 +799,44 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetSupportedLanguage(const char* language);
 
     /**
-     * Get and array of supported languages
+     * Set a supported language.
+     *
+     * This is a string representing a single language. The language is
+     * specified using IETF language tags specified by the RFC 5646.
+     *
+     * If the language tag has already been added, ER_OK will be returned with no
+     * additional changes being made.
+     *
+     * @param[in] language the IETF language tag
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetSupportedLanguage(const qcc::String& language);
+
+    /**
+     * Get an array of supported languages
      *
      * @param languageTags A pointer to a languageTags array to receive the
-     *                     language tags. Can be NULL in which case no
+     *                     language tags. Can be nullptr in which case no
      *                     language tags are returned and the return value gives
      *                     the number of language tags available.
      * @param num          the size of the languageTags array.
      *
+     * @note This function provides pointers to AboutData's internal data storage. Any change to the
+     * languages in AboutData will also entail a change under the obtained pointers.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
      * @return The number of languageTags returned or the total number of
-     *         language tags if languageTags is NULL.
+     *         language tags if languageTags is nullptr.
      */
-    size_t GetSupportedLanguages(const char** languageTags = NULL, size_t num = 0);
+    size_t GetSupportedLanguages(const char** languageTags = nullptr, size_t num = 0);
+
+    /**
+     * Get a set of supported languages
+     *
+     * @return The set of languageTags
+     */
+    std::set<qcc::String> GetSupportedLanguagesSet() const;
 
     /**
      * Set the Description to the AboutData
@@ -520,7 +847,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[in] description the Description (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Description will be set for the default language.
+     *            if language is nullptr, the Description will be set for the default language.
      *
      * @return
      *  - #ER_OK on success
@@ -528,7 +855,45 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *                                             and the default language is also
      *                                             not found.
      */
-    QStatus SetDescription(const char* description, const char* language = NULL);
+    QStatus SetDescription(const char* description, const char* language = nullptr);
+
+    /**
+     * Set the Description to the AboutData
+     *
+     * Description IS required
+     * Description IS NOT part of the announce signal
+     * Description CAN BE localized for other languages
+     *
+     * @param[in] description the Description (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the Description will be set for the default language.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetDescription(const qcc::String& description, const qcc::String& language = "");
+
+    /**
+     * Get the Description from the About data
+     *
+     * Description IS required
+     * Description IS NOT part of the announce signal
+     * Description CAN BE localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] description the Description found in the AboutData (UTF-8 encoded string)
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is nullptr, the Description for the default language will be returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetDescription(char** description, const char* language = nullptr);
 
     /**
      * Get the Description from the About data
@@ -539,11 +904,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[out] description the Description found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Description for the default language will be returned.
+     *            if language is empty, the Description for the default language will be returned.
      *
      * @return ER_OK on success
      */
-    QStatus GetDescription(char** description, const char* language = NULL);
+    QStatus GetDescription(qcc::String& description, const qcc::String& language = "") const;
 
     /**
      * Set the DateOfManufacture to the AboutData
@@ -562,6 +927,42 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetDateOfManufacture(const char* dateOfManufacture);
 
     /**
+     * Set the DateOfManufacture to the AboutData
+     *
+     * The date of manufacture using the format YYYY-MM-DD.  Known as XML
+     * DateTime format.
+     *
+     * ModelNumber IS NOT required
+     * ModelNumber IS NOT part of the announce signal
+     * ModelNumber CAN NOT be localized for other languages
+     *
+     * @param[in] dateOfManufacture the date of manufacture using YYYY-MM-DD format
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetDateOfManufacture(const qcc::String& dateOfManufacture);
+
+    /**
+     * Get the DateOfManufacture from the AboutData
+     *
+     * The date of manufacture using the format YYYY-MM-DD.  Known as XML
+     * DateTime format.
+     *
+     * ModelNumber IS NOT required
+     * ModelNumber IS NOT part of the announce signal
+     * ModelNumber CAN NOT be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] dateOfManufacture the date of manufacture using YYYY-MM-DD format
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetDateOfManufacture(char** dateOfManufacture);
+
+    /**
      * Get the DateOfManufacture from the AboutData
      *
      * The date of manufacture using the format YYYY-MM-DD.  Known as XML
@@ -575,7 +976,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetDateOfManufacture(char** dateOfManufacture);
+    QStatus GetDateOfManufacture(qcc::String& dateOfManufacture) const;
 
     /**
      * Set the SoftwareVersion to the AboutData
@@ -591,6 +992,36 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetSoftwareVersion(const char* softwareVersion);
 
     /**
+     * Set the SoftwareVersion to the AboutData
+     *
+     * SoftwareVersion IS required
+     * SoftwareVersion IS NOT part of the announce signal
+     * SoftwareVersion CAN NOT be localized for other languages
+     *
+     * @param[in] softwareVersion the software version for the OEM software
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetSoftwareVersion(const qcc::String& softwareVersion);
+
+    /**
+     * Get the SoftwareVersion from the AboutData
+     *
+     * SoftwareVersion IS required
+     * SoftwareVersion IS NOT part of the announce signal
+     * SoftwareVersion CAN NOT be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] softwareVersion the software version for the OEM software
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetSoftwareVersion(char** softwareVersion);
+
+    /**
      * Get the SoftwareVersion from the AboutData
      *
      * SoftwareVersion IS required
@@ -601,7 +1032,28 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetSoftwareVersion(char** softwareVersion);
+    QStatus GetSoftwareVersion(qcc::String& softwareVersion) const;
+
+    /**
+     * Get the AJSoftwareVersion from the AboutData
+     *
+     * The AJSoftwareVersion is automatically set when the AboutData is created
+     * or when it is read from remote device.
+     *
+     * ModelNumber IS required
+     * ModelNumber IS NOT part of the announce signal
+     * ModelNumber CAN NOT be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] ajSoftwareVersion the current version of AllJoyn SDK utilized
+     *             by the application
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetAJSoftwareVersion(char** ajSoftwareVersion);
 
     /**
      * Get the AJSoftwareVersion from the AboutData
@@ -618,7 +1070,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetAJSoftwareVersion(char** ajSoftwareVersion);
+    QStatus GetAJSoftwareVersion(qcc::String& ajSoftwareVersion) const;
 
     /**
      * Set the HardwareVersion to the AboutData
@@ -634,6 +1086,36 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetHardwareVersion(const char* hardwareVersion);
 
     /**
+     * Set the HardwareVersion to the AboutData
+     *
+     * HardwareVersion IS NOT required
+     * HardwareVersion IS NOT part of the announce signal
+     * HardwareVersion CAN NOT be localized for other languages
+     *
+     * @param[in] hardwareVersion the device hardware version
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetHardwareVersion(const qcc::String& hardwareVersion);
+
+    /**
+     * Get the HardwareVersion from the AboutData
+     *
+     * HardwareVersion IS NOT required
+     * HardwareVersion IS NOT part of the announce signal
+     * HardwareVersion CAN NOT be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] hardwareVersion the device hardware version
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetHardwareVersion(char** hardwareVersion);
+
+    /**
      * Get the HardwareVersion from the AboutData
      *
      * HardwareVersion IS NOT required
@@ -644,7 +1126,8 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetHardwareVersion(char** hardwareVersion);
+    QStatus GetHardwareVersion(qcc::String& hardwareVersion) const;
+
     /**
      * Set the SupportUrl to the AboutData
      *
@@ -659,6 +1142,36 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetSupportUrl(const char* supportUrl);
 
     /**
+     * Set the SupportUrl to the AboutData
+     *
+     * SupportUrl IS NOT required
+     * SupportUrl IS NOT part of the announce signal
+     * SupportUrl CAN NOT be localized for other languages
+     *
+     * @param[in] supportUrl the support URL to be populated by OEM
+     *
+     * @return ER_OK on success
+     */
+    QStatus SetSupportUrl(const qcc::String& supportUrl);
+
+    /**
+     * Get the SupportUrl from the AboutData
+     *
+     * SupportUrl IS NOT required
+     * SupportUrl IS NOT part of the announce signal
+     * SupportUrl CAN NOT be localized for other languages
+     *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * field in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
+     * @param[out] supportUrl the support URL
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetSupportUrl(char** supportUrl);
+
+    /**
      * Get the SupportUrl from the AboutData
      *
      * SupportUrl IS NOT required
@@ -669,24 +1182,24 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetSupportUrl(char** supportUrl);
+    QStatus GetSupportUrl(qcc::String& supportUrl) const;
 
     /**
      * generic way to Set new field.  Everything could be done this way.
      *
      * Unless the generic field is one of the pre-defined fields when they are
-     * set they will have the following specifications
+     * set, they will have the following specifications
      *   NOT required
      *   NOT part of the announce signal
      *   CAN be localized
      *
-     * Since every field can be localized even if the field is not localized it
+     * Since every field can be localized, even if the field is not localized it
      * must be set for every language.
      *
      * @param[in] name the name of the field to set
      * @param[in] value a MsgArg that contains the value that is set for the field
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the default language will be used.  Only
+     *            if language is nullptr, the default language will be used.  Only
      *            used for fields that are marked as localizable.
      *
      * @return
@@ -695,7 +1208,33 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *                                             and the default language is also
      *                                             not found.
      */
-    QStatus SetField(const char* name, MsgArg value, const char* language = NULL);
+    QStatus SetField(const char* name, MsgArg value, const char* language = nullptr);
+
+    /**
+     * generic way to Set new field.  Everything could be done this way.
+     *
+     * Unless the generic field is one of the pre-defined fields when they are
+     * set, they will have the following specifications
+     *   NOT required
+     *   NOT part of the announce signal
+     *   CAN be localized
+     *
+     * Since every field can be localized, even if the field is not localized it
+     * must be set for every language.
+     *
+     * @param[in] name the name of the field to set
+     * @param[in] value a MsgArg that contains the value that is set for the field
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the default language will be used.  Only
+     *            used for fields that are marked as localizable.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
+     */
+    QStatus SetField(const qcc::String& name, MsgArg value, const qcc::String& language = "");
 
     /**
      * generic way to get field.
@@ -703,12 +1242,25 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * @param[in] name the name of the field to get
      * @param[out] value MsgArg holding a variant value that represents the field
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the field for the default language will be
+     *            if language is nullptr, the field for the default language will be
      *            returned.
      *
      * @return ER_OK on success
      */
-    QStatus GetField(const char* name, MsgArg*& value, const char* language = NULL) const;
+    QStatus GetField(const char* name, MsgArg*& value, const char* language = nullptr) const;
+
+    /**
+     * generic way to get field.
+     *
+     * @param[in] name the name of the field to get
+     * @param[out] value MsgArg holding a variant value that represents the field
+     * @param[in] language the IETF language tag specified by RFC 5646
+     *            if language is empty, the field for the default language will be
+     *            returned.
+     *
+     * @return ER_OK on success
+     */
+    QStatus GetField(const qcc::String& name, MsgArg*& value, const qcc::String& language = "") const;
 
     /**
      * Get a list of the fields contained in this AboutData class.  This may be
@@ -716,13 +1268,28 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * fields are permitted. Use the GetFields method to get a list of all fields
      * currently found known by the AboutData.
      *
+     * @note This function provides a pointer to AboutData's internal data storage. Any change to the
+     * available fields in AboutData will also entail a change under the obtained pointer.
+     * If a copy of the data is needed, please use the qcc::String variant of the function.
+     *
      * @param[out] fields an array of const char* that will contain all the strings
      * @param[in]  num_fields the size of the array
      *
      * @return
-     *  The number of fields returned or the total number of fields if the fields parameter is NULL
+     *  The number of fields returned or the total number of fields if the fields parameter is nullptr
      */
-    size_t GetFields(const char** fields = NULL, size_t num_fields = 0) const;
+    size_t GetFields(const char** fields = nullptr, size_t num_fields = 0) const;
+
+    /**
+     * Get a set of the fields contained in this AboutData class.  This may be
+     * required if the AboutData comes from a remote source. User defined
+     * fields are permitted. Use the GetFields method to get a set of all fields
+     * currently found known by the AboutData.
+     *
+     * @return
+     *  The set of all known fields
+     */
+    std::set<qcc::String> GetFieldsSet() const;
 
     /**
      * Create the MsgArg that is returned when a user calls
@@ -732,11 +1299,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * The MsgArg will contain the signature `a{sv}`.
      *
      * Custom fields are allowed. Since the proxy object only receives the field
-     * name and the MsgArg containing the contents for that field the default
+     * name and the MsgArg containing the contents for that field, the default
      * assumption is that user defined fields are:
-     * - are not required
-     * - are not announced
-     * - are localized if the MsgArg contains a String (not localized otherwise)
+     * - not required
+     * - not announced
+     * - localized if the MsgArg contains a String (not localized otherwise)
      *
      * If the language tag given is not supported, return the best matching
      * language according to RFC 4647 section 3.4. This algorithm requires
@@ -746,14 +1313,14 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * order to match either "en-US" or "en" if supported).
      *
      * If the user has not
-     * provided ALL of the required fields return the QStatus
+     * provided ALL of the required fields, return the QStatus
      * #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
      *
      * @param[out] msgArg a dictionary containing all of the AboutData fields for
      *                    the requested language.  If language is not specified, the default
      *                    language will be used.
      * @param[in] language IETF language tag specified by RFC 5646. If the string
-     *                     is NULL or an empty string, the MsgArg for the default
+     *                     is nullptr or an empty string, the MsgArg for the default
      *                     language will be returned.
      *
      * @return
@@ -761,7 +1328,46 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *  - ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if a required field is missing
      *  - other error indicating failure
      */
-    QStatus GetAboutData(MsgArg* msgArg, const char* language = NULL);
+    QStatus GetAboutData(MsgArg* msgArg, const char* language = nullptr);
+
+    /**
+     * Create the MsgArg that is returned when a user calls
+     * org.alljoyn.About.GetAboutData. The returned MsgArg must contain the
+     * AboutData dictionary for the Language specified.
+     *
+     * The MsgArg will contain the signature `a{sv}`.
+     *
+     * Custom fields are allowed. Since the proxy object only receives the field
+     * name and the MsgArg containing the contents for that field, the default
+     * assumption is that user defined fields are:
+     * - not required
+     * - not announced
+     * - localized if the MsgArg contains a String (not localized otherwise)
+     *
+     * If the language tag given is not supported, return the best matching
+     * language according to RFC 4647 section 3.4. This algorithm requires
+     * that the "supported" languages be the least specific they can (e.g.,
+     * "en" in order to match both "en" and "en-US" if requested), and the
+     * "requested" language be the most specific it can (e.g., "en-US" in
+     * order to match either "en-US" or "en" if supported).
+     *
+     * If the user has not
+     * provided ALL of the required fields, return the QStatus
+     * #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
+     *
+     * @param[out] msgArg a dictionary containing all of the AboutData fields for
+     *                    the requested language.  If language is not specified, the default
+     *                    language will be used.
+     * @param[in] language IETF language tag specified by RFC 5646. If the string
+     *                     is empty, the MsgArg for the default
+     *                     language will be returned.
+     *
+     * @return
+     *  - ER_OK on successful
+     *  - ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if a required field is missing
+     *  - other error indicating failure
+     */
+    QStatus GetAboutData(MsgArg* msgArg, const qcc::String& language) const;
 
     /**
      * Return a MsgArg pointer containing a dictionary containing the AboutData that
@@ -795,9 +1401,20 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return
      *  - true if the field is required to make an About announcement
-     *  - false otherwise.  If the fieldName is unknown false will be returned
+     *  - false otherwise.  If the fieldName is unknown, false will be returned
      */
     bool IsFieldRequired(const char* fieldName);
+
+    /**
+     * Is the given field name required to make an About announcement
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is required to make an About announcement
+     *  - false otherwise.  If the fieldName is unknown, false will be returned
+     */
+    bool IsFieldRequired(const qcc::String& fieldName) const;
 
     /**
      * Is the given field part of the announce signal
@@ -806,9 +1423,20 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return
      *  - true if the field is part of the announce signal
-     *  - false otherwise.  If the fieldName is unknown false will be returned
+     *  - false otherwise.  If the fieldName is unknown, false will be returned
      */
     bool IsFieldAnnounced(const char* fieldName);
+
+    /**
+     * Is the given field part of the announce signal
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is part of the announce signal
+     *  - false otherwise.  If the fieldName is unknown, false will be returned
+     */
+    bool IsFieldAnnounced(const qcc::String& fieldName) const;
 
     /**
      * Is the given field a localized field.
@@ -819,9 +1447,22 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return
      *  - true if the field is a localizable value
-     *  - false otherwise.  If the fieldName is unknown false will be returned.
+     *  - false otherwise.  If the fieldName is unknown, false will be returned.
      */
     bool IsFieldLocalized(const char* fieldName) const;
+
+    /**
+     * Is the given field a localized field.
+     *
+     * Localized fields should be provided for every supported language
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is a localizable value
+     *  - false otherwise.  If the fieldName is unknown, false will be returned.
+     */
+    bool IsFieldLocalized(const qcc::String& fieldName) const;
 
     /**
      * Get the signature for the given field.
@@ -830,9 +1471,20 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return
      *  - the signature of the field
-     *  - NULL is field is unknown
+     *  - nullptr is field is unknown
      */
     const char* GetFieldSignature(const char* fieldName);
+
+    /**
+     * Get the signature for the given field.
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - the signature of the field
+     *  - empty string is field is unknown
+     */
+    qcc::String GetFieldSignature(const qcc::String& fieldName) const;
 
     /*
      * we should add a way to generate a UUID based on RFC-4122. This should probably
@@ -931,6 +1583,8 @@ class AboutData : public AboutDataListener, public AboutKeys {
     class Internal;
 
     Internal* aboutDataInternal;     /**< Internal state information */
+
+    mutable qcc::Mutex aboutDataInternalLock; /**< Mutex for the internal state information */
     /// @endcond ALLJOYN_DEV
 };
 }
