@@ -126,6 +126,7 @@ static String NextTok(String& inStr)
     }
     return Trim(ret);
 }
+
 static void RemoveConn(ArdpConnRecord*conn) {
 
     std::map<uint32_t, ArdpConnRecord*>::iterator it = connList.begin();
@@ -169,19 +170,9 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
     QCC_UNUSED(len);
 
     printf("Inside Accept callback, we received a SYN from %s:%d, the message is \"%s\", status %s \n", ipAddr.ToString().c_str(), ipPort, (char*)buf, QCC_StatusText(status));
-    printf("Connection no is  %d, conn pointer is   %p \n", g_conn, conn);
+    printf("Connection no is %d, conn pointer is %p \n", g_conn, conn);
     connList[g_conn] = conn;
     g_conn++;
-    //int option=0;
-    //printf("Do you want to accept(1) it or not? ");
-    //scanf("%d",&option);
-    //if(option==1) {
-    //  printf("Returning true..\n");
-    //  return true;
-    //} else {
-    //  printf("Returning false..\n");
-    //  return false;
-    //}
     return true;
 }
 
@@ -247,7 +238,6 @@ class ThreadClass : public Thread {
         while ((!g_interrupt) && (IsRunning())) {
             uint32_t ms;
             ARDP_Run(m_handle, m_sock, true, false, true, &ms);
-            //qcc::Sleep(1000);
         }
 
         return this;
@@ -544,6 +534,7 @@ int CDECL_CALL main(int argc, char** argv)
         }
 
         if (strcmp(cmd.c_str(), "exit") == 0) {
+            g_interrupt = true;
             break;
         }
 
@@ -552,8 +543,9 @@ int CDECL_CALL main(int argc, char** argv)
         }
     }
 
-    t1->Stop();
-    t1->Join();
+    if (t1->Stop() == ER_OK) {
+        t1->Join();
+    }
     delete t1;
 
     AllJoynRouterShutdown();
