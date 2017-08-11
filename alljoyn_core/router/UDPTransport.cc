@@ -2655,12 +2655,11 @@ class ArdpStream : public qcc::Stream {
                  * the reference to it.
                  */
                 numSent = numBytes;
-                m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
                 ++m_sendsOutstanding;
+                m_transport->m_cbLock.AssertOwnedByCurrentThread();
 #if SENT_SANITY
                 m_sentSet.insert(buffer);
 #endif
-                m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
                 buffer = NULL;
                 done = true;
                 continue;
