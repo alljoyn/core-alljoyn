@@ -192,14 +192,14 @@ class SrpKeyXListener : public AuthListener {
                 if (authCount <= 3) {
                     /* seed the random number */
                     srand(time(nullptr));
-                    int pin = rand() % 1000000;
+                    unsigned int pin = (unsigned int)rand() % 1000000;
                     char pinStr[7];
 
 #if defined(QCC_OS_GROUP_WINDOWS)
-                    _snprintf(pinStr, ArraySize(pinStr), "%06d", pin);
+                    _snprintf(pinStr, ArraySize(pinStr), "%06u", pin);
                     pinStr[ArraySize(pinStr) - 1] = '\0';
 #else
-                    snprintf(pinStr, ArraySize(pinStr), "%06d", pin);
+                    snprintf(pinStr, ArraySize(pinStr), "%06u", pin);
 #endif
 
                     printf("One Time Password : %s\n", pinStr);
