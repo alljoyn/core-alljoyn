@@ -100,15 +100,19 @@ TEST(AboutIconTest, isAnnounced) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_abouticonobj aboutIcon = alljoyn_abouticonobj_create(g_msgBus, icon);
+    alljoyn_abouticon_destroy(icon);
 
     alljoyn_msgarg aodArg = alljoyn_msgarg_create();
     status = (*(ajn::BusAttachment*) g_msgBus).GetInternal().GetAnnouncedObjectDescription(*(ajn::MsgArg*)aodArg);
 
     alljoyn_aboutobjectdescription aod =
         alljoyn_aboutobjectdescription_create_full(aodArg);
+    alljoyn_msgarg_destroy(aodArg);
+
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(alljoyn_aboutobjectdescription_haspath(aod, "/About/DeviceIcon"));
 
+    alljoyn_aboutobjectdescription_destroy(aod);
     alljoyn_abouticonobj_destroy(aboutIcon);
     status = alljoyn_busattachment_stop(g_msgBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

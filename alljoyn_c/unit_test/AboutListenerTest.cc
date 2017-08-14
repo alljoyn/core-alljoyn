@@ -116,6 +116,7 @@ class AboutListenerTest : public testing::Test {
                                        ALLJOYN_TRANSPORT_ANY);
         listener = alljoyn_sessionportlistener_create(&callbacks, nullptr);
         status = alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
+        alljoyn_sessionopts_destroy(opts);
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -679,6 +680,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     destroy_about_test_about_listener(aboutListener1);
     destroy_about_test_about_listener(aboutListener2);
+    destroy_about_test_about_listener(aboutListener3);
     destroy_about_obj_test_bus_object(altObj);
     alljoyn_aboutobj_destroy(aboutObj);
     alljoyn_busattachment_destroy(clientBus);

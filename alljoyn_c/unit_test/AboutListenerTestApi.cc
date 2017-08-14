@@ -98,6 +98,9 @@ static void AJ_CALL non_128_bit_app_id_about_listener_announced_cb(const void* c
     QCC_UNUSED(objectDescriptionArg);
     announce_non_128_bit_app_id_about_listener* listener =
         (announce_non_128_bit_app_id_about_listener*)(context);
+    if (listener->aboutData != NULL) {
+        alljoyn_msgarg_destroy(listener->aboutData);
+    }
     listener->aboutData = alljoyn_msgarg_copy(aboutDataArg);
     alljoyn_msgarg_stabilize(listener->aboutData);
     announceListenerFlags[0] = QCC_TRUE;
@@ -176,6 +179,7 @@ static void AJ_CALL filtered_about_listener_cb(const void* context,
             }
         }
     }
+    alljoyn_aboutobjectdescription_destroy(aod);
 }
 
 int setExpectInterfaces(filtered_about_listener* listener, const char* path,
@@ -185,7 +189,7 @@ int setExpectInterfaces(filtered_about_listener* listener, const char* path,
     strcpy(listener->objpath, path);
     for (; i < infCount; ++i) {
         listener->expectedinterfaceset[i] =
-            (char*) malloc(sizeof(char) * strlen(interfaces[i]));
+            (char*) malloc(sizeof(char) * (strlen(interfaces[i]) + 1));
         strcpy(listener->expectedinterfaceset[i], interfaces[i]);
     }
     listener->interfacecnt = infCount;
@@ -202,6 +206,7 @@ about_test_about_listener* create_about_test_about_listener(int i)
     callback->about_listener_announced = announced_cb;
     result->listener = alljoyn_aboutlistener_create(callback, &(result->i));
 
+    delete callback;
     return result;
 }
 
@@ -279,6 +284,7 @@ about_test_wildcard_about_listener* create_about_test_wildcard_about_listener()
     callback->about_listener_announced = about_test_wildcard_about_listener_announced_cb;
     result->listener = alljoyn_aboutlistener_create(callback, result);
 
+    delete callback;
     return result;
 }
 
@@ -293,6 +299,8 @@ announce_non_128_bit_app_id_about_listener* create_announce_non_128_bit_app_id_a
     callback->about_listener_announced = non_128_bit_app_id_about_listener_announced_cb;
     result->listener = alljoyn_aboutlistener_create(callback, result);
     result->aboutData = NULL;
+
+    delete callback;
     return result;
 }
 
@@ -308,6 +316,7 @@ remove_object_description_about_listener* create_remove_object_description_about
     callback->about_listener_announced = remove_object_description_about_listener_cb;
     result->listener = alljoyn_aboutlistener_create(callback, result);
 
+    delete callback;
     return result;
 }
 
@@ -321,6 +330,8 @@ filtered_about_listener* create_filtered_about_listener()
         (alljoyn_aboutlistener_callback*) malloc(sizeof(alljoyn_aboutlistener_callback));
     callback->about_listener_announced = filtered_about_listener_cb;
     result->listener = alljoyn_aboutlistener_create(callback, result);
+
+    delete callback;
     return result;
 }
 
@@ -378,11 +389,15 @@ void destroy_remove_object_description_about_listener(remove_object_description_
 
 void destroy_filtered_about_listener(filtered_about_listener* aboutListener)
 {
-    if (!aboutListener) {
-        return;
-    }
-    if (aboutListener->listener) {
-        alljoyn_aboutlistener_destroy(aboutListener->listener);
-        aboutListener->listener = NULL;
+    if (aboutListener != NULL) {
+        if (aboutListener->listener) {
+            alljoyn_aboutlistener_destroy(aboutListener->listener);
+            aboutListener->listener = NULL;
+        }
+        for (size_t i = 0; i < aboutListener->interfacecnt; ++i) {
+            free(aboutListener->expectedinterfaceset[i]);
+        }
+        free(aboutListener);
+        aboutListener = NULL;
     }
 }

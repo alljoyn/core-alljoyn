@@ -1047,6 +1047,8 @@ TEST(DefaultAuthListenerTest, shouldCreateAuthListenerWithEmptyCallbacks)
     alljoyn_authlistener listener = alljoyn_authlistener_create(&s_emptySynchronousCallbacks, nullptr);
 
     EXPECT_NE(nullptr, listener);
+
+    alljoyn_authlistener_destroy(listener);
 }
 
 TEST_F(DefaultAuthListenerNoPasswordTest, shouldReturnTrueForDefaultVerifyCredentials)
