@@ -14,17 +14,17 @@ env:
 before_install:
 
  - |
-   echo "phase:before_install "
+   echo "phase:before_install"
 
 install:
 
  - |
-   echo "phase:install "
+   echo "phase:install"
 
 before_script:
 
  - |
-   echo "phase:before_script "
+   echo "phase:before_script"
 
 script:
 
